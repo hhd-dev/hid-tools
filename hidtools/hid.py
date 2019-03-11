@@ -1283,8 +1283,11 @@ class ReportDescriptor(object):
         """
         def __init__(self):
             self.usages = []
+            self.usage_sizes = []
             self.usage_min = 0
+            self.usage_min_size = 0
             self.usage_max = 0
+            self.usage_max_size = 0
             self.report_ID = -1
 
     def __init__(self, items):
@@ -1366,11 +1369,22 @@ class ReportDescriptor(object):
                 report_lists[type][self.local.report_ID] = cur
         return cur
 
+    def _concatenate_usages(self):
+        if self.local.usage_min_size <= 2:
+            self.local.usage_min |= self.glob.usage_page
+
+        if self.local.usage_max and self.local.usage_max_size <= 2:
+            self.local.usage_max |= self.glob.usage_page
+
+        self.local.usages = [v | self.glob.usage_page if self.local.usage_sizes[i] <= 2 else v
+                             for i, v in enumerate(self.local.usages)]
+
     def _parse_item(self, rdesc_item):
         # store current usage_page in rdesc_item
         rdesc_item.usage_page = self.glob.usage_page
         item = rdesc_item.item
         value = rdesc_item.value
+        size = rdesc_item.size - 1
 
         if item == "Report ID":
             self.local.report_ID = value
@@ -1383,9 +1397,14 @@ class ReportDescriptor(object):
             self.glob.usage_page = value << 16
             # reset the usage list
             self.local.usages = []
+            self.local.usage_sizes = []
             self.local.usage_min = 0
+            self.local.usage_min_size = 0
             self.local.usage_max = 0
+            self.local.usage_max_size = 0
         elif item == "Collection":
+            self._concatenate_usages()
+
             c = INV_COLLECTIONS[value]
             try:
                 if c == 'PHYSICAL':
@@ -1401,24 +1420,32 @@ class ReportDescriptor(object):
                 pass
             # reset the usage list
             self.local.usages = []
+            self.local.usage_sizes = []
             self.local.usage_min = 0
+            self.local.usage_min_size = 0
             self.local.usage_max = 0
+            self.local.usage_max_size = 0
         elif item == "Usage Minimum":
-            self.local.usage_min = value | self.glob.usage_page
+            self.local.usage_min = value
+            self.local.usage_min_size = size
         elif item == "Usage Maximum":
-            self.local.usage_max = value | self.glob.usage_page
+            self.local.usage_max = value
+            self.local.usage_max_size = size
         elif item == "Logical Minimum":
             self.glob.logical_min = value
         elif item == "Logical Maximum":
             self.glob.logical_max = value
         elif item == "Usage":
-            self.local.usages.append(value | self.glob.usage_page)
+            self.local.usages.append(value)
+            self.local.usage_sizes.append(size)
         elif item == "Report Count":
             self.glob.count = value
         elif item == "Report Size":
             self.glob.item_size = value
         elif item in ("Input", "Feature", "Output"):
             self.current_input_report = self._get_current_report(item)
+
+            self._concatenate_usages()
 
             inputItems = HidField.getHidFields(self.local.report_ID,
                                                self.glob.logical,
@@ -1439,8 +1466,11 @@ class ReportDescriptor(object):
                     self.local.usages[-1] == 0xff0000c5:
                 self.win8 = True
             self.local.usages = []
+            self.local.usage_sizes = []
             self.local.usage_min = 0
+            self.local.usage_min_size = 0
             self.local.usage_max = 0
+            self.local.usage_max_size = 0
 
     def dump(self, dump_file=sys.stdout, output_type='default'):
         """
