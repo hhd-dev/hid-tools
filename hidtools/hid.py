@@ -1395,13 +1395,6 @@ class ReportDescriptor(object):
             self.glob = self.global_stack.pop()
         elif item == "Usage Page":
             self.glob.usage_page = value << 16
-            # reset the usage list
-            self.local.usages = []
-            self.local.usage_sizes = []
-            self.local.usage_min = 0
-            self.local.usage_min_size = 0
-            self.local.usage_max = 0
-            self.local.usage_max_size = 0
         elif item == "Collection":
             self._concatenate_usages()
 
