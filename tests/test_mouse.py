@@ -422,6 +422,14 @@ class ResolutionMultiplierMouse(TwoWheelMouse):
         return 0
 
 
+class BadResolutionMultiplierMouse(ResolutionMultiplierMouse):
+    def set_report(self, req, rnum, rtype, data):
+        super().set_report(req, rnum, rtype, data)
+
+        self.wheel_multiplier = 1
+        self.hwheel_multiplier = 1
+        return 32  # EPIPE
+
 class ResolutionMultiplierHWheelMouse(TwoWheelMouse):
     report_descriptor = [
         0x05, 0x01,         # Usage Page (Generic Desktop)        0
@@ -843,6 +851,23 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
+
+
+class TestBadResolutionMultiplierMouse(TestTwoWheelMouse):
+    def create_device(self):
+        return BadResolutionMultiplierMouse()
+
+    def is_wheel_highres(self, uhdev):
+        high_res = super().is_wheel_highres(uhdev)
+
+        assert uhdev.wheel_multiplier == 1
+
+        return high_res
+
+    def test_resolution_multiplier_wheel(self):
+        uhdev = self.uhdev
+
+        assert uhdev.wheel_multiplier == 1
 
 
 class TestResolutionMultiplierHWheelMouse(TestResolutionMultiplierMouse):
