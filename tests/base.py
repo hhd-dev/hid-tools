@@ -61,6 +61,17 @@ class UHIDTestDevice(UHIDDevice):
         else:
             self.rdesc = rdesc
 
+    def match_evdev_rule(self, application, evdev):
+        '''Replace this in subclasses if the device has multiple reports
+        of the same type and we need to filter based on the actual evdev
+        node.
+
+        returning True will append the corresponding report to 
+        `self.input_nodes[type]`
+        returning False  will ignore this report for the device.
+        '''
+        return True
+
     def udev_event(self, event):
         if event.action != 'add':
             return
@@ -97,11 +108,16 @@ class UHIDTestDevice(UHIDDevice):
         event_node = open(devname, 'rb')
         self._opened_files.append(event_node)
         evdev = libevdev.Device(event_node)
+
         fd = evdev.fd.fileno()
         flag = fcntl.fcntl(fd, fcntl.F_GETFD)
         fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
         for type in types:
+            # check for custom defined matching
+            if not self.match_evdev_rule(type, evdev):
+                evdev.fd.close()
+                continue
             self.input_nodes[type] = evdev
 
     def open(self):
