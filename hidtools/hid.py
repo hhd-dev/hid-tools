@@ -122,7 +122,7 @@ class RangeError(Exception):
     """
     def __init__(self, field, value):
         self.field = field
-        self.range = field.logical_min, field.logical_min
+        self.range = field.logical_min, field.logical_max
         self.value = value
 
     def __str__(self):
