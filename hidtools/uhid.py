@@ -305,6 +305,7 @@ class UHIDDevice(object):
                           UHIDDevice._UHID_INPUT2,
                           len(data),
                           data)
+        logger.debug(f'inject {buf[:len(data)]}')
         os.write(self._fd, buf)
 
     @property
