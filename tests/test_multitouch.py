@@ -69,7 +69,7 @@ class Touch(object):
         self.cy = y
         self.tipswitch = True
         self.confidence = True
-        self.pressure = 100
+        self.tippressure = 15
         self.azimuth = 0
         self.inrange = True
         self.width = 10
