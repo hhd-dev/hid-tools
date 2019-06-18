@@ -28,8 +28,8 @@ from parse import parse, findall
 import logging
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
                     level=logging.INFO)
-base_logger = logging.getLogger('hid')
-logger = logging.getLogger('hid.replay')
+base_logger = logging.getLogger('hidtools')
+logger = logging.getLogger('hidtools.replay')
 
 
 class HIDReplay(object):
