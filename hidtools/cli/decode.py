@@ -25,6 +25,7 @@ import sys
 import hidtools.hid
 import hidtools.hidraw
 import logging
+import yaml
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
                     level=logging.INFO)
 base_logger = logging.getLogger('hid')
@@ -86,6 +87,23 @@ def interpret_file_hidrecorder(lines):
     return rdescs
 
 
+def interpret_file_libinput_record(fd):
+    try:
+        libinput_data = yaml.load(fd, Loader=yaml.Loader)
+    except UnicodeDecodeError:
+        # binary file?
+        return None
+    if 'libinput' not in libinput_data:
+        # not a libinput record
+        return None
+
+    rdescs_data = [dev['hid'] for dev in libinput_data['devices']]
+
+    rdescs = [hidtools.hid.ReportDescriptor.from_bytes(r) for r in rdescs_data]
+
+    return rdescs
+
+
 def open_report_descriptor(path):
     abspath = os.path.abspath(path)
     logger.debug(f'Processing {abspath}')
@@ -107,6 +125,11 @@ def open_report_descriptor(path):
         logger.debug(f'Opening {path} as text file')
         lines = fd.readlines()
         rdesc = interpret_file_hidrecorder(lines)
+        if rdesc is not None:
+            return rdesc
+
+    with open(path, 'r') as fd:
+        rdesc = interpret_file_libinput_record(fd)
         if rdesc is not None:
             return rdesc
 
