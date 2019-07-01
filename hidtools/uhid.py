@@ -359,6 +359,7 @@ class UHIDDevice(object):
                           0,  # country
                           bytes(self._rdesc))  # rd_data[HID_MAX_DESCRIPTOR_SIZE]
 
+        logger.debug('creating kernel device')
         n = os.write(self._fd, buf)
         assert n == len(buf)
         self._ready = True
