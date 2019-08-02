@@ -28,6 +28,14 @@ from base import main, setUpModule, tearDownModule  # noqa
 import logging
 logger = logging.getLogger('hidtools.test.mouse')
 
+# workaround https://gitlab.freedesktop.org/libevdev/python-libevdev/issues/6
+try:
+    libevdev.EV_REL.REL_WHEEL_HI_RES
+except AttributeError:
+    libevdev.EV_REL.REL_WHEEL_HI_RES = libevdev.EV_REL.REL_0B
+    libevdev.EV_REL.REL_HWHEEL_HI_RES = libevdev.EV_REL.REL_0C
+
+
 
 class InvalidHIDCommunication(Exception):
     pass
@@ -678,7 +686,7 @@ class TestWheelMouse(BaseTest.TestMouse):
 
     def is_wheel_highres(self, uhdev):
         self.assertTrue(uhdev.evdev.has(libevdev.EV_REL.REL_WHEEL))
-        return uhdev.evdev.has(libevdev.EV_REL.REL_0B)
+        return uhdev.evdev.has(libevdev.EV_REL.REL_WHEEL_HI_RES)
 
     def test_wheel(self):
         uhdev = self.uhdev
@@ -695,7 +703,7 @@ class TestWheelMouse(BaseTest.TestMouse):
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL, 1))
         if high_res_wheel:
-            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, 120))
+            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, 120))
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
@@ -704,7 +712,7 @@ class TestWheelMouse(BaseTest.TestMouse):
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL, -1))
         if high_res_wheel:
-            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, -120))
+            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, -120))
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
@@ -715,7 +723,7 @@ class TestWheelMouse(BaseTest.TestMouse):
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_Y, 2))
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL, 3))
         if high_res_wheel:
-            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, 360))
+            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, 360))
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
@@ -778,7 +786,7 @@ class TestTwoWheelMouse(TestWheelMouse):
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_Y, 2))
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL, -3))
         if high_res_wheel:
-            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, -360))
+            expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, -360))
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_HWHEEL, 4))
         if high_res_wheel:
             expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0C, 480))
@@ -823,14 +831,14 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
 
         r = uhdev.event(0, 0, wheels=1)
         expected = [syn_event]
-        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, 120 / mult))
+        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, 120 / mult))
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
 
         r = uhdev.event(0, 0, wheels=-1)
         expected = [syn_event]
-        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, -120 / mult))
+        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, -120 / mult))
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEvents(expected, events)
@@ -838,7 +846,7 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_X, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_Y, -2))
-        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_0B, 120 / mult))
+        expected.append(libevdev.InputEvent(libevdev.EV_REL.REL_WHEEL_HI_RES, 120 / mult))
 
         for _ in range(mult - 1):
             r = uhdev.event(1, -2, wheels=1)
