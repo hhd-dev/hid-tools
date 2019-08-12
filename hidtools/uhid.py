@@ -447,7 +447,8 @@ class UHIDDevice(object):
     def _set_report(self, req, rnum, rtype, size, data):
         logger.debug('set report {} {} {} {} {} '.format(req, rnum, rtype, size, [f'{d:02x}' for d in data[:size]]))
         error = self.set_report(req, rnum, rtype, [int(x) for x in data[:size]])
-        self._call_set_report(req, error)
+        if self._ready:
+            self._call_set_report(req, error)
 
     def get_report(self, req, rnum, rtype):
         """
@@ -468,7 +469,8 @@ class UHIDDevice(object):
     def _get_report(self, req, rnum, rtype):
         logger.debug('get report {} {} {}'.format(req, rnum, rtype))
         error, data = self.get_report(req, rnum, rtype)
-        self._call_get_report(req, data, error)
+        if self._ready:
+            self._call_get_report(req, data, error)
 
     def output_report(self, data, size, rtype):
         """
