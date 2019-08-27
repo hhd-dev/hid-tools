@@ -217,6 +217,7 @@ class LEDKeyboard(ArrayKeyboard):
     def __init__(self, rdesc=report_descriptor, name=None, info=None):
         super().__init__(rdesc, name, info)
 
+
 # Some Primax manufactured keyboards set the Usage Page after having defined
 # some local Usages. It relies on the fact that the specification states that
 # Usages are to be concatenated with Usage Pages upon finding a Main item (see
@@ -466,6 +467,7 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
 class TestLEDKeyboard(BaseTest.TestKeyboard):
     def create_device(self):
         return LEDKeyboard()
+
 
 class TestPrimaxKeyboard(BaseTest.TestKeyboard):
     def create_device(self):

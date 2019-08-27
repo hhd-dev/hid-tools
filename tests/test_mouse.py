@@ -36,7 +36,6 @@ except AttributeError:
     libevdev.EV_REL.REL_HWHEEL_HI_RES = libevdev.EV_REL.REL_0C
 
 
-
 class InvalidHIDCommunication(Exception):
     pass
 
@@ -437,6 +436,7 @@ class BadResolutionMultiplierMouse(ResolutionMultiplierMouse):
         self.wheel_multiplier = 1
         self.hwheel_multiplier = 1
         return 32  # EPIPE
+
 
 class ResolutionMultiplierHWheelMouse(TwoWheelMouse):
     report_descriptor = [
