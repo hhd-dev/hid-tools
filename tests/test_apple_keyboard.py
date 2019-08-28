@@ -326,3 +326,111 @@ class TestAppleKeyboard(TestArrayKeyboard):
         self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
         self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 0)
         self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 0)
+
+    def test_multiple_fn_function_key_release_between(self):
+        """check for function key reliability with the fn key."""
+        uhdev = self.uhdev
+        syn_event = self.syn_event
+
+        # press F4
+        r = uhdev.event(['F4'])
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_DASHBOARD, 1))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_DASHBOARD], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_KBDILLUMUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 0)
+
+        # press Fn key
+        r = uhdev.send_fn_state(1)
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 1))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_DASHBOARD], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_KBDILLUMUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 1)
+
+        # keep F4 and press F6
+        r = uhdev.event(['F4', 'F6'])
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F6, 1))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_DASHBOARD], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_KBDILLUMUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 1)
+
+        # keep F4 and F6
+        r = uhdev.event(['F4', 'F6'])
+        expected = []
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_DASHBOARD], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_KBDILLUMUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 1)
+
+        # release Fn key and all keys
+        r = uhdev.send_fn_state(0)
+        r.extend(uhdev.event([]))
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_DASHBOARD, 0))
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F6, 0))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F4], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_DASHBOARD], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_F6], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_KBDILLUMUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 0)
+
+    def test_single_pageup_key_release_first(self):
+        """check for function key reliability with the [page] up key."""
+        uhdev = self.uhdev
+        syn_event = self.syn_event
+
+        r = uhdev.send_fn_state(1)
+        r.extend(uhdev.event(['UpArrow']))
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_PAGEUP, 1))
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 1))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_PAGEUP], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_UP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 1)
+
+        r = uhdev.send_fn_state(0)
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 0))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_PAGEUP], 1)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_UP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 0)
+
+        r = uhdev.event([])
+        expected = [syn_event]
+        expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_PAGEUP, 0))
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
+        self.assertInputEventsIn(expected, events)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_PAGEUP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_UP], 0)
+        self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_FN], 0)
