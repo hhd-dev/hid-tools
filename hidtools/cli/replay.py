@@ -155,7 +155,7 @@ def main():
             while True:
                 replay.replay_one_sequence()
     except PermissionError:
-        print('Insufficient permissions, please run me as root.')
+        print('Insufficient permissions, please run me as root.', file=sys.stderr)
     except KeyboardInterrupt:
         pass
 
