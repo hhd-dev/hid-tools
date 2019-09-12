@@ -102,14 +102,14 @@ class UHIDDevice(object):
         like udev events are processed correctly. There's no indicator of
         when to call :meth:`dispatch` yet, call it whenever you're idle.
 
-        :returns: the number of devices data was available on
+        :returns: True if data was processed, False otherwise
         """
         devices = cls._poll.poll(timeout)
         for fd, mask in devices:
             if mask & select.POLLIN:
                 fun = cls._polling_functions[fd]
                 fun()
-        return len(devices)
+        return bool(devices)
 
     @classmethod
     def _append_fd_to_poll(cls, fd, read_function, mask=select.POLLIN):
