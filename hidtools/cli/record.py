@@ -108,6 +108,8 @@ def main():
                     for idx, d in devices.values():
                         d.time_offset = device.time_offset
 
+    except PermissionError:
+        print('Insufficient permissions, please run me as root.', file=sys.stderr)
     except KeyboardInterrupt:
         pass
 
