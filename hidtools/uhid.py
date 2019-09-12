@@ -380,7 +380,7 @@ class UHIDDevice(object):
             # this ensures that the callbacks are called correctly
             poll = select.poll()
             poll.register(self._fd, select.POLLIN)
-            if poll.poll(100):
+            while poll.poll(100):
                 fun = self._polling_functions[self._fd]
                 fun()
 
