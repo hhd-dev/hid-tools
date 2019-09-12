@@ -104,12 +104,16 @@ class UHIDDevice(object):
 
         :returns: True if data was processed, False otherwise
         """
+        had_data = False
         devices = cls._poll.poll(timeout)
-        for fd, mask in devices:
-            if mask & select.POLLIN:
-                fun = cls._polling_functions[fd]
-                fun()
-        return bool(devices)
+        while devices:
+            for fd, mask in devices:
+                if mask & select.POLLIN:
+                    fun = cls._polling_functions[fd]
+                    fun()
+            devices = cls._poll.poll(timeout)
+            had_data = True
+        return had_data
 
     @classmethod
     def _append_fd_to_poll(cls, fd, read_function, mask=select.POLLIN):
