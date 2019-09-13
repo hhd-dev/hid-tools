@@ -392,6 +392,8 @@ class UHIDDevice(object):
         self._remove_fd_from_poll(self._fd)
         os.close(self._fd)
         self._is_destroyed = True
+        self.device_nodes.clear()
+        self.hidraw_nodes.clear()
 
     def start(self, flags):
         """
