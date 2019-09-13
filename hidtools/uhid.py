@@ -19,6 +19,7 @@
 #
 
 import hidtools.hid
+import functools
 import os
 import pyudev
 import select
@@ -136,14 +137,12 @@ class UHIDDevice(object):
 
     @classmethod
     def _cls_udev_event_callback(cls):
-        event = cls._pyudev_monitor.poll()
+        for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
+            logger.debug(event)
 
-        if event is None:
-            return
-
-        for d in cls._devices:
-            if d.udev_device is not None and d.udev_device.sys_path in event.sys_path:
-                d._udev_event(event)
+            for d in cls._devices:
+                if d.udev_device is not None and d.udev_device.sys_path in event.sys_path:
+                    d._udev_event(event)
 
     def __init__(self):
         self._name = None
