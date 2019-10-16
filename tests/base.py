@@ -87,6 +87,8 @@ class UHIDTestDevice(UHIDDevice):
             type = 'Mouse'
         elif 'ID_INPUT_KEY' in device.properties:
             type = 'Key'
+        elif 'ID_INPUT_JOYSTICK' in device.properties:
+            type = 'Joystick'
         else:
             # abort, the device has not been processed by udev
             print('abort', devname, list(device.properties.items()))
