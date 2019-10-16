@@ -68,6 +68,10 @@ collections = {
     'PHYSICAL'			: 0,
     'APPLICATION'		: 1,
     'LOGICAL'			: 2,
+    'REPORT'			: 3,
+    'NAMED_ARRAY'		: 4,
+    'USAGE_SWITCH'		: 5,
+    'USAGE_MODIFIER'		: 6,
 }
 
 sensor_mods = {
@@ -1398,7 +1402,16 @@ class ReportDescriptor(object):
         elif item == "Collection":
             self._concatenate_usages()
 
-            c = INV_COLLECTIONS[value]
+            try:
+                c = INV_COLLECTIONS[value]
+            except KeyError:
+                if value in range(0x07, 0x7F):
+                    c = 'RESERVED'
+                elif value in range(0x80, 0xFF):
+                    c = 'VENDOR_DEFINED'
+                else:  # not supposed to happen
+                    raise
+
             try:
                 if c == 'PHYSICAL':
                     self.collection[1] += 1
@@ -1406,7 +1419,7 @@ class ReportDescriptor(object):
                 elif c == 'APPLICATION':
                     self.collection[0] += 1
                     self.glob.application = self.local.usages[-1]
-                else:  # 'LOGICAL'
+                elif c == 'LOGICAL':
                     self.collection[2] += 1
                     self.glob.logical = self.local.usages[-1]
             except IndexError:
