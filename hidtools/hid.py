@@ -844,7 +844,12 @@ class HidField(object):
 
         for idx in range(self.count):
             v = data[idx]
-            if self.usage_name not in ['Contact Id', 'Contact Max', 'Contact Count']:
+
+            if self.is_null:
+                # FIXME: handle the signed case too
+                if v >= (1 << self.size):
+                    raise RangeError(self, v)
+            elif self.usage_name not in ['Contact Id', 'Contact Max', 'Contact Count']:
                 if v < self.logical_min or v > self.logical_max:
                     raise RangeError(self, v)
             if self.logical_min < 0:
@@ -864,6 +869,13 @@ class HidField(object):
         ``True`` if this HID field is const
         """
         return self.type & (0x1 << 0)
+
+    @property
+    def is_null(self):
+        """
+        ``True`` if this HID field is null
+        """
+        return self.type & (0x1 << 6)
 
     @property
     def usage_page_name(self):
