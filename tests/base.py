@@ -76,20 +76,20 @@ class UHIDTestDevice(UHIDDevice):
 
         # associate the Input type to the matching HID application
         # we reuse the guess work from udev
-        type = None
+        types = []
         if 'ID_INPUT_TOUCHSCREEN' in device.properties:
-            type = 'Touch Screen'
-        elif 'ID_INPUT_TOUCHPAD' in device.properties:
-            type = 'Touch Pad'
-        elif 'ID_INPUT_TABLET' in device.properties:
-            type = 'Pen'
-        elif 'ID_INPUT_MOUSE' in device.properties:
-            type = 'Mouse'
-        elif 'ID_INPUT_KEY' in device.properties:
-            type = 'Key'
-        elif 'ID_INPUT_JOYSTICK' in device.properties:
-            type = 'Joystick'
-        else:
+            types.append('Touch Screen')
+        if 'ID_INPUT_TOUCHPAD' in device.properties:
+            types.append('Touch Pad')
+        if 'ID_INPUT_TABLET' in device.properties:
+            types.append('Pen')
+        if 'ID_INPUT_MOUSE' in device.properties:
+            types.append('Mouse')
+        if 'ID_INPUT_KEY' in device.properties:
+            types.append('Key')
+        if 'ID_INPUT_JOYSTICK' in device.properties:
+            types.append('Joystick')
+        if not types:
             # abort, the device has not been processed by udev
             print('abort', devname, list(device.properties.items()))
             return
@@ -101,7 +101,8 @@ class UHIDTestDevice(UHIDDevice):
         flag = fcntl.fcntl(fd, fcntl.F_GETFD)
         fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
-        self.input_nodes[type] = evdev
+        for type in types:
+            self.input_nodes[type] = evdev
 
     def open(self):
         self.opened = True
