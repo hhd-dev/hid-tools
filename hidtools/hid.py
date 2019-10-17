@@ -1386,14 +1386,19 @@ class ReportDescriptor(object):
         return cur
 
     def _concatenate_usages(self):
-        if self.local.usage_min_size <= 2:
-            self.local.usage_min |= self.glob.usage_page
-
         if self.local.usage_max and self.local.usage_max_size <= 2:
-            self.local.usage_max |= self.glob.usage_page
+            if self.local.usage_max & 0xFFFF0000 != self.glob.usage_page:
+                self.local.usage_max &= 0xFFFF
+                self.local.usage_max |= self.glob.usage_page
+                self.local.usage_min &= 0xFFFF
+                self.local.usage_min |= self.glob.usage_page
 
-        self.local.usages = [v | self.glob.usage_page if self.local.usage_sizes[i] <= 2 else v
-                             for i, v in enumerate(self.local.usages)]
+        for i, v in enumerate(self.local.usages):
+            if self.local.usage_sizes[i] > 2:
+                continue
+            if v & 0xFFFF0000 == self.glob.usage_page:
+                break
+            self.local.usages[i] = v & 0xFFFF | self.glob.usage_page
 
     def _parse_item(self, rdesc_item):
         # store current usage_page in rdesc_item
@@ -1444,17 +1449,26 @@ class ReportDescriptor(object):
             self.local.usage_max = 0
             self.local.usage_max_size = 0
         elif item == "Usage Minimum":
-            self.local.usage_min = value
+            if size <= 2:
+                self.local.usage_min = value | self.glob.usage_page
+            else:
+                self.local.usage_min = value
             self.local.usage_min_size = size
         elif item == "Usage Maximum":
-            self.local.usage_max = value
+            if size <= 2:
+                self.local.usage_max = value | self.glob.usage_page
+            else:
+                self.local.usage_max = value
             self.local.usage_max_size = size
         elif item == "Logical Minimum":
             self.glob.logical_min = value
         elif item == "Logical Maximum":
             self.glob.logical_max = value
         elif item == "Usage":
-            self.local.usages.append(value)
+            if size <= 2:
+                self.local.usages.append(value | self.glob.usage_page)
+            else:
+                self.local.usages.append(value)
             self.local.usage_sizes.append(size)
         elif item == "Report Count":
             self.glob.count = value
