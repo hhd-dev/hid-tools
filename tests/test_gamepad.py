@@ -45,7 +45,7 @@ class BaseGamepad(base.UHIDTestDevice):
         self.right = (127, 127)
         self.hat_switch = 15
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None, application='Joystick'):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None, application='Game Pad'):
         """
         Return an input report for this device.
 
@@ -117,7 +117,25 @@ class BaseGamepad(base.UHIDTestDevice):
         return [r]
 
 
-class SaitekGamepad(BaseGamepad):
+class JoystickGamepad(BaseGamepad):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+        """
+        Return an input report for this device.
+
+        :param left: a tuple of absolute (x, y) value of the left joypad
+            where ``None`` is "leave unchanged"
+        :param right: a tuple of absolute (x, y) value of the right joypad
+            where ``None`` is "leave unchanged"
+        :param hat_switch: an absolute angular value of the hat switch
+            where ``None`` is "leave unchanged"
+        :param buttons: a (0, 1, 2, 3) tuple of bools for the button states,
+            where ``None`` is "leave unchanged"
+        :param reportID: the numeric report ID for this report, if needed
+        """
+        return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Joystick')
+
+
+class SaitekGamepad(JoystickGamepad):
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x04,                    # Usage (Joystick)                    2
