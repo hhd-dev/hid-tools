@@ -55,15 +55,17 @@ class BaseGamepad(base.UHIDTestDevice):
             where ``None`` is "leave unchanged"
         :param hat_switch: an absolute angular value of the hat switch
             where ``None`` is "leave unchanged"
-        :param buttons: a (0, 1, 2, 3) tuple of bools for the button states,
+        :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         :param application: the application used to report the values
         """
         if buttons is not None:
-            for i, b in enumerate(buttons):
+            for i, b in buttons.items():
+                if i not in self.buttons:
+                    raise InvalidHIDCommunication(f'button {i} is not part of this {self.application}')
                 if b is not None:
-                    self._buttons[self.buttons.index(i + 1) + 1] = b
+                    self._buttons[i] = b
 
         def replace_none_in_tuple(item, default):
             if item is None:
@@ -109,7 +111,7 @@ class BaseGamepad(base.UHIDTestDevice):
             where ``None`` is "leave unchanged"
         :param hat_switch: an absolute angular value of the hat switch
             where ``None`` is "leave unchanged"
-        :param buttons: a (0, 1, 2, 3) tuple of bools for the button states,
+        :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
         """
         r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons)
@@ -128,7 +130,7 @@ class JoystickGamepad(BaseGamepad):
             where ``None`` is "leave unchanged"
         :param hat_switch: an absolute angular value of the hat switch
             where ``None`` is "leave unchanged"
-        :param buttons: a (0, 1, 2, 3) tuple of bools for the button states,
+        :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
@@ -451,30 +453,29 @@ class BaseTest:
             uhdev = self.uhdev
             syn_event = self.syn_event
 
-            buttons_map = [
-                'BTN_TRIGGER',  # corresponds to Button 1
-                'BTN_THUMB',
-                'BTN_THUMB2',
-                'BTN_TOP',
-                'BTN_TOP2',
-                'BTN_PINKIE',
-                'BTN_BASE',
-                'BTN_BASE2',
-                'BTN_BASE3',
-                'BTN_BASE4',
-                'BTN_BASE5',
-                'BTN_BASE6',
-                'BTN_DEAD',
-            ]
+            buttons_map = {
+                1: 'BTN_TRIGGER',
+                2: 'BTN_THUMB',
+                3: 'BTN_THUMB2',
+                4: 'BTN_TOP',
+                5: 'BTN_TOP2',
+                6: 'BTN_PINKIE',
+                7: 'BTN_BASE',
+                8: 'BTN_BASE2',
+                9: 'BTN_BASE3',
+                10: 'BTN_BASE4',
+                11: 'BTN_BASE5',
+                12: 'BTN_BASE6',
+                13: 'BTN_DEAD',
+            }
 
             # first send an empty report to initialize the axes
             r = uhdev.event()
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
 
-            for button in uhdev.buttons:
-                buttons = [None] * (max(uhdev.buttons))
-                b = button - 1  # buttons are 1-indexed
+            for b in uhdev.buttons:
+                buttons = {}
                 key = libevdev.evbit(buttons_map[b])
 
                 buttons[b] = True
@@ -494,7 +495,7 @@ class BaseTest:
                 self.assertInputEventsIn((syn_event, expected_event), events)
                 self.assertEqual(uhdev.evdev.value[key], 0)
 
-            r = uhdev.event(buttons=(True, True))
+            r = uhdev.event(buttons={1: True, 2: True})
             expected_event0 = libevdev.InputEvent(libevdev.EV_KEY.BTN_TRIGGER, 1)
             expected_event1 = libevdev.InputEvent(libevdev.EV_KEY.BTN_THUMB, 1)
             events = uhdev.next_sync_events()
@@ -503,7 +504,7 @@ class BaseTest:
             self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_TRIGGER], 1)
             self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_THUMB], 1)
 
-            r = uhdev.event(buttons=(False, None))
+            r = uhdev.event(buttons={1: False, 2: None})
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_TRIGGER, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
@@ -511,7 +512,7 @@ class BaseTest:
             self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_THUMB], 1)
             self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_TRIGGER], 0)
 
-            r = uhdev.event(buttons=(None, False))
+            r = uhdev.event(buttons={1: None, 2: False})
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_THUMB, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
