@@ -36,6 +36,24 @@ class GamepadData(object):
 
 
 class BaseGamepad(base.UHIDTestDevice):
+    buttons_map = {
+        1:  'BTN_SOUTH',
+        2:  'BTN_EAST',
+        3:  'BTN_C',
+        4:  'BTN_NORTH',
+        5:  'BTN_WEST',
+        6:  'BTN_Z',
+        7:  'BTN_TL',
+        8:  'BTN_TR',
+        9:  'BTN_TL2',
+        10: 'BTN_TR2',
+        11: 'BTN_SELECT',
+        12: 'BTN_START',
+        13: 'BTN_MODE',
+        14: 'BTN_THUMBL',
+        15: 'BTN_THUMBR',
+    }
+
     def __init__(self, rdesc, name=None, info=None):
         assert rdesc is not None
         super().__init__(name, 'Joystick', info=info, rdesc=rdesc)
@@ -120,6 +138,21 @@ class BaseGamepad(base.UHIDTestDevice):
 
 
 class JoystickGamepad(BaseGamepad):
+    buttons_map = {
+        1:  'BTN_TRIGGER',
+        2:  'BTN_THUMB',
+        3:  'BTN_THUMB2',
+        4:  'BTN_TOP',
+        5:  'BTN_TOP2',
+        6:  'BTN_PINKIE',
+        7:  'BTN_BASE',
+        8:  'BTN_BASE2',
+        9:  'BTN_BASE3',
+        10: 'BTN_BASE4',
+        11: 'BTN_BASE5',
+        12: 'BTN_BASE6',
+        13: 'BTN_DEAD',
+    }
     def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
         """
         Return an input report for this device.
@@ -446,28 +479,108 @@ class SaitekGamepad(JoystickGamepad):
         self.buttons = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 
 
+class AsusGamepad(BaseGamepad):
+    report_descriptor = [
+        0x05, 0x01,                    # Usage Page (Generic Desktop)        0
+        0x09, 0x05,                    # Usage (Game Pad)                    2
+        0xa1, 0x01,                    # Collection (Application)            4
+        0x85, 0x01,                    #  Report ID (1)                      6
+        0x05, 0x09,                    #  Usage Page (Button)                8
+        0x0a, 0x01, 0x00,              #  Usage (Vendor Usage 0x01)          10
+        0x0a, 0x02, 0x00,              #  Usage (Vendor Usage 0x02)          13
+        0x0a, 0x04, 0x00,              #  Usage (Vendor Usage 0x04)          16
+        0x0a, 0x05, 0x00,              #  Usage (Vendor Usage 0x05)          19
+        0x0a, 0x07, 0x00,              #  Usage (Vendor Usage 0x07)          22
+        0x0a, 0x08, 0x00,              #  Usage (Vendor Usage 0x08)          25
+        0x0a, 0x0e, 0x00,              #  Usage (Vendor Usage 0x0e)          28
+        0x0a, 0x0f, 0x00,              #  Usage (Vendor Usage 0x0f)          31
+        0x0a, 0x0d, 0x00,              #  Usage (Vendor Usage 0x0d)          34
+        0x05, 0x0c,                    #  Usage Page (Consumer Devices)      37
+        0x0a, 0x24, 0x02,              #  Usage (AC Back)                    39
+        0x0a, 0x23, 0x02,              #  Usage (AC Home)                    42
+        0x15, 0x00,                    #  Logical Minimum (0)                45
+        0x25, 0x01,                    #  Logical Maximum (1)                47
+        0x75, 0x01,                    #  Report Size (1)                    49
+        0x95, 0x0b,                    #  Report Count (11)                  51
+        0x81, 0x02,                    #  Input (Data,Var,Abs)               53
+        0x75, 0x01,                    #  Report Size (1)                    55
+        0x95, 0x01,                    #  Report Count (1)                   57
+        0x81, 0x03,                    #  Input (Cnst,Var,Abs)               59
+        0x05, 0x01,                    #  Usage Page (Generic Desktop)       61
+        0x75, 0x04,                    #  Report Size (4)                    63
+        0x95, 0x01,                    #  Report Count (1)                   65
+        0x25, 0x07,                    #  Logical Maximum (7)                67
+        0x46, 0x3b, 0x01,              #  Physical Maximum (315)             69
+        0x66, 0x14, 0x00,              #  Unit (Degrees,EngRotation)         72
+        0x09, 0x39,                    #  Usage (Hat switch)                 75
+        0x81, 0x42,                    #  Input (Data,Var,Abs,Null)          77
+        0x66, 0x00, 0x00,              #  Unit (None)                        79
+        0x09, 0x01,                    #  Usage (Pointer)                    82
+        0xa1, 0x00,                    #  Collection (Physical)              84
+        0x09, 0x30,                    #   Usage (X)                         86
+        0x09, 0x31,                    #   Usage (Y)                         88
+        0x09, 0x32,                    #   Usage (Z)                         90
+        0x09, 0x35,                    #   Usage (Rz)                        92
+        0x05, 0x02,                    #   Usage Page (Simulation Controls)  94
+        0x09, 0xc5,                    #   Usage (Brake)                     96
+        0x09, 0xc4,                    #   Usage (Accelerator)               98
+        0x15, 0x00,                    #   Logical Minimum (0)               100
+        0x26, 0xff, 0x00,              #   Logical Maximum (255)             102
+        0x35, 0x00,                    #   Physical Minimum (0)              105
+        0x46, 0xff, 0x00,              #   Physical Maximum (255)            107
+        0x75, 0x08,                    #   Report Size (8)                   110
+        0x95, 0x06,                    #   Report Count (6)                  112
+        0x81, 0x02,                    #   Input (Data,Var,Abs)              114
+        0xc0,                          #  End Collection                     116
+        0x85, 0x02,                    #  Report ID (2)                      117
+        0x05, 0x08,                    #  Usage Page (LEDs)                  119
+        0x0a, 0x01, 0x00,              #  Usage (Num Lock)                   121
+        0x0a, 0x02, 0x00,              #  Usage (Caps Lock)                  124
+        0x0a, 0x03, 0x00,              #  Usage (Scroll Lock)                127
+        0x0a, 0x04, 0x00,              #  Usage (Compose)                    130
+        0x15, 0x00,                    #  Logical Minimum (0)                133
+        0x25, 0x01,                    #  Logical Maximum (1)                135
+        0x75, 0x01,                    #  Report Size (1)                    137
+        0x95, 0x04,                    #  Report Count (4)                   139
+        0x91, 0x02,                    #  Output (Data,Var,Abs)              141
+        0x75, 0x04,                    #  Report Size (4)                    143
+        0x95, 0x01,                    #  Report Count (1)                   145
+        0x91, 0x03,                    #  Output (Cnst,Var,Abs)              147
+        0xc0,                          # End Collection                      149
+        0x05, 0x0c,                    # Usage Page (Consumer Devices)       150
+        0x09, 0x01,                    # Usage (Consumer Control)            152
+        0xa1, 0x01,                    # Collection (Application)            154
+        0x85, 0x03,                    #  Report ID (3)                      156
+        0x05, 0x01,                    #  Usage Page (Generic Desktop)       158
+        0x09, 0x06,                    #  Usage (Keyboard)                   160
+        0xa1, 0x02,                    #  Collection (Logical)               162
+        0x05, 0x06,                    #   Usage Page (Generic Device Controls) 164
+        0x09, 0x20,                    #   Usage (Battery Strength)          166
+        0x15, 0x00,                    #   Logical Minimum (0)               168
+        0x26, 0xff, 0x00,              #   Logical Maximum (255)             170
+        0x75, 0x08,                    #   Report Size (8)                   173
+        0x95, 0x01,                    #   Report Count (1)                  175
+        0x81, 0x02,                    #   Input (Data,Var,Abs)              177
+        0x06, 0xbc, 0xff,              #   Usage Page (Vendor Usage Page 0xffbc) 179
+        0x0a, 0xad, 0xbd,              #   Usage (Vendor Usage 0xbdad)       182
+        0x75, 0x08,                    #   Report Size (8)                   185
+        0x95, 0x06,                    #   Report Count (6)                  187
+        0x81, 0x02,                    #   Input (Data,Var,Abs)              189
+        0xc0,                          #  End Collection                     191
+        0xc0,                          # End Collection                      192
+    ]
+
+    def __init__(self, rdesc=report_descriptor, name=None):
+        super().__init__(rdesc, name, (3, 0x18d1, 0x2c40))
+        self.buttons = (1, 2, 4, 5, 7, 8, 14, 15, 13)
+
+
 class BaseTest:
     class TestGamepad(base.BaseTestCase.TestUhid):
         def test_buttons(self):
             """check for button reliability."""
             uhdev = self.uhdev
             syn_event = self.syn_event
-
-            buttons_map = {
-                1: 'BTN_TRIGGER',
-                2: 'BTN_THUMB',
-                3: 'BTN_THUMB2',
-                4: 'BTN_TOP',
-                5: 'BTN_TOP2',
-                6: 'BTN_PINKIE',
-                7: 'BTN_BASE',
-                8: 'BTN_BASE2',
-                9: 'BTN_BASE3',
-                10: 'BTN_BASE4',
-                11: 'BTN_BASE5',
-                12: 'BTN_BASE6',
-                13: 'BTN_DEAD',
-            }
 
             # first send an empty report to initialize the axes
             r = uhdev.event()
@@ -476,7 +589,7 @@ class BaseTest:
 
             for b in uhdev.buttons:
                 buttons = {}
-                key = libevdev.evbit(buttons_map[b])
+                key = libevdev.evbit(uhdev.buttons_map[b])
 
                 buttons[b] = True
                 r = uhdev.event(buttons=buttons)
@@ -487,7 +600,6 @@ class BaseTest:
                 self.assertEqual(uhdev.evdev.value[key], 1)
 
                 buttons[b] = False
-
                 r = uhdev.event(buttons=buttons)
                 expected_event = libevdev.InputEvent(key, 0)
                 events = uhdev.next_sync_events()
@@ -495,36 +607,50 @@ class BaseTest:
                 self.assertInputEventsIn((syn_event, expected_event), events)
                 self.assertEqual(uhdev.evdev.value[key], 0)
 
-            r = uhdev.event(buttons={1: True, 2: True})
-            expected_event0 = libevdev.InputEvent(libevdev.EV_KEY.BTN_TRIGGER, 1)
-            expected_event1 = libevdev.InputEvent(libevdev.EV_KEY.BTN_THUMB, 1)
+            # can change intended b1 b2 values
+            b1 = uhdev.buttons[0]
+            key1 = libevdev.evbit(uhdev.buttons_map[b1])
+            b2 = uhdev.buttons[1]
+            key2 = libevdev.evbit(uhdev.buttons_map[b2])
+
+            buttons = {b1: True, b2: True}
+            r = uhdev.event(buttons=buttons)
+            expected_event0 = libevdev.InputEvent(key1, 1)
+            expected_event1 = libevdev.InputEvent(key2, 1)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event0, expected_event1), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_TRIGGER], 1)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_THUMB], 1)
+            self.assertEqual(uhdev.evdev.value[key1], 1)
+            self.assertEqual(uhdev.evdev.value[key2], 1)
 
-            r = uhdev.event(buttons={1: False, 2: None})
-            expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_TRIGGER, 0)
+            buttons = {b1: False, b2: None}
+            r = uhdev.event(buttons=buttons)
+            r = uhdev.event(buttons={b1: False, b2: None})
+            expected_event = libevdev.InputEvent(key1, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_THUMB], 1)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_TRIGGER], 0)
+            self.assertEqual(uhdev.evdev.value[key1], 0)
+            self.assertEqual(uhdev.evdev.value[key2], 1)
 
-            r = uhdev.event(buttons={1: None, 2: False})
-            expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_THUMB, 0)
+            buttons = {b1: None, b2: False}
+            r = uhdev.event(buttons=buttons)
+            expected_event = libevdev.InputEvent(key2, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_THUMB], 0)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_TRIGGER], 0)
+            self.assertEqual(uhdev.evdev.value[key1], 0)
+            self.assertEqual(uhdev.evdev.value[key2], 0)
 
 
 class TestSaitekGamepad(BaseTest.TestGamepad):
     def create_device(self):
         return SaitekGamepad()
 
+
+class TestAsusGamepad(BaseTest.TestGamepad):
+    def create_device(self):
+        return AsusGamepad()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
