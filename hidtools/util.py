@@ -28,7 +28,7 @@ def twos_comp(val, bits):
     :param int bits:
         size of val in bits
     """
-    if (val & (1 << (bits - 1))) != 0:
+    if bits and (val & (1 << (bits - 1))) != 0:
         val = val - (1 << bits)
     return val
 
