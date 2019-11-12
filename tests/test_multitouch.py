@@ -129,9 +129,9 @@ class Digitizer(base.UHIDTestDevice):
         self.cur_application = application
 
         for features in self.parsed_rdesc.feature_reports.values():
-                for feature in features:
-                    if feature.usage_name == 'Inputmode':
-                        self.cur_application = 'Mouse'
+            for feature in features:
+                if feature.usage_name == 'Inputmode':
+                    self.cur_application = 'Mouse'
 
         self.fields = []
         for r in self.parsed_rdesc.input_reports.values():
@@ -476,10 +476,10 @@ class BaseTest:
                 return default
 
             if 'SLOT_IS_CONTACTID' in uhdev.quirks:
-                    return t.contactid
+                return t.contactid
 
             if 'SLOT_IS_CONTACTID_MINUS_ONE' in uhdev.quirks:
-                    return t.contactid - 1
+                return t.contactid - 1
 
             return default
 
@@ -1510,31 +1510,31 @@ class TestWin8TSConfidence(BaseTest.TestWin8Multitouch):
     @skipIfUHDev(lambda uhdev: 'Confidence' not in uhdev.fields,
                  'Device not compatible, missing Confidence usage')
     def test_mt_confidence_bad_release(self):
-            """Check for the validity of the confidence bit.
-            When a contact is marked as not confident, it should be detected
-            as a palm from the kernel POV and released.
+        """Check for the validity of the confidence bit.
+        When a contact is marked as not confident, it should be detected
+        as a palm from the kernel POV and released.
 
-            Note: if the kernel exports ABS_MT_TOOL_TYPE, it shouldn't release
-            the touch but instead convert it to ABS_MT_TOOL_PALM."""
-            uhdev = self.uhdev
+        Note: if the kernel exports ABS_MT_TOOL_TYPE, it shouldn't release
+        the touch but instead convert it to ABS_MT_TOOL_PALM."""
+        uhdev = self.uhdev
 
-            t0 = Touch(1, 150, 200)
-            r = uhdev.event([t0])
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
+        t0 = Touch(1, 150, 200)
+        r = uhdev.event([t0])
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
 
-            t0.confidence = False
-            t0.tipswitch = False
-            r = uhdev.event([t0])
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
+        t0.confidence = False
+        t0.tipswitch = False
+        r = uhdev.event([t0])
+        events = uhdev.next_sync_events()
+        self.debug_reports(r, uhdev, events)
 
-            if uhdev.evdev.absinfo[libevdev.EV_ABS.ABS_MT_TOOL_TYPE] is not None:
-                # the kernel exports MT_TOOL_PALM
-                self.assertIn(libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_TOOL_TYPE, 2), events)
+        if uhdev.evdev.absinfo[libevdev.EV_ABS.ABS_MT_TOOL_TYPE] is not None:
+            # the kernel exports MT_TOOL_PALM
+            self.assertIn(libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_TOOL_TYPE, 2), events)
 
-            self.assertIn(libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0), events)
-            self.assertEqual(uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_TRACKING_ID], -1)
+        self.assertIn(libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0), events)
+        self.assertEqual(uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_TRACKING_ID], -1)
 
 
 class TestElanXPS9360(BaseTest.TestWin8Multitouch):
