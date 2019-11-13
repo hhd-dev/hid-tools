@@ -1393,7 +1393,7 @@ class ReportDescriptor(object):
                 self.local.usage_min &= 0xFFFF
                 self.local.usage_min |= self.glob.usage_page
 
-        for i, v in enumerate(self.local.usages):
+        for i, v in reversed(list(enumerate(self.local.usages))):
             if self.local.usage_sizes[i] > 2:
                 continue
             if v & 0xFFFF0000 == self.glob.usage_page:
