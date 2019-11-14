@@ -267,7 +267,7 @@ class HidrawDevice(object):
                     indent_2nd_line = slash + 1
             indent = f'\n#{" " * indent_2nd_line}'
             output = indent.join(output.split('\n'))
-            print(f'# {output}')
+            print(f'# {output}', file=file)
 
         data = map(lambda x: f'{x:02x}', event.bytes)
         print(f'E: {event.sec:06d}.{event.usec:06d} {len(event.bytes)} {" ".join(data)}', file=file, flush=True)
