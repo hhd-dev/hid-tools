@@ -10,12 +10,13 @@ kernel tests can be run straight from the git repository. Where the tools
 need to be installed, it is recommended to use `pip`:
 
 ```
-$ pip3 install --user .
+$ sudo pip3 install .
 ```
 
-This installs all tools into the user-specifc Python paths. Skip the
-`--user` flag where it needs to be installed system-wide. Removal of the
-tools works with `pip` as well:
+This installs all tools into the system-wide Python path. hid-tools needs
+root access to the `/dev/hidraw` nodes, an installation in the user-specific
+paths will not usually work without further commandline tweaking
+configuration.  Removal of the tools works with `pip` as well:
 
 ```
 $ pip3 uninstall hid-tools
