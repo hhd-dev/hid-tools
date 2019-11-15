@@ -70,6 +70,8 @@ from the git repository. The most convenient invocation of the tests is by
 simply calling `pytest`.
 
 ```
+$ git clone https://gitlab.freedesktop.org/libevdev/hid-tools
+$ cd hid-tools
 $ sudo pytest-3
 ```
 
