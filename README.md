@@ -6,8 +6,16 @@ install hid-tools`.
 # Installation
 
 The `hid-tools` repository does not need to be installed, all tools and
-kernel tests can be run straight from the git repository. Where the tools
-need to be installed, it is recommended to use `pip`:
+kernel tests can be run straight from the git repository, for example the
+following commands clone the repository and run the `hid-recorder` tool.
+
+```
+$ git clone https://gitlab.freedesktop.org/libevdev/hid-tools
+$ cd hid-tools
+$ sudo ./hid-recorder
+```
+
+Where the tools need to be installed, it is recommended to use `pip`:
 
 ```
 $ sudo pip3 install .
