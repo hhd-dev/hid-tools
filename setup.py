@@ -11,8 +11,7 @@ class ManPageGenerator(install):
     def run(self):
         man_pages = self.pandocify()
         if man_pages:
-            entry = (os.path.join(self.prefix, 'share', 'man', 'man1'),
-                     man_pages)
+            entry = (os.path.join('share', 'man', 'man1'), man_pages)
             self.distribution.data_files.append(entry)
         super().run()
 
