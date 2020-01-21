@@ -21,10 +21,14 @@
 import hidtools.hid
 import functools
 import os
-import pyudev
 import select
 import struct
 import uuid
+
+try:
+    import pyudev
+except ImportError:
+    raise ImportError('UHID is not supported due to missing pyudev dependency')
 
 import logging
 logger = logging.getLogger('hidtools.hid.uhid')

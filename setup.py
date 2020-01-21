@@ -86,7 +86,11 @@ setup(name='hid-tools',
       data_files=[],  # man pages are added on success
       python_requires='>=3.6',
       include_package_data=True,
-      install_requires=['parse', 'pyudev', 'pyyaml'],
+      install_requires=['parse', 'pyyaml'],
+      extras_require={
+          'uhid': ['pyudev']
+      },
+      tests_require=['hid-tools[uhid]'],
       cmdclass=dict(
           install=ManPageGenerator,
       )

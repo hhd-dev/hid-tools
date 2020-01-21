@@ -46,7 +46,8 @@ $ sudo hid-recorder
 ## hid-replay
 
 `hid-replay` takes the output from `hid-recorder` and replays it through a
-virtual HID device that looks exactly like the one recorded.
+virtual HID device that looks exactly like the one recorded. `hid-replay`
+requires UHID support so make sure `pyudev` is installed.
 
 ```
 $ sudo hid-replay recording-file.hid
@@ -67,7 +68,8 @@ $ hid-decode /sys/class/input/event5/device/device/report_descriptor
 The `hid-tools` repository contains a number of tests exercising the kernel
 HID subsystem. The tests are not part of the `pip3` module and must be run
 from the git repository. The most convenient invocation of the tests is by
-simply calling `pytest`.
+simply calling `pytest`. The test suite requires UHID support so make sure
+`pyudev` is installed.
 
 ```
 $ git clone https://gitlab.freedesktop.org/libevdev/hid-tools
