@@ -24,6 +24,7 @@ import libevdev
 import os
 import resource
 import sys
+import time
 import unittest
 
 # FIXME: this is really wrong :)
@@ -248,7 +249,8 @@ class BaseTestCase:
             with self.create_device() as self.uhdev:
                 self._skip_conditions(self.uhdev)
                 self.uhdev.create_kernel_device()
-                while self.uhdev.application not in self.uhdev.input_nodes:
+                now = time.time()
+                while self.uhdev.application not in self.uhdev.input_nodes and time.time() - now < 5:
                     self.uhdev.dispatch(10)
                 self.assertIsNotNone(self.uhdev.evdev)
                 yield
