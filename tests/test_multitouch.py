@@ -226,7 +226,7 @@ class Digitizer(base.UHIDTestDevice):
 
 
 class PTP(Digitizer):
-    def __init__(self, name, type='Click Pad', rdesc_str=None, rdesc=None, application='Touch Pad', physical='Pointer', max_contacts=None):
+    def __init__(self, name, type='Click Pad', rdesc_str=None, rdesc=None, application='Touch Pad', physical='Pointer', max_contacts=None, info=None):
         self.type = type.lower().replace(' ', '')
         if self.type == 'clickpad':
             self.buttontype = 0
@@ -235,7 +235,7 @@ class PTP(Digitizer):
         self.clickpad_state = False
         self.left_state = False
         self.right_state = False
-        super().__init__(name, rdesc_str, rdesc, application, physical, max_contacts)
+        super().__init__(name, rdesc_str, rdesc, application, physical, max_contacts, info)
 
     def event(self, slots=None, click=None, left=None, right=None, contact_count=None, incr_scantime=True):
         # update our internal state
