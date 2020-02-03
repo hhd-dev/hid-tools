@@ -187,7 +187,7 @@ class BaseTestCase:
                 self.assertEqual(self.__taint, taint)
 
     class TestUhid(ContextTest):
-        syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT, 0)
+        syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)
         key_event = libevdev.InputEvent(libevdev.EV_KEY)
         abs_event = libevdev.InputEvent(libevdev.EV_ABS)
         rel_event = libevdev.InputEvent(libevdev.EV_REL)
