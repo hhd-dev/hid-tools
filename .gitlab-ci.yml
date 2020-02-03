@@ -13,7 +13,10 @@ variables:
 flake:
   extends: .default_setup
   script:
-    - python3 setup.py flake8
+    # The proper way is to run:
+    # python3 setup.py flake8
+    # but we want to also check the `tests` folder, so call flake8 directly
+    - flake8
 
 install:
   extends: .default_setup
