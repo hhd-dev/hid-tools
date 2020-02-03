@@ -67,7 +67,7 @@ class UHIDTestDevice(UHIDDevice):
         of the same type and we need to filter based on the actual evdev
         node.
 
-        returning True will append the corresponding report to 
+        returning True will append the corresponding report to
         `self.input_nodes[type]`
         returning False  will ignore this report for the device.
         '''
