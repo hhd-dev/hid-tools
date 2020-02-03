@@ -54,9 +54,9 @@ class BaseGamepad(base.UHIDTestDevice):
         15: 'BTN_THUMBR',
     }
 
-    def __init__(self, rdesc, name=None, info=None):
+    def __init__(self, rdesc, name=None, input_info=None):
         assert rdesc is not None
-        super().__init__(name, 'Joystick', info=info, rdesc=rdesc)
+        super().__init__(name, 'Joystick', input_info=input_info, rdesc=rdesc)
         self.buttons = (1, 2, 3)
         self._buttons = {}
         self.left = (127, 127)

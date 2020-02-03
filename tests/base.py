@@ -40,16 +40,16 @@ logger = logging.getLogger('hidtools.test.base')
 
 
 class UHIDTestDevice(UHIDDevice):
-    def __init__(self, name, application, rdesc_str=None, rdesc=None, info=None):
+    def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
         if rdesc_str is None and rdesc is None:
             raise Exception('Please provide at least a rdesc or rdesc_str')
         super().__init__()
         if name is None:
             name = f'uhid test {self.__class__.__name__}'
-        if info is None:
-            info = (3, 1, 2)
+        if input_info is None:
+            input_info = (3, 1, 2)
         self.name = name
-        self.info = info
+        self.info = input_info
         self.default_reportID = None
         if not name.startswith('uhid test '):
             self.name = 'uhid test ' + self.name

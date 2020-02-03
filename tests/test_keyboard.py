@@ -37,9 +37,9 @@ class KeyboardData(object):
 
 
 class BaseKeyboard(base.UHIDTestDevice):
-    def __init__(self, rdesc, name=None, info=None):
+    def __init__(self, rdesc, name=None, input_info=None):
         assert rdesc is not None
-        super().__init__(name, 'Key', info=info, rdesc=rdesc)
+        super().__init__(name, 'Key', input_info=input_info, rdesc=rdesc)
         self.keystates = {}
 
     def _update_key_state(self, keys):
@@ -121,8 +121,8 @@ class PlainKeyboard(BaseKeyboard):
         0xc0,                          # End Collection
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
         self.default_reportID = 1
 
 
@@ -150,8 +150,8 @@ class ArrayKeyboard(BaseKeyboard):
         0xc0,                          # End Collection
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
 
     def _create_report_data(self):
         keyboard = KeyboardData()
@@ -214,8 +214,8 @@ class LEDKeyboard(ArrayKeyboard):
         0xc0,                          # End Collection
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
 
 
 # Some Primax manufactured keyboards set the Usage Page after having defined
@@ -258,8 +258,8 @@ class PrimaxKeyboard(ArrayKeyboard):
         0xC0,                          # End Collection
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
 
 
 class BaseTest:

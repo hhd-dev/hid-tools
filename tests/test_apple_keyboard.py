@@ -148,8 +148,8 @@ class AppleKeyboard(ArrayKeyboard):
     def __init__(self,
                  rdesc=report_descriptor,
                  name='Apple Wireless Keyboard',
-                 info=(0x5, 0x05ac, 0x0256)):
-        super().__init__(rdesc, name, info)
+                 input_info=(0x5, 0x05ac, 0x0256)):
+        super().__init__(rdesc, name, input_info)
         self.default_reportID = 1
 
     def send_fn_state(self, state):

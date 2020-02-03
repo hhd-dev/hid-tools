@@ -45,9 +45,9 @@ class MouseData(object):
 
 
 class BaseMouse(base.UHIDTestDevice):
-    def __init__(self, rdesc, name=None, info=None):
+    def __init__(self, rdesc, name=None, input_info=None):
         assert rdesc is not None
-        super().__init__(name, 'Mouse', info=info, rdesc=rdesc)
+        super().__init__(name, 'Mouse', input_info=input_info, rdesc=rdesc)
         self.left = False
         self.right = False
         self.middle = False
@@ -147,8 +147,8 @@ class ButtonMouse(BaseMouse):
         0xc0,        # .End Collection                      54
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
 
     def fake_report(self, x, y, buttons):
         if buttons is not None:
@@ -208,8 +208,8 @@ class WheelMouse(ButtonMouse):
         0xc0,        # End Collection                      61
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
         self.wheel_multiplier = 1
 
 
@@ -250,8 +250,8 @@ class TwoWheelMouse(WheelMouse):
         0xc0,              # End Collection                      66
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
         self.hwheel_multiplier = 1
 
 
@@ -325,11 +325,11 @@ class MIDongleMIWirelessMouse(TwoWheelMouse):
         0x81, 0x06,         # .Input (Data,Var,Rel)
         0xc0,               # End Collection
     ]
-    device_info = (0x3, 0x2717, 0x003b)
+    device_input_info = (0x3, 0x2717, 0x003b)
     device_name = "uhid test MI Dongle MI Wireless Mouse"
 
-    def __init__(self, rdesc=report_descriptor, name=device_name, info=device_info):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=device_name, input_info=device_input_info):
+        super().__init__(rdesc, name, input_info)
 
     def event(self, x, y, buttons=None, wheels=None):
         # this mouse spreads the relative pointer and the mouse buttons
@@ -406,8 +406,8 @@ class ResolutionMultiplierMouse(TwoWheelMouse):
         0xc0,              # End Collection                      195
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
         self.default_reportID = 0x11
 
         # Feature Report 12, multiplier Feature value must be set to 0b01,
@@ -515,8 +515,8 @@ class ResolutionMultiplierHWheelMouse(TwoWheelMouse):
         0xc0,               # End Collection                      147
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, info=None):
-        super().__init__(rdesc, name, info)
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
+        super().__init__(rdesc, name, input_info)
         self.default_reportID = 0x1a
 
         # Feature Report 12, multiplier Feature value must be set to 0b0101,
