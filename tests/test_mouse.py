@@ -22,11 +22,10 @@ import base
 import libevdev
 import sys
 import hidtools.hid
-import unittest
+import pytest
 from base import main, setUpModule, tearDownModule  # noqa
 
 import logging
-import pytest
 logger = logging.getLogger('hidtools.test.mouse')
 
 # workaround https://gitlab.freedesktop.org/libevdev/python-libevdev/issues/6
@@ -814,7 +813,7 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
         uhdev = self.uhdev
 
         if not self.is_wheel_highres(uhdev):
-            raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
+            pytest.skip('Kernel not compatible, we can not trigger the conditions')
 
         assert uhdev.wheel_multiplier > 1
         assert 120 % uhdev.wheel_multiplier == 0
@@ -823,7 +822,7 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
         uhdev = self.uhdev
 
         if not self.is_wheel_highres(uhdev):
-            raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
+            pytest.skip('Kernel not compatible, we can not trigger the conditions')
 
         assert uhdev.wheel_multiplier > 1
 
@@ -897,7 +896,7 @@ class TestResolutionMultiplierHWheelMouse(TestResolutionMultiplierMouse):
         uhdev = self.uhdev
 
         if not self.is_hwheel_highres(uhdev):
-            raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
+            pytest.skip('Kernel not compatible, we can not trigger the conditions')
 
         assert uhdev.hwheel_multiplier > 1
         assert 120 % uhdev.hwheel_multiplier == 0
@@ -906,7 +905,7 @@ class TestResolutionMultiplierHWheelMouse(TestResolutionMultiplierMouse):
         uhdev = self.uhdev
 
         if not self.is_hwheel_highres(uhdev):
-            raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
+            pytest.skip('Kernel not compatible, we can not trigger the conditions')
 
         assert uhdev.hwheel_multiplier > 1
 
