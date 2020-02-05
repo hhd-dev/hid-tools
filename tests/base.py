@@ -307,12 +307,22 @@ class BaseTestCase:
             if skip_test_if_uhdev(self.uhdev):
                 self.skipTest(method.skip_test_if_uhdev_reason)
 
+        def uhdev_is_ready(self):
+            '''Can be overwritten in subclasses to add extra conditions
+            on when to consider a UHID device ready. This can be:
+            - we need to wait on different types of input devices to be ready
+              (Touch Screen and Pen for example)
+            - we need to have at least 4 LEDs present
+              (len(self.uhdev.leds_classes) == 4)
+            - or any other combinations'''
+            return self.uhdev.application in self.uhdev.input_nodes
+
         def context(self):
             with self.create_device() as self.uhdev:
                 self._skip_conditions(self.uhdev)
                 self.uhdev.create_kernel_device()
                 now = time.time()
-                while self.uhdev.application not in self.uhdev.input_nodes and time.time() - now < 5:
+                while not self.uhdev_is_ready() and time.time() - now < 5:
                     self.uhdev.dispatch(10)
                 self.assertIsNotNone(self.uhdev.evdev)
                 yield
