@@ -21,9 +21,6 @@
 # This is for generic devices
 
 import base
-import sys
-from base import main
-
 import logging
 logger = logging.getLogger('hidtools.test.hid')
 
@@ -148,7 +145,3 @@ class TestCollectionOverflow(base.BaseTestCase.TestUhid):
             HID: core: replace the collection tree pointers with indices
         '''
         pass
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

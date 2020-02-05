@@ -18,12 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from base import main
 from test_keyboard import ArrayKeyboard, TestArrayKeyboard
 
 import libevdev
 import logging
-import sys
 logger = logging.getLogger('hidtools.test.ite-keyboard')
 
 
@@ -165,7 +163,3 @@ class TestITEKeyboard(TestArrayKeyboard):
         # call events = uhdev.next_sync_events()
         self.debug_reports([], uhdev, events)
         self.assertInputEventsIn(expected, events)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

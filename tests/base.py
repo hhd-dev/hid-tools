@@ -18,12 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import argparse
 import fcntl
 import libevdev
 import os
 import pathlib
-import resource
 import sys
 import time
 import unittest
@@ -356,26 +354,3 @@ def create_udev_rule(uuid):
 def teardown_udev_rule(uuid):
     os.remove(f'/run/udev/rules.d/91-uhid-test-device-REMOVEME-{uuid}.rules')
     reload_udev_rules()
-
-
-def parse(input_string):
-    parser_test = argparse.ArgumentParser("Testsuite for hid devices")
-    ns, rest = parser_test.parse_known_args(input_string)
-    return rest
-
-
-def main(argv):
-    if not os.geteuid() == 0:
-        sys.exit('Script must be run as root')
-
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-
-    args = parse(argv)
-
-    unittest.main(argv=[sys.argv[0], *args])
-
-
-if __name__ == '__main__':
-    from test_mouse import *  # noqa
-    from test_multitouch import *  # noqa
-    main(sys.argv[1:])

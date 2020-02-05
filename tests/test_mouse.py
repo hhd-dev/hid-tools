@@ -19,13 +19,11 @@
 #
 
 import base
-import libevdev
-import sys
 import hidtools.hid
-import pytest
-from base import main
-
+import libevdev
 import logging
+import pytest
+
 logger = logging.getLogger('hidtools.test.mouse')
 
 # workaround https://gitlab.freedesktop.org/libevdev/python-libevdev/issues/6
@@ -959,7 +957,3 @@ class TestMiMouse(TestWheelMouse):
             # assert below print out the real error
             pass
         assert remaining == []
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

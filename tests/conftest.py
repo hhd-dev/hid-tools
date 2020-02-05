@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
 import pytest
 import resource
 import uuid
@@ -38,8 +37,3 @@ def udev_rules_setup():
 @pytest.fixture(autouse=True, scope='session')
 def setup_rlimit():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-
-
-@pytest.fixture(autouse=True, scope='session')
-def setup_environ_var():
-    os.environ['PYTEST_RUNNING'] = '1'

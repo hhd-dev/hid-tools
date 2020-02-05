@@ -19,12 +19,10 @@
 #
 
 import base
-import libevdev
-import sys
 import hidtools.hid
-from base import main
-
+import libevdev
 import logging
+
 logger = logging.getLogger('hidtools.test.keyboard')
 
 
@@ -472,7 +470,3 @@ class TestLEDKeyboard(BaseTest.TestKeyboard):
 class TestPrimaxKeyboard(BaseTest.TestKeyboard):
     def create_device(self):
         return PrimaxKeyboard()
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

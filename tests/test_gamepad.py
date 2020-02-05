@@ -20,8 +20,6 @@
 
 import base
 import libevdev
-import sys
-from base import main
 
 import logging
 logger = logging.getLogger('hidtools.test.gamepad')
@@ -658,7 +656,3 @@ class TestSaitekGamepad(BaseTest.TestGamepad):
 class TestAsusGamepad(BaseTest.TestGamepad):
     def create_device(self):
         return AsusGamepad()
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
