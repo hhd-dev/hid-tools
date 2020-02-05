@@ -142,7 +142,7 @@ class UHIDDevice(object):
     @classmethod
     def _cls_udev_event_callback(cls):
         for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
-            logger.debug(f'udev event: {event}')
+            logger.debug(f'udev event: {event.action} -> {event}')
 
             for d in cls._devices:
                 if d.udev_device is not None and d.udev_device.sys_path in event.sys_path:
