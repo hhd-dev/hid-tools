@@ -591,7 +591,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[key], 1)
+            assert uhdev.evdev.value[key] == 1
 
             buttons[button] = False
             r = uhdev.event(buttons=buttons)
@@ -599,7 +599,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[key], 0)
+            assert uhdev.evdev.value[key] == 0
 
         def test_buttons(self):
             """check for button reliability."""
@@ -627,8 +627,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event0, expected_event1), events)
-            self.assertEqual(uhdev.evdev.value[key1], 1)
-            self.assertEqual(uhdev.evdev.value[key2], 1)
+            assert uhdev.evdev.value[key1] == 1
+            assert uhdev.evdev.value[key2] == 1
 
             buttons = {b1: False, b2: None}
             r = uhdev.event(buttons=buttons)
@@ -637,8 +637,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[key1], 0)
-            self.assertEqual(uhdev.evdev.value[key2], 1)
+            assert uhdev.evdev.value[key1] == 0
+            assert uhdev.evdev.value[key2] == 1
 
             buttons = {b1: None, b2: False}
             r = uhdev.event(buttons=buttons)
@@ -646,8 +646,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[key1], 0)
-            self.assertEqual(uhdev.evdev.value[key2], 0)
+            assert uhdev.evdev.value[key1] == 0
+            assert uhdev.evdev.value[key2] == 0
 
 
 class TestSaitekGamepad(BaseTest.TestGamepad):

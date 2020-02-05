@@ -26,6 +26,7 @@ import unittest
 from base import main, setUpModule, tearDownModule  # noqa
 
 import logging
+import pytest
 logger = logging.getLogger('hidtools.test.mouse')
 
 # workaround https://gitlab.freedesktop.org/libevdev/python-libevdev/issues/6
@@ -545,42 +546,42 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 1
 
             r = uhdev.event(0, 0, (None, False, None))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_RIGHT, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 0
 
             r = uhdev.event(0, 0, (None, None, True))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_MIDDLE, 1)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_MIDDLE], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_MIDDLE] == 1
 
             r = uhdev.event(0, 0, (None, None, False))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_MIDDLE, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_MIDDLE], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_MIDDLE] == 0
 
             r = uhdev.event(0, 0, (True, None, None))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_LEFT, 1)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT] == 1
 
             r = uhdev.event(0, 0, (False, None, None))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_LEFT, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT] == 0
 
             r = uhdev.event(0, 0, (True, True, None))
             expected_event0 = libevdev.InputEvent(libevdev.EV_KEY.BTN_LEFT, 1)
@@ -588,24 +589,24 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event0, expected_event1), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT], 1)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 1
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT] == 1
 
             r = uhdev.event(0, 0, (False, None, None))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_LEFT, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT], 1)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 1
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT] == 0
 
             r = uhdev.event(0, 0, (None, False, None))
             expected_event = libevdev.InputEvent(libevdev.EV_KEY.BTN_RIGHT, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT], 0)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 0
+            assert uhdev.evdev.value[libevdev.EV_KEY.BTN_LEFT] == 0
 
         def test_relative(self):
             """Check for relative events."""
@@ -644,39 +645,39 @@ class TestSimpleMouse(BaseTest.TestMouse):
         uhdev = self.uhdev
 
         event = (0, 0, (None, None, None))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (0, 0, (None, True, None))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (0, 0, (True, True, None))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (0, 0, (False, False, False))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (1, 0, (True, False, True))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (-1, 0, (True, False, True))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (-5, 5, (True, False, True))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (-127, 127, (True, False, True))
-        self.assertEqual(uhdev.fake_report(*event),
-                         uhdev.create_report(*event))
+        assert uhdev.fake_report(*event) == \
+            uhdev.create_report(*event)
 
         event = (0, -128, (True, False, True))
-        with self.assertRaises(hidtools.hid.RangeError):
+        with pytest.raises(hidtools.hid.RangeError):
             uhdev.create_report(*event)
 
 
@@ -685,7 +686,7 @@ class TestWheelMouse(BaseTest.TestMouse):
         return WheelMouse()
 
     def is_wheel_highres(self, uhdev):
-        self.assertTrue(uhdev.evdev.has(libevdev.EV_REL.REL_WHEEL))
+        assert uhdev.evdev.has(libevdev.EV_REL.REL_WHEEL)
         return uhdev.evdev.has(libevdev.EV_REL.REL_WHEEL_HI_RES)
 
     def test_wheel(self):
@@ -734,7 +735,7 @@ class TestTwoWheelMouse(TestWheelMouse):
         return TwoWheelMouse()
 
     def is_hwheel_highres(self, uhdev):
-        self.assertTrue(uhdev.evdev.has(libevdev.EV_REL.REL_HWHEEL))
+        assert uhdev.evdev.has(libevdev.EV_REL.REL_HWHEEL)
         return uhdev.evdev.has(libevdev.EV_REL.REL_HWHEEL_HI_RES)
 
     def test_ac_pan(self):
@@ -743,7 +744,7 @@ class TestTwoWheelMouse(TestWheelMouse):
         # check if the kernel is high res wheel compatible
         high_res_wheel = self.is_wheel_highres(uhdev)
         high_res_hwheel = self.is_hwheel_highres(uhdev)
-        self.assertEqual(high_res_wheel, high_res_hwheel)
+        assert high_res_wheel == high_res_hwheel
 
         syn_event = self.syn_event
         # The Resolution Multiplier is applied to the HID reports, so we
@@ -815,8 +816,8 @@ class TestResolutionMultiplierMouse(TestTwoWheelMouse):
         if not self.is_wheel_highres(uhdev):
             raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
 
-        self.assertGreater(uhdev.wheel_multiplier, 1)
-        self.assertEqual(120 % uhdev.wheel_multiplier, 0)
+        assert uhdev.wheel_multiplier > 1
+        assert 120 % uhdev.wheel_multiplier == 0
 
     def test_wheel_with_multiplier(self):
         uhdev = self.uhdev
@@ -898,8 +899,8 @@ class TestResolutionMultiplierHWheelMouse(TestResolutionMultiplierMouse):
         if not self.is_hwheel_highres(uhdev):
             raise unittest.SkipTest('Kernel not compatible, we can not trigger the conditions')
 
-        self.assertGreater(uhdev.hwheel_multiplier, 1)
-        self.assertEqual(120 % uhdev.hwheel_multiplier, 0)
+        assert uhdev.hwheel_multiplier > 1
+        assert 120 % uhdev.hwheel_multiplier == 0
 
     def test_ac_pan_with_multiplier(self):
         uhdev = self.uhdev
@@ -958,7 +959,7 @@ class TestMiMouse(TestWheelMouse):
             # If there's no SYN_REPORT in the list, continue and let the
             # assert below print out the real error
             pass
-        self.assertEqual(remaining, [])
+        assert remaining == []
 
 
 if __name__ == "__main__":

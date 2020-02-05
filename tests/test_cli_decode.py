@@ -22,6 +22,7 @@ import unittest
 from base import UHIDTestDevice
 from hidtools.cli.decode import main as decode
 import logging
+import re
 logger = logging.getLogger('hidtools.test.cli.decode')
 
 
@@ -53,27 +54,27 @@ class BaseTest:
             return [int(b, 16) for b in items if b.startswith('0x')]
 
         def test_read(self):
-            self.assertIsNotNone(self.output)
+            assert self.output is not None
 
         def test_basic_elements(self):
             all = '\n'.join(self.output)
-            self.assertIn('Usage (', all)
-            self.assertIn('Usage Page (', all)
-            self.assertIn('Collection (Application)', all)
-            self.assertIn('End Collection', all)
+            assert 'Usage (' in all
+            assert 'Usage Page (' in all
+            assert 'Collection (Application)' in all
+            assert 'End Collection' in all
 
         def test_format(self):
             for line in self.output:
                 if 'End Collection' in line:
-                    self.assertRegex(line, '0xc0, *// +End Collection *[0-9]+\n')
+                    assert re.search('0xc0, *// +End Collection *[0-9]+\n', line)
                 elif 'Push' in line:
-                    self.assertRegex(line, '0xa4, *// +Push *[0-9]+\n')
+                    assert re.search('0xa4, *// +Push *[0-9]+\n', line)
                 elif 'Pop' in line:
-                    self.assertRegex(line, '0xb4, *// +Pop *[0-9]+\n')
+                    assert re.search('0xb4, *// +Pop *[0-9]+\n', line)
                 elif line == '**** win 8 certified ****\n':
                     pass
                 else:
-                    self.assertRegex(line, '0x[0-9a-f][0-9a-f], 0x[0-9a-f][0-9a-f], *// .*')
+                    assert re.search('0x[0-9a-f][0-9a-f], 0x[0-9a-f][0-9a-f], *// .*', line)
 
 
 class TestHidRecording(BaseTest.HidDecodeBase):
@@ -84,15 +85,15 @@ I: 3 046d c24e
 '''
 
     def test_dump(self):
-        self.assertEqual(self.output[0].strip(), f'0x05, 0x01,                    // Usage Page (Generic Desktop)        0')
-        self.assertEqual(self.output[1].strip(), f'0x09, 0x02,                    // Usage (Mouse)                       2')
-        self.assertIn('End Collection', self.output[-1])
-        self.assertIn('End Collection', self.output[-2])
+        assert self.output[0].strip() == f'0x05, 0x01,                    // Usage Page (Generic Desktop)        0'
+        assert self.output[1].strip() == f'0x09, 0x02,                    // Usage (Mouse)                       2'
+        assert 'End Collection' in self.output[-1]
+        assert 'End Collection' in self.output[-2]
 
         bytelist = self.output_to_bytes(self.output)
         strbytes = " ".join(f'{x:02x}' for x in bytelist)
         expected = f'R: {len(bytelist)} {strbytes}'
-        self.assertEqual(self.data.split('\n')[1], expected)
+        assert self.data.split('\n')[1] == expected
 
 
 class TestHidRecordingVerbose(TestHidRecording):
@@ -192,7 +193,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
             self.uhid_device.dispatch(10)
 
         node = self.uhid_device.device_nodes[0]
-        self.assertTrue(node.startswith('/dev/input/'))
+        assert node.startswith('/dev/input/')
         node = node[len('/dev/input/'):]
         sysfs = f'/sys/class/input/{node}/device/device/report_descriptor'
         self.data = open(sysfs, 'rb').read()
@@ -203,7 +204,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
 
     def test_rdesc_match(self):
         # make sure the output matches our rdesc
-        self.assertEqual(self.rdesc, self.output_to_bytes(self.output))
+        assert self.rdesc == self.output_to_bytes(self.output)
 
     def test_pass_hidraw(self):
         # same as above, but passes the hidraw node into hid-decode
@@ -211,7 +212,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
             decode(['hid-decode.test'] + self.cli_args + [f'--output', outfile.name, source])
             lines = outfile.readlines()
-            self.assertEqual(self.rdesc, self.output_to_bytes(lines))
+            assert self.rdesc == self.output_to_bytes(lines)
 
     def test_pass_event_node(self):
         # same as above, but passes the event node into hid-decode
@@ -219,7 +220,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
             decode(['hid-decode.test'] + self.cli_args + [f'--output', outfile.name, source])
             lines = outfile.readlines()
-            self.assertEqual(self.rdesc, self.output_to_bytes(lines))
+            assert self.rdesc == self.output_to_bytes(lines)
 
 
 if __name__ == "__main__":

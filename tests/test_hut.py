@@ -21,6 +21,7 @@ import unittest
 from hidtools.hut import HUT
 
 import logging
+import pytest
 logger = logging.getLogger('hidtools.test.hut')
 
 
@@ -66,11 +67,11 @@ class TestHUT(unittest.TestCase):
     }
 
     def test_hut_exists(self):
-        self.assertIsNotNone(HUT)
+        assert HUT is not None
 
     def test_hut_size(self):
         # Update this test when a new Usage Page is added
-        self.assertEqual(len(HUT), 37)
+        assert len(HUT) == 37
 
     def test_usage_pages(self):
         pages = self.pages
@@ -78,22 +79,22 @@ class TestHUT(unittest.TestCase):
 
         for page_id, name in pages.items():
             page = HUT[page_id]
-            self.assertEqual(page.page_id, page_id)
-            self.assertEqual(page.page_name, name)
+            assert page.page_id == page_id
+            assert page.page_name == name
             print(page, page.page_name)
             if page.page_name in empty_pages:
-                self.assertEqual(dict(page.from_name.items()), {})
-                self.assertEqual(dict(page.from_usage.items()), {})
+                assert dict(page.from_name.items()) == {}
+                assert dict(page.from_usage.items()) == {}
             else:
-                self.assertNotEqual(dict(page.from_name.items()), {})
-                self.assertNotEqual(dict(page.from_usage.items()), {})
+                assert dict(page.from_name.items()) != {}
+                assert dict(page.from_usage.items()) != {}
 
-            self.assertEqual(HUT[page_id], HUT[page_id << 16])
+            assert HUT[page_id] == HUT[page_id << 16]
 
     def test_usage_page_names(self):
-        self.assertEqual(sorted(self.pages.values()), sorted(HUT.usage_page_names))
-        self.assertEqual(HUT.usage_page_names['Generic Desktop'], HUT.usage_pages[0x01])
-        self.assertEqual(HUT['Generic Desktop'], HUT.usage_pages[0x01])
+        assert sorted(self.pages.values()) == sorted(HUT.usage_page_names)
+        assert HUT.usage_page_names['Generic Desktop'] == HUT.usage_pages[0x01]
+        assert HUT['Generic Desktop'] == HUT.usage_pages[0x01]
 
     def test_usage_gd(self):
         usages = {
@@ -207,22 +208,22 @@ class TestHUT(unittest.TestCase):
                 continue
 
             usage = page[u]
-            self.assertEqual(usage.name, uname)
-            self.assertEqual(usage.usage, u)
-            self.assertEqual(page[u], page.from_name[uname])
-            self.assertEqual(page[u], page.from_usage[u])
+            assert usage.name == uname
+            assert usage.usage == u
+            assert page[u] == page.from_name[uname]
+            assert page[u] == page.from_usage[u]
 
         for i in range(0xffff):
             if i not in usages or usages[i] == 'Reserved':
-                self.assertNotIn(i, page)
+                assert i not in page
 
     def test_32_bit_usage_lookup(self):
-        self.assertEqual(HUT[0x1][0x1 << 16 | 0x31].name, 'Y')
-        self.assertEqual(HUT[0x1][0x1 << 16 | 0x30].name, 'X')
-        self.assertEqual(HUT[0x2][0x2 << 16 | 0x09].name, 'Airplane Simulation Device')
-        self.assertEqual(HUT[0x2][0x2 << 16 | 0xB2].name, 'Anti-Torque Control')
+        assert HUT[0x1][0x1 << 16 | 0x31].name == 'Y'
+        assert HUT[0x1][0x1 << 16 | 0x30].name == 'X'
+        assert HUT[0x2][0x2 << 16 | 0x09].name == 'Airplane Simulation Device'
+        assert HUT[0x2][0x2 << 16 | 0xB2].name == 'Anti-Torque Control'
 
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             HUT[0x01][0x2 << 16 | 0x1]
 
     def test_duplicate_pages(self):
@@ -235,60 +236,60 @@ class TestHUT(unittest.TestCase):
             keys = list(HUT)
             keys.remove(p)
             for k in keys:
-                self.assertNotEqual(page, HUT[k])
+                assert page != HUT[k]
 
     def test_up01_generic_desktop(self):
-        self.assertEqual(HUT[0x01].page_name, 'Generic Desktop')
-        self.assertEqual(HUT[0x01][0x0A].name, 'Water Cooling Device')
-        self.assertEqual(HUT[0x01][0x10].name, 'Assistive Control')
-        self.assertEqual(HUT[0x01][0x9A].name, 'System Dismiss Notification')
+        assert HUT[0x01].page_name == 'Generic Desktop'
+        assert HUT[0x01][0x0A].name == 'Water Cooling Device'
+        assert HUT[0x01][0x10].name == 'Assistive Control'
+        assert HUT[0x01][0x9A].name == 'System Dismiss Notification'
 
     def test_up12_eye_and_head_trackers(self):
-        self.assertEqual(HUT[0x12].page_name, 'Eye and Head Trackers')
-        self.assertEqual(HUT[0x12][0x1].name, 'Eye Tracker')
-        self.assertEqual(HUT[0x12][0x205].name, 'Calibrated Screen Height')
-        self.assertEqual(HUT[0x12][0x400].name, 'Device Mode Request')
+        assert HUT[0x12].page_name == 'Eye and Head Trackers'
+        assert HUT[0x12][0x1].name == 'Eye Tracker'
+        assert HUT[0x12][0x205].name == 'Calibrated Screen Height'
+        assert HUT[0x12][0x400].name == 'Device Mode Request'
 
     def test_up0c_consumer_devices(self):
-        self.assertEqual(HUT[0x0c].page_name, 'Consumer Devices')
-        self.assertEqual(HUT[0x0c][0x29E].name, 'AC Navigation Guidance')
+        assert HUT[0x0c].page_name == 'Consumer Devices'
+        assert HUT[0x0c][0x29E].name == 'AC Navigation Guidance'
 
         # HUTRR32: 1C8 AL Message Status
         # HUTRR75: 1C8 AL Navigation
-        self.assertEqual(HUT[0x0c][0x1C8].name, 'AL Message Status')
+        assert HUT[0x0c][0x1C8].name == 'AL Message Status'
 
         # HUTRR32: 2A0  ACSoft Key Left
         # HUTRR77: 2A0  AC Desktop Show All Applications
-        self.assertEqual(HUT[0x0c][0x2A0].name, 'ACSoft Key Left')
+        assert HUT[0x0c][0x2A0].name == 'ACSoft Key Left'
 
     def test_up0d_digitizers(self):
-        self.assertEqual(HUT[0x0d].page_name, 'Digitizers')
-        self.assertEqual(HUT[0x0d][0x24].name, 'Character Gesture')
-        self.assertEqual(HUT[0x0d][0x61].name, 'Gesture Character Quality')
-        self.assertEqual(HUT[0x0d][0x69].name, 'UTF32 Big Endian Character Gesture Encoding')
+        assert HUT[0x0d].page_name == 'Digitizers'
+        assert HUT[0x0d][0x24].name == 'Character Gesture'
+        assert HUT[0x0d][0x61].name == 'Gesture Character Quality'
+        assert HUT[0x0d][0x69].name == 'UTF32 Big Endian Character Gesture Encoding'
         # HUTRR76: 6A Gesture Character Enable
         # HUTRR87: 6A Capacitive Heat Map Protocol Vendor ID
-        self.assertEqual(HUT[0x0d][0x6A].name, 'Gesture Character Enable')
-        self.assertEqual(HUT[0x0d][0x6B].name, 'Capacitive Heat Map Protocol Version')
-        self.assertEqual(HUT[0x0d][0x98].name, 'Microsoft Pen Protocol')
+        assert HUT[0x0d][0x6A].name == 'Gesture Character Enable'
+        assert HUT[0x0d][0x6B].name == 'Capacitive Heat Map Protocol Version'
+        assert HUT[0x0d][0x98].name == 'Microsoft Pen Protocol'
 
     def test_up20_sensor(self):
-        self.assertEqual(HUT[0x20].page_name, 'Sensor')
-        self.assertEqual(HUT[0x20][0x3A].name, 'Environmental: Object Presence')
-        self.assertEqual(HUT[0x20][0x43A].name, 'Data Field: Object Presence')
+        assert HUT[0x20].page_name == 'Sensor'
+        assert HUT[0x20][0x3A].name == 'Environmental: Object Presence'
+        assert HUT[0x20][0x43A].name == 'Data Field: Object Presence'
 
     def test_up41_braille_display(self):
-        self.assertEqual(HUT[0x41].page_name, 'Braille Display')
-        self.assertEqual(HUT[0x41][0x03].name, '8 Dot Braille Cell')
-        self.assertEqual(HUT[0x41][0x100].name, 'Router Button')
-        self.assertEqual(HUT[0x41][0x210].name, 'Braille Joystick Center')
+        assert HUT[0x41].page_name == 'Braille Display'
+        assert HUT[0x41][0x03].name == '8 Dot Braille Cell'
+        assert HUT[0x41][0x100].name == 'Router Button'
+        assert HUT[0x41][0x210].name == 'Braille Joystick Center'
 
     def test_up59_lighting_and_illumination(self):
-        self.assertEqual(HUT[0x59].page_name, 'Lighting and Illumination')
-        self.assertEqual(HUT[0x59][0x7].name, 'Lamp Array Kind')
-        self.assertEqual(HUT[0x59][0x22].name, 'Lamp Attributes Response Report')
-        self.assertEqual(HUT[0x59][0x53].name, 'Blue Update Channel')
+        assert HUT[0x59].page_name == 'Lighting and Illumination'
+        assert HUT[0x59][0x7].name == 'Lamp Array Kind'
+        assert HUT[0x59][0x22].name == 'Lamp Attributes Response Report'
+        assert HUT[0x59][0x53].name == 'Blue Update Channel'
 
     def test_up84_power_device(self):
-        self.assertEqual(HUT[0x84].page_name, 'Power Device')
-        self.assertEqual(HUT[0x84][0x06].name, 'Peripheral Device')
+        assert HUT[0x84].page_name == 'Power Device'
+        assert HUT[0x84][0x06].name == 'Peripheral Device'

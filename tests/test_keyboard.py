@@ -275,7 +275,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_A], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_A] == 1
 
             r = uhdev.event([])
             expected = [syn_event]
@@ -283,7 +283,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_A], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_A] == 0
 
         def test_two_keys(self):
             uhdev = self.uhdev
@@ -296,7 +296,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_A], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_A] == 1
 
             r = uhdev.event([])
             expected = [syn_event]
@@ -305,8 +305,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_A], 0)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_Q], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_A] == 0
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_Q] == 0
 
             r = uhdev.event(['c and C'])
             expected = [syn_event]
@@ -314,27 +314,27 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_C], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_C] == 1
 
             r = uhdev.event(['c and C', 'Spacebar'])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_SPACE, 1))
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
-            self.assertNotIn(libevdev.InputEvent(libevdev.EV_KEY.KEY_C), events)
+            assert libevdev.InputEvent(libevdev.EV_KEY.KEY_C) not in events
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_C], 1)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_C] == 1
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE] == 1
 
             r = uhdev.event(['Spacebar'])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_C, 0))
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
-            self.assertNotIn(libevdev.InputEvent(libevdev.EV_KEY.KEY_SPACE), events)
+            assert libevdev.InputEvent(libevdev.EV_KEY.KEY_SPACE) not in events
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_C], 0)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE], 1)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_C] == 0
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE] == 1
 
             r = uhdev.event([])
             expected = [syn_event]
@@ -342,7 +342,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn(expected, events)
-            self.assertEqual(uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE], 0)
+            assert uhdev.evdev.value[libevdev.EV_KEY.KEY_SPACE] == 0
 
         def test_modifiers(self):
             # ctrl-alt-del would be very nice :)
@@ -447,7 +447,7 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
         self.debug_reports(r, uhdev, events)
         self.assertInputEventsIn(expected, events)
         for key in unexpected:
-            self.assertNotIn(key, events)
+            assert key not in events
 
         r = uhdev.event([])
         expected = [syn_event]
@@ -461,7 +461,7 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
         self.debug_reports(r, uhdev, events)
         self.assertInputEventsIn(expected, events)
         for key in unexpected:
-            self.assertNotIn(key, events)
+            assert key not in events
 
 
 class TestLEDKeyboard(BaseTest.TestKeyboard):

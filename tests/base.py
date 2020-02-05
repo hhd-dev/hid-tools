@@ -246,7 +246,7 @@ class BaseTestCase:
                 raise RuntimeError("context method should only yield once")
             with open('/proc/sys/kernel/tainted') as f:
                 taint = int(f.readline())
-                self.assertEqual(self.__taint, taint)
+                assert self.__taint == taint
 
     class TestUhid(ContextTest):
         syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)
@@ -258,13 +258,13 @@ class BaseTestCase:
         def assertInputEventsIn(self, expected_events, effective_events):
             effective_events = effective_events.copy()
             for ev in expected_events:
-                self.assertIn(ev, effective_events)
+                assert ev in effective_events
                 effective_events.remove(ev)
             return effective_events
 
         def assertInputEvents(self, expected_events, effective_events):
             remaining = self.assertInputEventsIn(expected_events, effective_events)
-            self.assertEqual(remaining, [])
+            assert remaining == []
 
         @classmethod
         def debug_reports(cls, reports, uhdev=None, events=None):
@@ -295,7 +295,7 @@ class BaseTestCase:
             raise Exception('please reimplement me in subclasses')
 
         def assertName(self, uhdev):
-            self.assertEqual(uhdev.evdev.name, uhdev.name)
+            assert uhdev.evdev.name == uhdev.name
 
         def _skip_conditions(self, udev):
             method = getattr(self, self._testMethodName)
@@ -324,7 +324,7 @@ class BaseTestCase:
                 now = time.time()
                 while not self.uhdev_is_ready() and time.time() - now < 5:
                     self.uhdev.dispatch(10)
-                self.assertIsNotNone(self.uhdev.evdev)
+                assert self.uhdev.evdev is not None
                 yield
 
         def test_creation(self):
@@ -335,8 +335,8 @@ class BaseTestCase:
             descriptors."""
             uhdev = self.uhdev
             self.assertName(uhdev)
-            self.assertEqual(len(uhdev.next_sync_events()), 0)
-            self.assertIsNotNone(uhdev.evdev)
+            assert len(uhdev.next_sync_events()) == 0
+            assert uhdev.evdev is not None
 
 
 def reload_udev_rules():
