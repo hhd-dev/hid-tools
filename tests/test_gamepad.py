@@ -578,6 +578,29 @@ class AsusGamepad(BaseGamepad):
 
 class BaseTest:
     class TestGamepad(base.BaseTestCase.TestUhid):
+        def assert_button(self, button):
+            uhdev = self.uhdev
+            syn_event = self.syn_event
+
+            buttons = {}
+            key = libevdev.evbit(uhdev.buttons_map[button])
+
+            buttons[button] = True
+            r = uhdev.event(buttons=buttons)
+            expected_event = libevdev.InputEvent(key, 1)
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+            self.assertInputEventsIn((syn_event, expected_event), events)
+            self.assertEqual(uhdev.evdev.value[key], 1)
+
+            buttons[button] = False
+            r = uhdev.event(buttons=buttons)
+            expected_event = libevdev.InputEvent(key, 0)
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+            self.assertInputEventsIn((syn_event, expected_event), events)
+            self.assertEqual(uhdev.evdev.value[key], 0)
+
         def test_buttons(self):
             """check for button reliability."""
             uhdev = self.uhdev
@@ -589,24 +612,7 @@ class BaseTest:
             self.debug_reports(r, uhdev, events)
 
             for b in uhdev.buttons:
-                buttons = {}
-                key = libevdev.evbit(uhdev.buttons_map[b])
-
-                buttons[b] = True
-                r = uhdev.event(buttons=buttons)
-                expected_event = libevdev.InputEvent(key, 1)
-                events = uhdev.next_sync_events()
-                self.debug_reports(r, uhdev, events)
-                self.assertInputEventsIn((syn_event, expected_event), events)
-                self.assertEqual(uhdev.evdev.value[key], 1)
-
-                buttons[b] = False
-                r = uhdev.event(buttons=buttons)
-                expected_event = libevdev.InputEvent(key, 0)
-                events = uhdev.next_sync_events()
-                self.debug_reports(r, uhdev, events)
-                self.assertInputEventsIn((syn_event, expected_event), events)
-                self.assertEqual(uhdev.evdev.value[key], 0)
+                self.assert_button(b)
 
             # can change intended b1 b2 values
             b1 = uhdev.buttons[0]
