@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from base import main, setUpModule, tearDownModule  # noqa
+from base import main
 from test_keyboard import ArrayKeyboard, TestArrayKeyboard
 
 import libevdev

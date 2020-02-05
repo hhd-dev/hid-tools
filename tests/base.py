@@ -358,18 +358,6 @@ def teardown_udev_rule(uuid):
     reload_udev_rules()
 
 
-def setUpModule():
-    # create a udev rule to make libinput ignore the test devices
-    if 'PYTEST_RUNNING' not in os.environ:
-        create_udev_rule('XXXXX')
-
-
-def tearDownModule():
-    # clean up after ourselves
-    if 'PYTEST_RUNNING' not in os.environ:
-        teardown_udev_rule('XXXXX')
-
-
 def parse(input_string):
     parser_test = argparse.ArgumentParser("Testsuite for hid devices")
     ns, rest = parser_test.parse_known_args(input_string)

@@ -22,7 +22,7 @@ import base
 import libevdev
 import sys
 import hidtools.hid
-from base import main, setUpModule, tearDownModule  # noqa
+from base import main
 
 import logging
 logger = logging.getLogger('hidtools.test.keyboard')

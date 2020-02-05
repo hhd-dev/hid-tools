@@ -21,7 +21,7 @@
 import base
 import libevdev
 import sys
-from base import main, setUpModule, tearDownModule  # noqa
+from base import main
 
 import logging
 logger = logging.getLogger('hidtools.test.gamepad')

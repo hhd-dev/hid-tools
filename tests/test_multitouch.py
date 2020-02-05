@@ -23,7 +23,7 @@ from hidtools.hut import HUT
 import libevdev
 import sys
 import time
-from base import main, setUpModule, tearDownModule, skipIfUHDev  # noqa
+from base import main, skipIfUHDev
 
 import logging
 logger = logging.getLogger('hidtools.test.multitouch')
