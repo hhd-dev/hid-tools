@@ -22,6 +22,7 @@ import argparse
 import fcntl
 import libevdev
 import os
+import pathlib
 import resource
 import sys
 import time
@@ -37,6 +38,50 @@ from hidtools.util import twos_comp, to_twos_comp # noqa
 from hidtools.uhid import UHIDDevice  # noqa
 
 logger = logging.getLogger('hidtools.test.base')
+
+
+class SysfsFile(object):
+    def __init__(self, path):
+        self.path = path
+
+    def __set_value(self, value):
+        with open(self.path, 'w') as f:
+            return f.write(f'{value}\n')
+
+    def __get_value(self):
+        with open(self.path) as f:
+            return f.read().strip()
+
+    @property
+    def int_value(self):
+        return int(self.__get_value())
+
+    @int_value.setter
+    def int_value(self, v):
+        self.__set_value(v)
+
+    @property
+    def str_value(self):
+        return self.__get_value()
+
+    @str_value.setter
+    def str_value(self, v):
+        self.__set_value(v)
+
+
+class LED(object):
+    def __init__(self, udev_object):
+        self.sys_path = pathlib.Path(udev_object.sys_path)
+        self.max_brightness = SysfsFile(self.sys_path / 'max_brightness').int_value
+        self.__brightness = SysfsFile(self.sys_path / 'brightness')
+
+    @property
+    def brightness(self):
+        return self.__brightness.int_value
+
+    @brightness.setter
+    def brightness(self, value):
+        self.__brightness.int_value = value
 
 
 class UHIDTestDevice(UHIDDevice):
@@ -56,6 +101,7 @@ class UHIDTestDevice(UHIDDevice):
         self.opened = False
         self.application = application
         self.input_nodes = {}
+        self.led_classes = {}
         self._opened_files = []
         if rdesc is None:
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
@@ -73,12 +119,7 @@ class UHIDTestDevice(UHIDDevice):
         '''
         return True
 
-    def udev_event(self, event):
-        if event.action != 'add':
-            return
-
-        device = event
-
+    def udev_input_event(self, device):
         if 'DEVNAME' not in device.properties:
             return
 
@@ -120,6 +161,25 @@ class UHIDTestDevice(UHIDDevice):
                 evdev.fd.close()
                 continue
             self.input_nodes[type] = evdev
+
+    def udev_led_event(self, device):
+        led = LED(device)
+        self.led_classes[led.sys_path.name] = led
+
+    def udev_event(self, event):
+        if event.action != 'add':
+            return
+
+        device = event
+
+        subsystem = device.properties['SUBSYSTEM']
+
+        if subsystem == 'input':
+            return self.udev_input_event(device)
+        elif subsystem == 'leds':
+            return self.udev_led_event(device)
+
+        logger.debug(f'{subsystem}: {device}')
 
     def open(self):
         self.opened = True
