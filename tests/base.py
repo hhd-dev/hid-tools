@@ -85,6 +85,16 @@ class LED(object):
 
 
 class UHIDTestDevice(UHIDDevice):
+    input_type_mapping = {
+        'ID_INPUT_TOUCHSCREEN': 'Touch Screen',
+        'ID_INPUT_TOUCHPAD': 'Touch Pad',
+        'ID_INPUT_TABLET': 'Pen',
+        'ID_INPUT_MOUSE': 'Mouse',
+        'ID_INPUT_KEY': 'Key',
+        'ID_INPUT_JOYSTICK': 'Joystick',
+        'ID_INPUT_ACCELEROMETER': 'Accelerometer',
+    }
+
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
         if rdesc_str is None and rdesc is None:
             raise Exception('Please provide at least a rdesc or rdesc_str')
@@ -130,18 +140,10 @@ class UHIDTestDevice(UHIDDevice):
         # associate the Input type to the matching HID application
         # we reuse the guess work from udev
         types = []
-        if 'ID_INPUT_TOUCHSCREEN' in device.properties:
-            types.append('Touch Screen')
-        if 'ID_INPUT_TOUCHPAD' in device.properties:
-            types.append('Touch Pad')
-        if 'ID_INPUT_TABLET' in device.properties:
-            types.append('Pen')
-        if 'ID_INPUT_MOUSE' in device.properties:
-            types.append('Mouse')
-        if 'ID_INPUT_KEY' in device.properties:
-            types.append('Key')
-        if 'ID_INPUT_JOYSTICK' in device.properties:
-            types.append('Joystick')
+        for name, type in UHIDTestDevice.input_type_mapping.items():
+            if name in device.properties:
+                types.append(type)
+
         if not types:
             # abort, the device has not been processed by udev
             print('abort', devname, list(device.properties.items()))
