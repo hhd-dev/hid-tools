@@ -18,16 +18,16 @@
 #
 
 import tempfile
-import unittest
 from base import UHIDTestDevice
 from hidtools.cli.decode import main as decode
 import logging
+import pytest
 import re
 logger = logging.getLogger('hidtools.test.cli.decode')
 
 
 class BaseTest:
-    class HidDecodeBase(unittest.TestCase):
+    class HidDecodeBase(object):
         cli_args = []
 
         def run_hid_decode(self):
@@ -155,6 +155,7 @@ R: 945 05 0d 09 04 a1 01 85 01 09 22 a1 02 09 42 15 00 25 01 75 01 95 01 81 02 7
 
 
 class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.rdesc = [
             0x05, 0x01,  # .Usage Page (Generic Desktop)        0
@@ -198,7 +199,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         sysfs = f'/sys/class/input/{node}/device/device/report_descriptor'
         self.data = open(sysfs, 'rb').read()
 
-    def tearDown(self):
+        yield
         self.uhid_device.destroy()
         self.uhid_device.dispatch(10)
 
@@ -224,4 +225,4 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main()

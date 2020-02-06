@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import unittest
 from hidtools.hut import HUT
 
 import logging
@@ -25,7 +24,7 @@ import pytest
 logger = logging.getLogger('hidtools.test.hut')
 
 
-class TestHUT(unittest.TestCase):
+class TestHUT(object):
     pages = {
         0x00: 'Undefined',
         0x01: 'Generic Desktop',

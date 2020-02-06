@@ -22,9 +22,9 @@ import fcntl
 import libevdev
 import os
 import pathlib
+import pytest
 import sys
 import time
-import unittest
 
 # FIXME: this is really wrong :)
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/..')  # noqa
@@ -223,7 +223,7 @@ def skipIfUHDev(condition, reason):
 
 
 class BaseTestCase:
-    class ContextTest(unittest.TestCase):
+    class ContextTest(object):
         """A unit test where setUp/tearDown are amalgamated into a
         single generator
 
@@ -295,15 +295,15 @@ class BaseTestCase:
         def assertName(self, uhdev):
             assert uhdev.evdev.name == uhdev.name
 
-        def _skip_conditions(self, udev):
-            method = getattr(self, self._testMethodName)
+        def _skip_conditions(self, request, udev):
+            method = request.function
             try:
                 skip_test_if_uhdev = method.skip_test_if_uhdev
             except AttributeError:
                 return
 
             if skip_test_if_uhdev(self.uhdev):
-                self.skipTest(method.skip_test_if_uhdev_reason)
+                pytest.skip(method.skip_test_if_uhdev_reason)
 
         def uhdev_is_ready(self):
             '''Can be overwritten in subclasses to add extra conditions
@@ -315,9 +315,10 @@ class BaseTestCase:
             - or any other combinations'''
             return self.uhdev.application in self.uhdev.input_nodes
 
-        def context(self):
+        @pytest.fixture(autouse=True)
+        def context(self, request):
             with self.create_device() as self.uhdev:
-                self._skip_conditions(self.uhdev)
+                self._skip_conditions(request, self.uhdev)
                 self.uhdev.create_kernel_device()
                 now = time.time()
                 while not self.uhdev_is_ready() and time.time() - now < 5:
