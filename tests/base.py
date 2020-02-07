@@ -223,30 +223,7 @@ def skipIfUHDev(condition, reason):
 
 
 class BaseTestCase:
-    class ContextTest(object):
-        """A unit test where setUp/tearDown are amalgamated into a
-        single generator
-
-        see https://stackoverflow.com/questions/13874859/python-with-statement-and-its-use-in-a-class"""
-        def context(self):
-            """Put both setUp and tearDown code in this generator method
-            with a single `yield` between"""
-            yield
-
-        def setUp(self):
-            with open('/proc/sys/kernel/tainted') as f:
-                self.__taint = int(f.readline())
-            self.__context = self.context()
-            next(self.__context)
-
-        def tearDown(self):
-            for _ in self.__context:
-                raise RuntimeError("context method should only yield once")
-            with open('/proc/sys/kernel/tainted') as f:
-                taint = int(f.readline())
-                assert self.__taint == taint
-
-    class TestUhid(ContextTest):
+    class TestUhid(object):
         syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)
         key_event = libevdev.InputEvent(libevdev.EV_KEY)
         abs_event = libevdev.InputEvent(libevdev.EV_ABS)
@@ -325,6 +302,16 @@ class BaseTestCase:
                     self.uhdev.dispatch(10)
                 assert self.uhdev.evdev is not None
                 yield
+
+        @pytest.fixture(autouse=True)
+        def check_taint(self):
+            # we are abusing SysfsFile here, it's in /proc, but meh
+            taint_file = SysfsFile('/proc/sys/kernel/tainted')
+            taint = taint_file.int_value
+
+            yield
+
+            assert taint_file.int_value == taint
 
         def test_creation(self):
             """Make sure the device gets processed by the kernel and creates
