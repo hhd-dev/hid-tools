@@ -22,9 +22,9 @@ import base
 from hidtools.hut import HUT
 import libevdev
 import logging
+import pytest
 import sys
 import time
-from base import skipIfUHDev
 
 logger = logging.getLogger('hidtools.test.multitouch')
 
@@ -641,7 +641,7 @@ class BaseTest:
             assert uhdev.evdev.slots[slot0][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
             assert uhdev.evdev.slots[slot1][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
 
-        @skipIfUHDev(lambda uhdev: uhdev.max_contacts <= 2, 'Device not compatible')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: uhdev.max_contacts <= 2, 'Device not compatible')
         def test_mt_triple_tap(self):
             """Send 3 touches in the first 3 slots.
             Make sure the kernel sees this as a triple touch.
@@ -686,7 +686,7 @@ class BaseTest:
             assert uhdev.evdev.slots[slot1][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
             assert uhdev.evdev.slots[slot2][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
 
-        @skipIfUHDev(lambda uhdev: uhdev.max_contacts <= 2, 'Device not compatible')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: uhdev.max_contacts <= 2, 'Device not compatible')
         def test_mt_max_contact(self):
             """send the maximum number of contact as reported by the device.
             Make sure all contacts are forwarded and that there is no miss.
@@ -720,9 +720,10 @@ class BaseTest:
 
                 assert uhdev.evdev.slots[slot][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
 
-        @skipIfUHDev(lambda uhdev: (uhdev.touches_in_a_report == 1 or
-                                    uhdev.quirks is not None and 'CONTACT_CNT_ACCURATE' not in uhdev.quirks),
-                     'Device not compatible, we can not trigger the conditions')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: (uhdev.touches_in_a_report == 1 or
+                                                  uhdev.quirks is not None and
+                                                  'CONTACT_CNT_ACCURATE' not in uhdev.quirks),
+                                   'Device not compatible, we can not trigger the conditions')
         def test_mt_contact_count_accurate(self):
             """Test the MT_QUIRK_CONTACT_CNT_ACCURATE from the kernel.
             A report should forward an accurate contact count and the kernel
@@ -763,8 +764,8 @@ class BaseTest:
                     except KeyError:
                         pass
 
-        @skipIfUHDev(lambda uhdev: uhdev.fields.count('X') == uhdev.touches_in_a_report,
-                     'Device not compatible, we can not trigger the conditions')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: uhdev.fields.count('X') == uhdev.touches_in_a_report,
+                                   'Device not compatible, we can not trigger the conditions')
         def test_mt_tx_cx(self):
             """send a single touch in the first slot of the device, with
             different values of Tx and Cx. Make sure the kernel reports Tx."""
@@ -783,8 +784,8 @@ class BaseTest:
             assert uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_POSITION_Y] == 10
             assert uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_TOOL_Y] == 100
 
-        @skipIfUHDev(lambda uhdev: 'In Range' not in uhdev.fields,
-                     'Device not compatible, missing In Range usage')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'In Range' not in uhdev.fields,
+                                   'Device not compatible, missing In Range usage')
         def test_mt_inrange(self):
             """Send one contact that has the InRange bit set before/after
             tipswitch.
@@ -885,8 +886,8 @@ class BaseTest:
             self.debug_reports(r, uhdev, events)
             assert uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == 1
 
-        @skipIfUHDev(lambda uhdev: 'Azimuth' not in uhdev.fields,
-                     'Device not compatible, missing Azimuth usage')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Azimuth' not in uhdev.fields,
+                                   'Device not compatible, missing Azimuth usage')
         def test_mt_azimuth(self):
             """Check for the azimtuh information bit.
             When azimuth is presented by the device, it should be exported
@@ -952,8 +953,8 @@ class BaseTest:
                 assert libevdev.InputEvent(libevdev.EV_KEY.BTN_RIGHT, 0) in events
                 assert uhdev.evdev.value[libevdev.EV_KEY.BTN_RIGHT] == 0
 
-        @skipIfUHDev(lambda uhdev: 'Confidence' not in uhdev.fields,
-                     'Device not compatible, missing Confidence usage')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Confidence' not in uhdev.fields,
+                                   'Device not compatible, missing Confidence usage')
         def test_ptp_confidence(self):
             """Check for the validity of the confidence bit.
             When a contact is marked as not confident, it should be detected
@@ -986,8 +987,8 @@ class BaseTest:
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
             assert uhdev.evdev.slots[0][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == -1
 
-        @skipIfUHDev(lambda uhdev: uhdev.touches_in_a_report >= uhdev.max_contacts,
-                     'Device not compatible, we can not trigger the conditions')
+        @pytest.mark.skip_if_uhdev(lambda uhdev: uhdev.touches_in_a_report >= uhdev.max_contacts,
+                                   'Device not compatible, we can not trigger the conditions')
         def test_ptp_non_touch_data(self):
             """Some single finger hybrid touchpads might not provide the
             button information in subsequent reports (only in the first report).
@@ -1514,8 +1515,8 @@ class TestWin8TSConfidence(BaseTest.TestWin8Multitouch):
     def create_device(self):
         return Win8TSConfidence(5)
 
-    @skipIfUHDev(lambda uhdev: 'Confidence' not in uhdev.fields,
-                 'Device not compatible, missing Confidence usage')
+    @pytest.mark.skip_if_uhdev(lambda uhdev: 'Confidence' not in uhdev.fields,
+                               'Device not compatible, missing Confidence usage')
     def test_mt_confidence_bad_release(self):
         """Check for the validity of the confidence bit.
         When a contact is marked as not confident, it should be detected

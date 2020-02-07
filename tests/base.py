@@ -214,14 +214,6 @@ class UHIDTestDevice(UHIDDevice):
         return self.input_nodes[self.application]
 
 
-def skipIfUHDev(condition, reason):
-    def decorator(func):
-        func.skip_test_if_uhdev = condition
-        func.skip_test_if_uhdev_reason = reason
-        return func
-    return decorator
-
-
 class BaseTestCase:
     class TestUhid(object):
         syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)
@@ -272,16 +264,6 @@ class BaseTestCase:
         def assertName(self, uhdev):
             assert uhdev.evdev.name == uhdev.name
 
-        def _skip_conditions(self, request, udev):
-            method = request.function
-            try:
-                skip_test_if_uhdev = method.skip_test_if_uhdev
-            except AttributeError:
-                return
-
-            if skip_test_if_uhdev(self.uhdev):
-                pytest.skip(method.skip_test_if_uhdev_reason)
-
         def uhdev_is_ready(self):
             '''Can be overwritten in subclasses to add extra conditions
             on when to consider a UHID device ready. This can be:
@@ -295,7 +277,13 @@ class BaseTestCase:
         @pytest.fixture(autouse=True)
         def context(self, request):
             with self.create_device() as self.uhdev:
-                self._skip_conditions(request, self.uhdev)
+                skip_cond = request.node.get_closest_marker('skip_if_uhdev')
+                if skip_cond:
+                    test, message, *rest = skip_cond.args
+
+                    if test(self.uhdev):
+                        pytest.skip(message)
+
                 self.uhdev.create_kernel_device()
                 now = time.time()
                 while not self.uhdev_is_ready() and time.time() - now < 5:

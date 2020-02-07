@@ -37,3 +37,9 @@ def udev_rules_setup():
 @pytest.fixture(autouse=True, scope='session')
 def setup_rlimit():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "skip_if_uhdev(condition, message): mark test to skip if the condition on the uhdev device is met"
+    )
