@@ -31,9 +31,9 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/..')  # noqa
 
 import logging
 
-import hidtools.hid as hid # noqa
+import hidtools.hid as hid
 from hidtools.util import twos_comp, to_twos_comp # noqa
-from hidtools.uhid import UHIDDevice  # noqa
+from hidtools.uhid import UHIDDevice
 
 logger = logging.getLogger('hidtools.test.base')
 
