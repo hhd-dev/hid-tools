@@ -21,6 +21,7 @@
 from test_gamepad import BaseGamepad, BaseTest
 
 import logging
+import pytest
 import random
 import struct
 logger = logging.getLogger('hidtools.test.sony')
@@ -261,7 +262,8 @@ class SonyBaseTest:
         def uhdev_is_ready(self):
             return super().uhdev_is_ready() and len(self.uhdev.led_classes) == 4
 
-        def test_led(self):
+        @pytest.fixture(autouse=True)
+        def start_controller(self):
             # emulate a 'PS' button press to tell the kernel we are ready to accept events
             self.assert_button(17)
 
@@ -269,6 +271,7 @@ class SonyBaseTest:
             while self.uhdev.dispatch(10):
                 pass
 
+        def test_led(self):
             for k, v in self.uhdev.led_classes.items():
                 # the kernel might have set a LED for us
                 logger.info(f'{k}: {v.brightness}')
