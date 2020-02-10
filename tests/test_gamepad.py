@@ -34,6 +34,18 @@ class GamepadData(object):
     pass
 
 
+class AxisMapping(object):
+    '''Represents a mapping between a HID type
+    and an evdev event'''
+    def __init__(self, hid, evdev=None):
+        self.hid = hid.lower()
+
+        if evdev is None:
+            evdev = f'ABS_{hid.upper()}'
+
+        self.evdev = libevdev.evbit('EV_ABS', evdev)
+
+
 class BaseGamepad(base.UHIDTestDevice):
     buttons_map = {
         1: 'BTN_SOUTH',
@@ -53,6 +65,17 @@ class BaseGamepad(base.UHIDTestDevice):
         15: 'BTN_THUMBR',
     }
 
+    axes_map = {
+        'left_stick': {
+            'x': AxisMapping('x'),
+            'y': AxisMapping('y'),
+        },
+        'right_stick': {
+            'x': AxisMapping('z'),
+            'y': AxisMapping('Rz'),
+        },
+    }
+
     def __init__(self, rdesc, name=None, input_info=None):
         assert rdesc is not None
         super().__init__(name, 'Joystick', input_info=input_info, rdesc=rdesc)
@@ -61,6 +84,12 @@ class BaseGamepad(base.UHIDTestDevice):
         self.left = (127, 127)
         self.right = (127, 127)
         self.hat_switch = 15
+
+    def store_axes(self, which, gamepad, data):
+        amap = self.axes_map[which]
+        x, y = data
+        setattr(gamepad, amap['x'].hid, x)
+        setattr(gamepad, amap['y'].hid, y)
 
     def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None, application='Game Pad'):
         """
@@ -111,10 +140,9 @@ class BaseGamepad(base.UHIDTestDevice):
         gamepad = GamepadData()
         for i, b in self._buttons.items():
             gamepad.__setattr__(f'b{i}', int(b) if b is not None else 0)
-        gamepad.x = left[0]
-        gamepad.y = left[1]
-        gamepad.rudder = right[0]
-        gamepad.throttle = right[1]
+
+        self.store_axes('left_stick', gamepad, left)
+        self.store_axes('right_stick', gamepad, right)
         gamepad.hatswitch = hat_switch
         return super().create_report(gamepad, reportID=reportID, application=application)
 
@@ -153,6 +181,17 @@ class JoystickGamepad(BaseGamepad):
         13: 'BTN_DEAD',
     }
 
+    axes_map = {
+        'left_stick': {
+            'x': AxisMapping('x'),
+            'y': AxisMapping('y'),
+        },
+        'right_stick': {
+            'x': AxisMapping('rudder'),
+            'y': AxisMapping('throttle'),
+        },
+    }
+
     def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
         """
         Return an input report for this device.
@@ -168,6 +207,9 @@ class JoystickGamepad(BaseGamepad):
         :param reportID: the numeric report ID for this report, if needed
         """
         return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Joystick')
+
+    def store_right_joystick(self, gamepad, data):
+        gamepad.rudder, gamepad.throttle = data
 
 
 class SaitekGamepad(JoystickGamepad):
@@ -655,6 +697,77 @@ class BaseTest:
             self.assertInputEventsIn((syn_event, expected_event), events)
             assert uhdev.evdev.value[key1] == 0
             assert uhdev.evdev.value[key2] == 0
+
+        def _get_libevdev_abs_events(self, which):
+            """Returns which ABS_* evdev axes are expected for the given stick"""
+            abs_map = self.uhdev.axes_map[which]
+
+            x = abs_map['x'].evdev
+            y = abs_map['y'].evdev
+
+            assert x
+            assert y
+
+            return x, y
+
+        def _test_joystick_press(self, which, data):
+            uhdev = self.uhdev
+
+            libevdev_axes = self._get_libevdev_abs_events(which)
+
+            r = None
+            if which == 'left_stick':
+                r = uhdev.event(left=data)
+            else:
+                r = uhdev.event(right=data)
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+
+            for i, d in enumerate(data):
+                if d is not None and d != 127:
+                    assert libevdev.InputEvent(libevdev_axes[i], d) in events
+                else:
+                    assert libevdev.InputEvent(libevdev_axes[i]) not in events
+
+        def test_left_joystick_press_left(self):
+            """check for the left joystick reliability"""
+            self._test_joystick_press('left_stick', (63, None))
+            self._test_joystick_press('left_stick', (0, 127))
+
+        def test_left_joystick_press_right(self):
+            """check for the left joystick reliability"""
+            self._test_joystick_press('left_stick', (191, 127))
+            self._test_joystick_press('left_stick', (255, None))
+
+        def test_left_joystick_press_up(self):
+            """check for the left joystick reliability"""
+            self._test_joystick_press('left_stick', (None, 63))
+            self._test_joystick_press('left_stick', (127, 0))
+
+        def test_left_joystick_press_down(self):
+            """check for the left joystick reliability"""
+            self._test_joystick_press('left_stick', (127, 191))
+            self._test_joystick_press('left_stick', (None, 255))
+
+        def test_right_joystick_press_left(self):
+            """check for the right joystick reliability"""
+            self._test_joystick_press('right_stick', (63, None))
+            self._test_joystick_press('right_stick', (0, 127))
+
+        def test_right_joystick_press_right(self):
+            """check for the right joystick reliability"""
+            self._test_joystick_press('right_stick', (191, 127))
+            self._test_joystick_press('right_stick', (255, None))
+
+        def test_right_joystick_press_up(self):
+            """check for the right joystick reliability"""
+            self._test_joystick_press('right_stick', (None, 63))
+            self._test_joystick_press('right_stick', (127, 0))
+
+        def test_right_joystick_press_down(self):
+            """check for the right joystick reliability"""
+            self._test_joystick_press('right_stick', (127, 191))
+            self._test_joystick_press('right_stick', (None, 255))
 
 
 class TestSaitekGamepad(BaseTest.TestGamepad):

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from test_gamepad import BaseGamepad, BaseTest
+from test_gamepad import AxisMapping, BaseGamepad, BaseTest
 
 import logging
 import pytest
@@ -95,6 +95,17 @@ class PS3Controller(BaseGamepad):
         15: 'BTN_SOUTH',            # cross */
         16: 'BTN_WEST',             # view/square */
         17: 'BTN_MODE',             # PS button */
+    }
+
+    axes_map = {
+        'left_stick': {
+            'x': AxisMapping('x'),
+            'y': AxisMapping('y'),
+        },
+        'right_stick': {
+            'x': AxisMapping('z', 'ABS_RX'),
+            'y': AxisMapping('Rz', 'ABS_RY'),
+        },
     }
 
     report_descriptor = [
