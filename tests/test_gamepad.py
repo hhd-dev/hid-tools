@@ -20,6 +20,7 @@
 
 import base
 import libevdev
+import pytest
 
 import logging
 logger = logging.getLogger('hidtools.test.gamepad')
@@ -576,6 +577,15 @@ class AsusGamepad(BaseGamepad):
 
 class BaseTest:
     class TestGamepad(base.BaseTestCase.TestUhid):
+        @pytest.fixture(autouse=True)
+        def send_initial_state(self):
+            """send an empty report to initialize the axes"""
+            uhdev = self.uhdev
+
+            r = uhdev.event()
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+
         def assert_button(self, button):
             uhdev = self.uhdev
             syn_event = self.syn_event
@@ -602,15 +612,14 @@ class BaseTest:
         def test_buttons(self):
             """check for button reliability."""
             uhdev = self.uhdev
-            syn_event = self.syn_event
-
-            # first send an empty report to initialize the axes
-            r = uhdev.event()
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
 
             for b in uhdev.buttons:
                 self.assert_button(b)
+
+        def test_dual_buttons(self):
+            """check for button reliability when pressing 2 buttons"""
+            uhdev = self.uhdev
+            syn_event = self.syn_event
 
             # can change intended b1 b2 values
             b1 = uhdev.buttons[0]
