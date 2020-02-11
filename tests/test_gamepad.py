@@ -85,6 +85,11 @@ class BaseGamepad(base.UHIDTestDevice):
         self.right = (127, 127)
         self.hat_switch = 15
 
+        self.fields = []
+        for r in self.parsed_rdesc.input_reports.values():
+            if r.application_name == self.application:
+                self.fields = [f.usage_name for f in r]
+
     def store_axes(self, which, gamepad, data):
         amap = self.axes_map[which]
         x, y = data
@@ -100,6 +105,7 @@ class BaseGamepad(base.UHIDTestDevice):
         :param right: a tuple of absolute (x, y) value of the right joypad
             where ``None`` is "leave unchanged"
         :param hat_switch: an absolute angular value of the hat switch
+            (expressed in 1/8 of circle, 0 being North, 2 East)
             where ``None`` is "leave unchanged"
         :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
@@ -768,6 +774,23 @@ class BaseTest:
             """check for the right joystick reliability"""
             self._test_joystick_press('right_stick', (127, 191))
             self._test_joystick_press('right_stick', (None, 255))
+
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Hat switch' not in uhdev.fields,
+                                   'Device not compatible, missing Hat switch usage')
+        @pytest.mark.parametrize('hat_value,expected_evdev,evdev_value',
+                                 [
+                                     (0, 'ABS_HAT0Y', -1),
+                                     (2, 'ABS_HAT0X', 1),
+                                     (4, 'ABS_HAT0Y', 1),
+                                     (6, 'ABS_HAT0X', -1),
+                                 ])
+        def test_hat_switch(self, hat_value, expected_evdev, evdev_value):
+            uhdev = self.uhdev
+
+            r = uhdev.event(hat_switch=hat_value)
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+            assert libevdev.InputEvent(libevdev.evbit('EV_ABS', expected_evdev), evdev_value) in events
 
 
 class TestSaitekGamepad(BaseTest.TestGamepad):
