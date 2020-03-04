@@ -37,7 +37,19 @@ class HIDReplay(object):
         self._devices = {}
         self.filename = filename
         self.replayed_count = 0
+
+        devices = {}
+        dev = None
         with open(filename) as f:
+
+            class DeviceInfo(object):
+                def __init__(self):
+                    self.name = None
+                    self.info = None
+                    self.phys = ''
+                    self.rdesc = None
+                    self.rdesc_length = None
+
             idx = 0
             for line in f:
                 line = line.strip()
@@ -46,9 +58,9 @@ class HIDReplay(object):
                     assert r is not None
                     idx = r['idx']
                     continue
-                if idx not in self._devices:
-                    self._devices[idx] = hidtools.uhid.UHIDDevice()
-                dev = self._devices[idx]
+                if idx not in devices:
+                    devices[idx] = DeviceInfo()
+                dev = devices[idx]
                 if line.startswith('N:'):
                     r = parse('N: {name}', line)
                     assert r is not None
@@ -64,12 +76,19 @@ class HIDReplay(object):
                 elif line.startswith('R:'):
                     r = parse('R: {length:d} {desc}', line)
                     assert r is not None
-                    length = r['length']
-                    dev.rdesc = r['desc']
-                    assert len(dev.rdesc) == length
+                    dev.rdesc = r
 
-        for d in self._devices.values():
-            d.create_kernel_device()
+        for idx, dev in devices.items():
+            uhid_dev = hidtools.uhid.UHIDDevice()
+            uhid_dev.name = dev.name
+            uhid_dev.info = dev.info
+            uhid_dev.phys = dev.phys
+            uhid_dev.rdesc = dev.rdesc['desc']
+            assert len(uhid_dev.rdesc) == dev.rdesc['length']
+
+            self._devices[idx] = uhid_dev
+
+            uhid_dev.create_kernel_device()
 
         while not self.ready:
             hidtools.uhid.UHIDDevice.dispatch(1000)

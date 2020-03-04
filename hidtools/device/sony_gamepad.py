@@ -213,7 +213,7 @@ class PS3Controller(BaseGamepad):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.info(f'set_report {bool(rdesc)}, {req}, {rnum}, {rtype}, {data}')
+        logger.debug(f'set_report {bool(rdesc)}, {req}, {rnum}, {rtype}, {data}')
 
         if rdesc is None:
             return 1
