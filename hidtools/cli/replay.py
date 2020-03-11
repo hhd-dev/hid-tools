@@ -25,6 +25,8 @@ import time
 import hidtools.uhid
 from parse import parse, findall
 
+from hidtools.device.sony_gamepad import PS3Controller
+
 import logging
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
                     level=logging.INFO)
@@ -33,6 +35,10 @@ logger = logging.getLogger('hidtools.replay')
 
 
 class HIDReplay(object):
+    _known_devices = {
+        (0x054c, 0x0268): PS3Controller()
+    }
+
     def __init__(self, filename):
         self._devices = {}
         self.filename = filename
@@ -68,7 +74,7 @@ class HIDReplay(object):
                 elif line.startswith('I:'):
                     r = parse('I: {bus:x} {vid:x} {pid:x}', line)
                     assert r is not None
-                    dev.info = [r['bus'], r['vid'], r['pid']]
+                    dev.info = r
                 elif line.startswith('P:'):
                     r = parse('P: {phys}', line)
                     if r is not None:
@@ -79,9 +85,11 @@ class HIDReplay(object):
                     dev.rdesc = r
 
         for idx, dev in devices.items():
-            uhid_dev = hidtools.uhid.UHIDDevice()
+            uhid_dev = self.determine_device_by_info(dev.info)
             uhid_dev.name = dev.name
-            uhid_dev.info = dev.info
+            uhid_dev.info = [dev.info['bus'],
+                             dev.info['vid'],
+                             dev.info['pid']]
             uhid_dev.phys = dev.phys
             uhid_dev.rdesc = dev.rdesc['desc']
             assert len(uhid_dev.rdesc) == dev.rdesc['length']
@@ -92,6 +100,12 @@ class HIDReplay(object):
 
         while not self.ready:
             hidtools.uhid.UHIDDevice.dispatch(1000)
+
+    def determine_device_by_info(self, info):
+        device_id = (info['vid'], info['pid'])
+        if device_id in self._known_devices:
+            return self._known_devices[device_id]
+        return hidtools.uhid.UHIDDevice()
 
     @property
     def ready(self):
