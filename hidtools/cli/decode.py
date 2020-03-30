@@ -136,6 +136,14 @@ def open_report_descriptor(path):
     raise Oops(f'Unable to detect file type for {path}')
 
 
+class FakeHidraw(hidtools.hidraw.HidrawDevice):
+    def __init__(self, name, rdesc):
+        self.name = name
+        self.bustype, self.vendor_id, self.product_id = 3, 1, 1
+        self.report_descriptor = rdesc
+        self.events = []
+
+
 @click.command()
 @click.argument('report_descriptor', metavar='<Path to report descriptor>', nargs=-1, type=click.Path(exists=True, dir_okay=False, readable=True))
 @click.option('--output', metavar='output-file', default=sys.stdout, nargs=1, type=click.File('w'), help='The file to record to (default: stdout)')
@@ -146,12 +154,13 @@ def main(report_descriptor, output, verbose):
         if verbose:
             base_logger.setLevel(logging.DEBUG)
 
-        for path in report_descriptor:
+        for d, path in enumerate(report_descriptor):
             rdescs = open_report_descriptor(path)
-            for rdesc in rdescs:
-                rdesc.dump(output)
+            for r, rdesc in enumerate(rdescs):
+                fake = FakeHidraw(f'device {d}:{r}', rdesc)
+                fake.dump(output, from_the_beginning=True)
                 if rdesc.win8:
-                    output.write("**** win 8 certified ****\n")
+                    output.write("# **** win 8 certified ****\n")
     except BrokenPipeError:
         pass
     except PermissionError as e:
