@@ -86,7 +86,7 @@ setup(name='hid-tools',
       data_files=[],  # man pages are added on success
       python_requires='>=3.6',
       include_package_data=True,
-      install_requires=['parse', 'pyyaml'],
+      install_requires=['parse', 'pyyaml', 'click'],
       extras_require={
           'uhid': ['pyudev']
       },

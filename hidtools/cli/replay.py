@@ -19,7 +19,7 @@
 #
 
 from datetime import datetime, timedelta
-import argparse
+import click
 import sys
 import time
 import hidtools.uhid
@@ -173,18 +173,16 @@ class HIDReplay(object):
             hidtools.uhid.UHIDDevice.dispatch()
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Replay a HID recording')
-    parser.add_argument('recording', metavar='recording.hid',
-                        type=str, help='Path to device recording')
-    parser.add_argument('--verbose', action='store_true',
-                        default=False, help='Show debugging information')
-    args = parser.parse_args()
-    if args.verbose:
+@click.command()
+@click.option('--verbose', default=False, is_flag=True, help='Show debugging information')
+@click.argument('recording', metavar='recording.hid', type=str)
+def main(verbose, recording):
+    '''Replay a HID recording'''
+    if verbose:
         base_logger.setLevel(logging.DEBUG)
 
     try:
-        with HIDReplay(args.recording) as replay:
+        with HIDReplay(recording) as replay:
             while True:
                 replay.replay_one_sequence()
     except PermissionError:

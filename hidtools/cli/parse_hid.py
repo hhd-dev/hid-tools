@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import argparse
+import click
 import sys
 import hidtools.hid
 from parse import parse as _parse
@@ -109,18 +109,14 @@ def parse_hid(f_in, f_out, print_events=True):
             f_out.write(line)
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Parse a HID recording and display it in human-readable format')
-    parser.add_argument('recording', metavar='recording.hid', nargs='?',
-                        help='Path to device recording (stdin if missing)',
-                        type=argparse.FileType('r'), default=sys.stdin)
-    parser.add_argument('--report-descriptor-only', action='store_true',
-                        help='Only print the Report Descriptor',
-                        default=False)
-    args = parser.parse_args()
-    with args.recording as f:
+@click.command()
+@click.option('--report-descriptor-only', default=False, is_flag=True, help='Only print the Report Descriptor')
+@click.argument('recording', metavar='<Path to device recording (stdin if missing)>', default=sys.stdin, type=click.File('r'))
+def main(recording, report_descriptor_only):
+    '''Parse a HID recording and display it in human-readable format'''
+    with recording as f:
         try:
-            parse_hid(f, sys.stdout, not args.report_descriptor_only)
+            parse_hid(f, sys.stdout, not report_descriptor_only)
         except KeyboardInterrupt:
             pass
         except BrokenPipeError:

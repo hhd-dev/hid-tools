@@ -17,8 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import click
 import select
-import argparse
 import sys
 import os
 
@@ -59,32 +59,24 @@ def list_devices():
         sys.exit(1)
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Record a HID device')
-    parser.add_argument('device', metavar='/dev/hidrawX',
-                        nargs="*", type=argparse.FileType('r'),
-                        help='Path to the hidraw device node')
-    parser.add_argument('--output', metavar='output-file',
-                        nargs=1, default=[sys.stdout],
-                        type=argparse.FileType('w'),
-                        help='The file to record to (default: stdout)')
-    args = parser.parse_args()
+@click.command()
+@click.option('--output', metavar='output-file', default=sys.stdout, nargs=1, type=click.File('w'), help='The file to record to (default: stdout)')
+@click.argument('device_list', metavar='<Path to the hidraw device node(s)>', nargs=-1, type=click.File('r'))
+def main(device_list, output):
+    '''Record a HID device'''
 
     devices = {}
     last_index = -1
     poll = select.poll()
     is_first_event = True
 
-    # argparse always gives us a list for nargs 1
-    output = args.output[0]
-
     try:
-        if not args.device:
-            args.device = [open(list_devices())]
+        if not device_list:
+            device_list = [open(list_devices())]
 
-        for idx, fd in enumerate(args.device):
+        for idx, fd in enumerate(device_list):
             device = HidrawDevice(fd)
-            if len(args.device) > 1:
+            if len(device_list) > 1:
                 print(f'D: {idx}', file=output)
             device.dump(output)
             poll.register(fd, select.POLLIN)

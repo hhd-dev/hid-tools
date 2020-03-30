@@ -18,7 +18,7 @@
 #
 
 
-import argparse
+import click
 import os
 import re
 import sys
@@ -136,22 +136,17 @@ def open_report_descriptor(path):
     raise Oops(f'Unable to detect file type for {path}')
 
 
-def main(argv=sys.argv):
+@click.command()
+@click.argument('report_descriptor', metavar='<Path to report descriptor>', nargs=-1, type=click.Path(exists=True, dir_okay=False, readable=True))
+@click.option('--output', metavar='output-file', default=sys.stdout, nargs=1, type=click.File('w'), help='The file to record to (default: stdout)')
+@click.option('--verbose', default=False, is_flag=True, help='Show debugging information')
+def main(report_descriptor, output, verbose):
+    '''Decode a HID report descriptor to human-readable format'''
     try:
-        parser = argparse.ArgumentParser(description='Decode a HID report descriptor to human-readable format ')
-        parser.add_argument('report_descriptor', help='Path to report descriptor(s)', nargs='+', type=str)
-        parser.add_argument('--output', metavar='output-file',
-                            nargs=1, default=[sys.stdout],
-                            type=argparse.FileType('w'),
-                            help='The file to record to (default: stdout)')
-        parser.add_argument('--verbose', action='store_true',
-                            default=False, help='Show debugging information')
-        args = parser.parse_args(argv[1:])
-        # argparse gives us a list size 1 for nargs 1
-        output = args.output[0]
-        if args.verbose:
+        if verbose:
             base_logger.setLevel(logging.DEBUG)
-        for path in args.report_descriptor:
+
+        for path in report_descriptor:
             rdescs = open_report_descriptor(path)
             for rdesc in rdescs:
                 rdesc.dump(output)
