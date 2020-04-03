@@ -44,10 +44,14 @@ class BaseTest:
                     runner.invoke(decode, self.cli_args + [f'--output', outfile.name, sourcefile.name])
                     return outfile.readlines()
 
+        def get_rdesc_dump(self, output):
+            _output = [o.lstrip('# ') for o in output if o.startswith('# ')]
+            return [o for o in _output if o.strip() and 'device ' not in o]
+
         @property
         def output(self):
             if not hasattr(self, '_output'):
-                self._output = self.run_hid_decode()
+                self._output = self.get_rdesc_dump(self.run_hid_decode())
             return self._output
 
         def output_to_bytes(self, output_lines):
@@ -215,7 +219,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
             runner.invoke(decode, self.cli_args + [f'--output', outfile.name, source])
-            lines = outfile.readlines()
+            lines = self.get_rdesc_dump(outfile.readlines())
             assert self.rdesc == self.output_to_bytes(lines)
 
     def test_pass_event_node(self):
@@ -224,7 +228,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         runner = CliRunner()
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
             runner.invoke(decode, self.cli_args + [f'--output', outfile.name, source])
-            lines = outfile.readlines()
+            lines = self.get_rdesc_dump(outfile.readlines())
             assert self.rdesc == self.output_to_bytes(lines)
 
 
