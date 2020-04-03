@@ -20,6 +20,7 @@
 import tempfile
 from base import UHIDTestDevice
 from hidtools.cli.decode import main as decode
+from click.testing import CliRunner
 import logging
 import pytest
 import re
@@ -31,6 +32,7 @@ class BaseTest:
         cli_args = []
 
         def run_hid_decode(self):
+            runner = CliRunner()
             with tempfile.NamedTemporaryFile(delete=True) as sourcefile:
                 if isinstance(self.data, str):
                     data = bytes(self.data, encoding='utf-8')
@@ -39,7 +41,7 @@ class BaseTest:
                 sourcefile.write(data)
                 sourcefile.seek(0)
                 with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
-                    decode(['hid-decode.test'] + self.cli_args + [f'--output', outfile.name, sourcefile.name])
+                    runner.invoke(decode, self.cli_args + [f'--output', outfile.name, sourcefile.name])
                     return outfile.readlines()
 
         @property
@@ -210,16 +212,18 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
     def test_pass_hidraw(self):
         # same as above, but passes the hidraw node into hid-decode
         source = self.uhid_device.hidraw_nodes[0]
+        runner = CliRunner()
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
-            decode(['hid-decode.test'] + self.cli_args + [f'--output', outfile.name, source])
+            runner.invoke(decode, self.cli_args + [f'--output', outfile.name, source])
             lines = outfile.readlines()
             assert self.rdesc == self.output_to_bytes(lines)
 
     def test_pass_event_node(self):
         # same as above, but passes the event node into hid-decode
         source = self.uhid_device.device_nodes[0]
+        runner = CliRunner()
         with tempfile.NamedTemporaryFile(mode='r', delete=True) as outfile:
-            decode(['hid-decode.test'] + self.cli_args + [f'--output', outfile.name, source])
+            runner.invoke(decode, self.cli_args + [f'--output', outfile.name, source])
             lines = outfile.readlines()
             assert self.rdesc == self.output_to_bytes(lines)
 
