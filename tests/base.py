@@ -24,13 +24,13 @@ import pytest
 import sys
 import time
 
+import logging
+
 # FIXME: this is really wrong :)
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/..')  # noqa
 
-import logging
-
 from hidtools.util import twos_comp, to_twos_comp # noqa
-from hidtools.device.base_device import BaseDevice, SysfsFile
+from hidtools.device.base_device import BaseDevice, SysfsFile # noqa
 
 logger = logging.getLogger('hidtools.test.base')
 
@@ -71,16 +71,16 @@ class BaseTestCase:
             if uhdev is not None:
                 human_data = [uhdev.parsed_rdesc.format_report(r, split_lines=True) for r in reports]
                 try:
-                    human_data = [f'\n\t       {" " * h.index("/")}'.join(h.split('\n')) for h in human_data]
+                    human_data = ['\n\t       {" " * h.index("/")}'.join(h.split('\n')) for h in human_data]
                 except ValueError:
                     # '/' not found: not a numbered report
-                    human_data = [f'\n\t      '.join(h.split('\n')) for h in human_data]
+                    human_data = ['\n\t      '.join(h.split('\n')) for h in human_data]
                 data = [f'{d}\n\t ====> {h}' for d, h in zip(data, human_data)]
 
             reports = data
 
             if len(reports) == 1:
-                print(f'sending 1 report:')
+                print('sending 1 report:')
             else:
                 print(f'sending {len(reports)} reports:')
             for report in reports:

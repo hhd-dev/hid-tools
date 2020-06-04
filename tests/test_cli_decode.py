@@ -41,7 +41,7 @@ class BaseTest:
                     sourcefile.write(data)
                     sourcefile.seek(0)
 
-                runner.invoke(decode, self.cli_args + [f'--output', 'output.txt', sourcefile.name])
+                runner.invoke(decode, self.cli_args + ['--output', 'output.txt', sourcefile.name])
                 with open('output.txt') as outfile:
                     return outfile.readlines()
 
@@ -85,15 +85,15 @@ class BaseTest:
 
 
 class TestHidRecording(BaseTest.HidDecodeBase):
-    data = f'''
+    data = '''
 R: 67 05 01 09 02 a1 01 09 01 a1 00 05 09 19 01 29 10 15 00 25 01 95 10 75 01 81 02 05 01 16 01 80 26 ff 7f 75 10 95 02 09 30 09 31 81 06 15 81 25 7f 75 08 95 01 09 38 81 06 05 0c 0a 38 02 95 01 81 06 c0 c0
 N: Logitech G500s Laser Gaming Mouse
 I: 3 046d c24e
 '''
 
     def test_dump(self):
-        assert self.output[0].strip() == f'0x05, 0x01,                    // Usage Page (Generic Desktop)        0'
-        assert self.output[1].strip() == f'0x09, 0x02,                    // Usage (Mouse)                       2'
+        assert self.output[0].strip() == '0x05, 0x01,                    // Usage Page (Generic Desktop)        0'
+        assert self.output[1].strip() == '0x09, 0x02,                    // Usage (Mouse)                       2'
         assert 'End Collection' in self.output[-1]
         assert 'End Collection' in self.output[-2]
 
@@ -219,7 +219,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         source = self.uhid_device.hidraw_nodes[0]
         runner = CliRunner()
         with runner.isolated_filesystem():
-            runner.invoke(decode, self.cli_args + [f'--output', 'output.txt', source])
+            runner.invoke(decode, self.cli_args + ['--output', 'output.txt', source])
             with open('output.txt') as outfile:
                 lines = self.get_rdesc_dump(outfile.readlines())
                 assert self.rdesc == self.output_to_bytes(lines)
@@ -229,7 +229,7 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
         source = self.uhid_device.device_nodes[0]
         runner = CliRunner()
         with runner.isolated_filesystem():
-            runner.invoke(decode, self.cli_args + [f'--output', 'output.txt', source])
+            runner.invoke(decode, self.cli_args + ['--output', 'output.txt', source])
             with open('output.txt') as outfile:
                 lines = self.get_rdesc_dump(outfile.readlines())
                 assert self.rdesc == self.output_to_bytes(lines)
