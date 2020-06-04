@@ -121,6 +121,7 @@ class BaseTestCase:
                     self.uhdev.dispatch(10)
                 assert self.uhdev.evdev is not None
                 yield
+                self.uhdev = None
 
         @pytest.fixture(autouse=True)
         def check_taint(self):
