@@ -71,7 +71,7 @@ class BaseTestCase:
             if uhdev is not None:
                 human_data = [uhdev.parsed_rdesc.format_report(r, split_lines=True) for r in reports]
                 try:
-                    human_data = ['\n\t       {" " * h.index("/")}'.join(h.split('\n')) for h in human_data]
+                    human_data = [f'\n\t       {" " * h.index("/")}'.join(h.split('\n')) for h in human_data]
                 except ValueError:
                     # '/' not found: not a numbered report
                     human_data = ['\n\t      '.join(h.split('\n')) for h in human_data]
