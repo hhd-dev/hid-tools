@@ -20,7 +20,7 @@
 
 # This is for generic devices
 
-import base
+from . import base
 import logging
 logger = logging.getLogger('hidtools.test.hid')
 

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from test_keyboard import ArrayKeyboard, TestArrayKeyboard
+from .test_keyboard import ArrayKeyboard, TestArrayKeyboard
 
 import libevdev
 import logging

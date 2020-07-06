@@ -21,7 +21,7 @@
 import pytest
 import resource
 import uuid
-from base import create_udev_rule, teardown_udev_rule
+from .base import create_udev_rule, teardown_udev_rule
 
 
 @pytest.fixture(autouse=True, scope="session")

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import base
+from . import base
 from hidtools.hut import HUT
 import libevdev
 import logging

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from test_gamepad import BaseTest
+from .test_gamepad import BaseTest
 from hidtools.device.sony_gamepad import PS3Controller
 
 import logging
