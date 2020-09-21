@@ -93,7 +93,8 @@ class BaseTestCase:
             raise Exception('please reimplement me in subclasses')
 
         def assertName(self, uhdev):
-            assert uhdev.evdev.name == uhdev.name
+            evdev = uhdev.get_evdev()
+            assert evdev.name == uhdev.name
 
         @pytest.fixture(autouse=True)
         def context(self, request):
@@ -109,7 +110,7 @@ class BaseTestCase:
                 now = time.time()
                 while not self.uhdev.is_ready() and time.time() - now < 5:
                     self.uhdev.dispatch(10)
-                assert self.uhdev.evdev is not None
+                assert self.uhdev.get_evdev() is not None
                 yield
                 self.uhdev = None
 
@@ -132,7 +133,7 @@ class BaseTestCase:
             uhdev = self.uhdev
             self.assertName(uhdev)
             assert len(uhdev.next_sync_events()) == 0
-            assert uhdev.evdev is not None
+            assert uhdev.get_evdev() is not None
 
 
 def reload_udev_rules():

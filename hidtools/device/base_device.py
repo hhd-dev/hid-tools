@@ -193,15 +193,18 @@ class BaseDevice(UHIDDevice):
         for name in to_remove:
             del(self.input_nodes[name])
 
-    def next_sync_events(self):
-        return list(self.evdev.events())
+    def next_sync_events(self, application=None):
+        evdev = self.get_evdev(application)
+        return list(evdev.events())
 
-    @property
-    def evdev(self):
-        if self.application not in self.input_nodes:
+    def get_evdev(self, application=None):
+        if application is None:
+            application = self.application
+
+        if application not in self.input_nodes:
             return None
 
-        return self.input_nodes[self.application]
+        return self.input_nodes[application]
 
     def is_ready(self):
         '''Returns whether a UHID device is ready. Can be overwritten in

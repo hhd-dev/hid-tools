@@ -41,6 +41,7 @@ class BaseTest:
 
         def assert_button(self, button):
             uhdev = self.uhdev
+            evdev = uhdev.get_evdev()
             syn_event = self.syn_event
 
             buttons = {}
@@ -52,7 +53,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            assert uhdev.evdev.value[key] == 1
+            assert evdev.value[key] == 1
 
             buttons[button] = False
             r = uhdev.event(buttons=buttons)
@@ -60,7 +61,7 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            assert uhdev.evdev.value[key] == 0
+            assert evdev.value[key] == 0
 
         def test_buttons(self):
             """check for button reliability."""
@@ -72,6 +73,7 @@ class BaseTest:
         def test_dual_buttons(self):
             """check for button reliability when pressing 2 buttons"""
             uhdev = self.uhdev
+            evdev = uhdev.get_evdev()
             syn_event = self.syn_event
 
             # can change intended b1 b2 values
@@ -87,8 +89,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event0, expected_event1), events)
-            assert uhdev.evdev.value[key1] == 1
-            assert uhdev.evdev.value[key2] == 1
+            assert evdev.value[key1] == 1
+            assert evdev.value[key2] == 1
 
             buttons = {b1: False, b2: None}
             r = uhdev.event(buttons=buttons)
@@ -97,8 +99,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            assert uhdev.evdev.value[key1] == 0
-            assert uhdev.evdev.value[key2] == 1
+            assert evdev.value[key1] == 0
+            assert evdev.value[key2] == 1
 
             buttons = {b1: None, b2: False}
             r = uhdev.event(buttons=buttons)
@@ -106,8 +108,8 @@ class BaseTest:
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
             self.assertInputEventsIn((syn_event, expected_event), events)
-            assert uhdev.evdev.value[key1] == 0
-            assert uhdev.evdev.value[key2] == 0
+            assert evdev.value[key1] == 0
+            assert evdev.value[key2] == 0
 
         def _get_libevdev_abs_events(self, which):
             """Returns which ABS_* evdev axes are expected for the given stick"""
