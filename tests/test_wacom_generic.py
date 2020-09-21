@@ -173,10 +173,8 @@ class BaseTablet(base.UHIDTestDevice):
         Use the Wacom driver's usual naming conventions to apply a
         sensible default filter.
         """
-        if application == 'Pen':
-            return evdev.name.endswith('Pen')
-        elif application == 'Pad':
-            return evdev.name.endswith('Pad')
+        if application in ['Pen', 'Pad']:
+            return evdev.name.endswith(application)
         else:
             return True
 

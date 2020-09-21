@@ -138,7 +138,8 @@ class BaseDevice(UHIDDevice):
 
         returning True will append the corresponding report to
         `self.input_nodes[type]`
-        returning False  will ignore this report for the device.
+        returning False  will ignore this report / type combination
+        for the device.
         '''
         return True
 
@@ -176,12 +177,14 @@ class BaseDevice(UHIDDevice):
         flag = fcntl.fcntl(fd, fcntl.F_GETFD)
         fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
 
+        used = False
         for type in types:
             # check for custom defined matching
-            if not self.match_evdev_rule(type, evdev):
-                evdev.fd.close()
-                continue
-            self.input_nodes[type] = evdev
+            if self.match_evdev_rule(type, evdev):
+                self.input_nodes[type] = evdev
+                used = True
+        if not used:
+            evdev.fd.close()
 
     def udev_led_event(self, device):
         led = LED(device)
