@@ -219,6 +219,17 @@ class BaseTablet(base.UHIDTestDevice):
 
         return super().create_report(report, reportID=reportID)
 
+    def create_report_heartbeat(self, reportID):
+        """
+        Return a heartbeat input report for this device.
+
+        Heartbeat reports generally contain battery status information,
+        among other things.
+        """
+        report = ReportData()
+        report.wacombatterycharging = 1
+        return super().create_report(report, reportID=reportID)
+
     def event(self, x, y, pressure, buttons=None, toolid=None, proximity=None):
         """
         Send an input event on the default report ID.
@@ -232,6 +243,14 @@ class BaseTablet(base.UHIDTestDevice):
              for unchanged.
         """
         r = self.create_report(x, y, pressure, buttons, toolid, proximity)
+        self.call_input_event(r)
+        return [r]
+
+    def event_heartbeat(self, reportID):
+        """
+        Send a heartbeat event on the requested report ID.
+        """
+        r = self.create_report_heartbeat(reportID)
         self.call_input_event(r)
         return [r]
 
@@ -652,3 +671,29 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
     def test_descriptor_physicals(self):
         # XFAIL: Various documented errata
         super().test_descriptor_physicals()
+
+    def test_heartbeat_spurious(self):
+        """
+        Test that the heartbeat report does not send spurious events.
+        """
+        uhdev = self.uhdev
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=300, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=0x822), proximity=ProximityState.IN_RANGE),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 200),
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1),
+            ]
+        )
+
+        # Exactly zero events: not even a SYN
+        self.sync_and_assert_events(uhdev.event_heartbeat(19), [], auto_syn=False, strict=True)
+
+        self.sync_and_assert_events(
+            uhdev.event(110, 200, pressure=300),
+            [
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 110),
+            ]
+        )
