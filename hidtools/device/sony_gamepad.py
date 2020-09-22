@@ -177,6 +177,9 @@ class PS3Controller(BaseGamepad):
         self.rumble = PS3Rumble()
         self.hw_leds = PS3LEDs()
 
+    def is_ready(self):
+        return super().is_ready() and len(self.led_classes) == 4
+
     def get_report(self, req, rnum, rtype):
         rdesc = None
         for v in self.parsed_rdesc.feature_reports.values():

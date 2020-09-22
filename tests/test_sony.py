@@ -28,9 +28,6 @@ logger = logging.getLogger('hidtools.test.sony')
 
 class SonyBaseTest:
     class SonyTest(BaseTest.TestGamepad):
-        def uhdev_is_ready(self):
-            return super().uhdev_is_ready() and len(self.uhdev.led_classes) == 4
-
         @pytest.fixture(autouse=True)
         def start_controller(self):
             # emulate a 'PS' button press to tell the kernel we are ready to accept events

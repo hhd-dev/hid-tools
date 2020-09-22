@@ -95,17 +95,6 @@ class BaseTestCase:
         def assertName(self, uhdev):
             assert uhdev.evdev.name == uhdev.name
 
-        def uhdev_is_ready(self):
-            '''Can be overwritten in subclasses to add extra conditions
-            on when to consider a UHID device ready. This can be:
-
-            - we need to wait on different types of input devices to be ready
-              (Touch Screen and Pen for example)
-            - we need to have at least 4 LEDs present
-              (len(self.uhdev.leds_classes) == 4)
-            - or any other combinations'''
-            return self.uhdev.application in self.uhdev.input_nodes
-
         @pytest.fixture(autouse=True)
         def context(self, request):
             with self.create_device() as self.uhdev:
@@ -118,7 +107,7 @@ class BaseTestCase:
 
                 self.uhdev.create_kernel_device()
                 now = time.time()
-                while not self.uhdev_is_ready() and time.time() - now < 5:
+                while not self.uhdev.is_ready() and time.time() - now < 5:
                     self.uhdev.dispatch(10)
                 assert self.uhdev.evdev is not None
                 yield

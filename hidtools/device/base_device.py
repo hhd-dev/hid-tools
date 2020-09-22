@@ -202,3 +202,15 @@ class BaseDevice(UHIDDevice):
             return None
 
         return self.input_nodes[self.application]
+
+    def is_ready(self):
+        '''Returns whether a UHID device is ready. Can be overwritten in
+        subclasses to add extra conditions on when to consider a UHID
+        device ready. This can be:
+
+        - we need to wait on different types of input devices to be ready
+          (Touch Screen and Pen for example)
+        - we need to have at least 4 LEDs present
+          (len(self.uhdev.leds_classes) == 4)
+        - or any other combinations'''
+        return self.application in self.input_nodes
