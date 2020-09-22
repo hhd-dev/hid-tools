@@ -960,6 +960,22 @@ class HidField(object):
 
         The logical maximum of this HID field
 
+    .. attribute:: physical_min
+
+        The physical minimum of this HID field
+
+    .. attribute:: physical_max
+
+        The physical maximum of this HID field
+
+    .. attribute:: unit
+
+        The unit of this HID field
+
+    .. attribute:: unit_exp
+
+        The unit exponent of this HID field
+
     .. attribute:: size
 
         Report Size in bits for this HID field
@@ -979,6 +995,10 @@ class HidField(object):
                  usage,
                  logical_min,
                  logical_max,
+                 physical_min,
+                 physical_max,
+                 unit,
+                 unit_exp,
                  item_size,
                  count):
         self.report_ID = report_ID
@@ -992,6 +1012,10 @@ class HidField(object):
         self.usages = None
         self.logical_min = logical_min
         self.logical_max = logical_max
+        self.physical_min = physical_min
+        self.physical_max = physical_max
+        self.unit = unit
+        self.unit_exp = unit_exp
         self.size = item_size
         self.count = count
 
@@ -1279,6 +1303,10 @@ class HidField(object):
                      usage_max,
                      logical_min,
                      logical_max,
+                     physical_min,
+                     physical_max,
+                     unit,
+                     unit_exp,
                      item_size,
                      count):
         """
@@ -1312,6 +1340,10 @@ class HidField(object):
                    usage,
                    logical_min,
                    logical_max,
+                   physical_min,
+                   physical_max,
+                   unit,
+                   unit_exp,
                    item_size,
                    1)
         items = []
@@ -1690,6 +1722,10 @@ class ReportDescriptor(object):
             self.application = None
             self.logical_min = 0
             self.logical_max = 0
+            self.physical_min = 0
+            self.physical_max = 0
+            self.unit = 0
+            self.unit_exp = 0
             self.count = 0
             self.item_size = 0
             if other is not None:
@@ -1699,6 +1735,10 @@ class ReportDescriptor(object):
                 self.application = other.application
                 self.logical_min = other.logical_min
                 self.logical_max = other.logical_max
+                self.physical_min = other.physical_min
+                self.physical_max = other.physical_max
+                self.unit = other.unit
+                self.unit = other.unit_exp
                 self.count = other.count
                 self.item_size = other.item_size
 
@@ -1870,6 +1910,14 @@ class ReportDescriptor(object):
             self.glob.logical_min = value
         elif item == "Logical Maximum":
             self.glob.logical_max = value
+        elif item == "Physical Minimum":
+            self.glob.physical_min = value
+        elif item == "Physical Maximum":
+            self.glob.physical_max = value
+        elif item == "Unit":
+            self.glob.unit = value
+        elif item == "Unit Exponent":
+            self.glob.unit_exp = value
         elif item == "Usage":
             if size <= 2:
                 self.local.usages.append(value | self.glob.usage_page)
@@ -1897,6 +1945,10 @@ class ReportDescriptor(object):
                                                self.local.usage_max,
                                                self.glob.logical_min,
                                                self.glob.logical_max,
+                                               self.glob.physical_min,
+                                               self.glob.physical_max,
+                                               self.glob.unit,
+                                               self.glob.unit_exp,
                                                self.glob.item_size,
                                                self.glob.count)
             self.current_input_report.extend(inputItems)

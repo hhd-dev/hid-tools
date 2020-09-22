@@ -32,6 +32,8 @@ decode reports sent by the device.
 
 import attr
 from enum import Enum
+from hidtools.hut import HUT
+from hidtools.hid import HidUnit
 import tests.base as base
 import libevdev
 
@@ -114,6 +116,34 @@ class ToolID():
         reportdata.transducerserialnumber = self.serial & 0xFFFFFFFF
         reportdata.serialhi = (self.serial >> 32) & 0xFFFFFFFF
         reportdata.tooltype = self.tooltype
+
+
+@attr.s
+class PhysRange():
+    """
+    Range of HID physical values, with units.
+    """
+    unit = attr.ib()
+    min_size = attr.ib()
+    max_size = attr.ib()
+
+    CENTIMETER = HidUnit.from_string("SILinear: cm")
+    DEGREE = HidUnit.from_string("EnglishRotation: deg")
+
+    def contains(self, field):
+        """
+        Check if the physical size of the provided field is in range.
+
+        Compare the physical size described by the provided HID field
+        against the range of sizes described by this object. This is
+        an exclusive range comparison (e.g. 0 cm is not within the
+        range 0 cm - 5 cm) and exact unit comparison (e.g. 1 inch is
+        not within the range 0 cm - 5 cm).
+        """
+        phys_size = (field.physical_max - field.physical_min) * 10**(field.unit_exp)
+        return field.unit == self.unit.value and \
+            phys_size > self.min_size and \
+            phys_size < self.max_size
 
 
 class BaseTablet(base.UHIDTestDevice):
@@ -282,6 +312,7 @@ class OpaqueCTLTablet(BaseTablet):
         0x09, 0x30,                     # .         Usage (Tip Pressure),
         0x55, 0x00,                     # .         Unit Exponent (0),
         0x65, 0x00,                     # .         Unit,
+        0x47, 0x00, 0x00, 0x00, 0x00,   # .         Physical Maximum (0),
         0x26, 0xFF, 0x0F,               # .         Logical Maximum (4095),
         0x75, 0x10,                     # .         Report Size (16),
         0x81, 0x02,                     # .         Input (Variable),
@@ -335,6 +366,25 @@ class BaseTest:
             else:
                 self.assertInputEventsIn(expected_events, actual_events)
 
+        def get_usages(self, uhdev):
+            def get_report_usages(report):
+                for field in report.fields:
+                    if field.usages is not None:
+                        for usage in field.usages:
+                            yield (field, usage)
+                    else:
+                        yield(field, field.usage)
+
+            desc = uhdev.parsed_rdesc
+            reports = [
+                *desc.input_reports.values(),
+                *desc.feature_reports.values(),
+                *desc.output_reports.values(),
+            ]
+            for report in reports:
+                for usage in get_report_usages(report):
+                    yield usage
+
         def assertName(self, uhdev):
             """
             Assert that the name is as we expect.
@@ -348,6 +398,34 @@ class BaseTest:
             if "wacom" not in expected_name.lower():
                 expected_name = "Wacom " + expected_name
             assert evdev.name == expected_name
+
+        def test_descriptor_physicals(self):
+            """
+            Verify that all HID usages which should have a physical range
+            actually do, and those which shouldn't don't. Also verify that
+            the associated unit is correct and within a sensible range.
+            """
+            def usage_id(page_name, usage_name):
+                page = HUT.usage_page_from_name(page_name)
+                return (page.page_id << 16) | page[usage_name].usage
+
+            required = {
+                usage_id('Generic Desktop', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id('Generic Desktop', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id('Wacom', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id('Wacom', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+            }
+            for field, usage in self.get_usages(self.uhdev):
+                expect_physical = usage in required
+
+                phys_set = field.physical_min != 0 or field.physical_max != 0
+                assert phys_set == expect_physical
+
+                unit_set = field.unit != 0
+                assert unit_set == expect_physical
+
+                if unit_set:
+                    assert required[usage].contains(field)
 
         def test_prop_direct(self):
             """
