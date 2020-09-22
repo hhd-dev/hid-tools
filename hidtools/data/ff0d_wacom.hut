@@ -77,6 +77,8 @@
 84	Err Full Trans Features Unavail
 85	Err Charge Low
 86-8F	Reserved for future errors
+0130	X
+0131	Y
 0132	Wacom Distance
 0136	Wacom TouchStrip
 0137	Wacom TouchStrip2

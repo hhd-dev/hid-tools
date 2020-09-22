@@ -30,11 +30,34 @@ in the driver's device table. It uses the device's HID descriptor to
 decode reports sent by the device.
 """
 
+import attr
+from enum import Enum
 import tests.base as base
 import libevdev
 
 import logging
 logger = logging.getLogger('hidtools.test.wacom')
+
+
+class ProximityState(Enum):
+    """
+    Enumeration of allowed proximity states.
+    """
+    # Tool is not able to be sensed by the device
+    OUT = 0
+
+    # Tool is close enough to be sensed, but some data may be invalid
+    # or inaccurate
+    IN_PROXIMITY = 1
+
+    # Tool is close enough to be sensed with high accuracy. All data
+    # valid.
+    IN_RANGE = 2
+
+    def fill(self, reportdata):
+        """Fill a report with approrpiate HID properties/values."""
+        reportdata.inrange = self in [ProximityState.IN_RANGE]
+        reportdata.wacomsense = self in [ProximityState.IN_PROXIMITY, ProximityState.IN_RANGE]
 
 
 class ReportData():
@@ -44,6 +67,55 @@ class ReportData():
     pass
 
 
+@attr.s
+class Buttons():
+    """
+    Stylus button state.
+
+    Describes the state of each of the buttons / "side switches" that
+    may be present on a stylus. Buttons set to 'None' indicate the
+    state is "unchanged" since the previous event.
+    """
+    primary = attr.ib(default=None)
+    secondary = attr.ib(default=None)
+    tertiary = attr.ib(default=None)
+
+    @staticmethod
+    def clear():
+        """Button object with all states cleared."""
+        return Buttons(False, False, False)
+
+    def fill(self, reportdata):
+        """Fill a report with approrpiate HID properties/values."""
+        reportdata.barrelswitch = int(self.primary or 0)
+        reportdata.secondarybarrelswitch = int(self.secondary or 0)
+        reportdata.b3 = int(self.tertiary or 0)
+
+
+@attr.s
+class ToolID():
+    """
+    Stylus tool identifiers.
+
+    Contains values used to identify a specific stylus, e.g. its serial
+    number and tool-type identifier. Values of ``0`` may sometimes be
+    used for the out-of-range condition.
+    """
+    serial = attr.ib()
+    tooltype = attr.ib()
+
+    @staticmethod
+    def clear():
+        """ToolID object with all fields cleared."""
+        return ToolID(0, 0)
+
+    def fill(self, reportdata):
+        """Fill a report with approrpiate HID properties/values."""
+        reportdata.transducerserialnumber = self.serial & 0xFFFFFFFF
+        reportdata.serialhi = (self.serial >> 32) & 0xFFFFFFFF
+        reportdata.tooltype = self.tooltype
+
+
 class BaseTablet(base.UHIDTestDevice):
     """
     Skeleton object for all kinds of tablet devices.
@@ -51,20 +123,35 @@ class BaseTablet(base.UHIDTestDevice):
     def __init__(self, rdesc, name=None, info=None):
         assert rdesc is not None
         super().__init__(name, 'Pen', input_info=info, rdesc=rdesc)
+        self.buttons = Buttons.clear()
+        self.toolid = ToolID.clear()
+        self.proximity = ProximityState.OUT
 
-    def create_report(self, x, y, pressure, inrange=None, reportID=None):
+    def create_report(self, x, y, pressure, buttons=None, toolid=None, proximity=None, reportID=None):
         """
         Return an input report for this device.
 
         :param x: absolute x
         :param y: absolute y
         :param pressure: pressure
-        :param inrange: a boolean indicating if the pen is in range
+        :param buttons: stylus button state. Use ``None`` for unchanged.
+        :param toolid: tool identifiers. Use ``None`` for unchanged.
+        :param proximity: a ProximityState indicating the sensor's ability
+             to detect and report attributes of this tool. Use ``None``
+             for unchanged.
         :param reportID: the numeric report ID for this report, if needed
         """
-        if inrange is not None:
-            self.inrange = inrange
-        inrange = self.inrange
+        if buttons is not None:
+            self.buttons = buttons
+        buttons = self.buttons
+
+        if toolid is not None:
+            self.toolid = toolid
+        toolid = self.toolid
+
+        if proximity is not None:
+            self.proximity = proximity
+        proximity = self.proximity
 
         reportID = reportID or self.default_reportID
 
@@ -73,18 +160,25 @@ class BaseTablet(base.UHIDTestDevice):
         report.y = y
         report.tippressure = pressure
         report.tipswitch = pressure > 0
-        report.inrange = inrange
+        buttons.fill(report)
+        proximity.fill(report)
+        toolid.fill(report)
+
         return super().create_report(report, reportID=reportID)
 
-    def event(self, x, y, pressure, inrange=None):
+    def event(self, x, y, pressure, buttons=None, toolid=None, proximity=None):
         """
         Send an input event on the default report ID.
 
         :param x: absolute x
         :param y: absolute y
-        :param inrange: a boolean indicating if the pen is in range
+        :param buttons: stylus button state. Use ``None`` for unchanged.
+        :param toolid: tool identifiers. Use ``None`` for unchanged.
+        :param proximity: a ProximityState indicating the sensor's ability
+             to detect and report attributes of this tool. Use ``None``
+             for unchanged.
         """
-        r = self.create_report(x, y, pressure, inrange)
+        r = self.create_report(x, y, pressure, buttons, toolid, proximity)
         self.call_input_event(r)
         return [r]
 
@@ -139,6 +233,89 @@ class OpaqueTablet(BaseTablet):
                  info=(0x3, 0x056a, 0x9999)):
         super().__init__(rdesc, name, info)
         self.default_reportID = 1
+
+
+class OpaqueCTLTablet(BaseTablet):
+    """
+    Opaque tablet similar to something in the CTL product line.
+
+    A pen-only tablet with most basic features you would expect from
+    an actual device. Position, eraser, pressure, barrel buttons.
+    Uses the Wacom vendor-defined usage page.
+    """
+    report_descriptor = [
+        0x06, 0x0D, 0xFF,               # . Usage Page (Vnd Wacom Emr),
+        0x09, 0x01,                     # . Usage (Digitizer),
+        0xA1, 0x01,                     # . Collection (Application),
+        0x85, 0x10,                     # .     Report ID (16),
+        0x09, 0x20,                     # .     Usage (Stylus),
+        0x35, 0x00,                     # .     Physical Minimum (0),
+        0x45, 0x00,                     # .     Physical Maximum (0),
+        0x15, 0x00,                     # .     Logical Minimum (0),
+        0x25, 0x01,                     # .     Logical Maximum (1),
+        0xA1, 0x00,                     # .     Collection (Physical),
+        0x09, 0x42,                     # .         Usage (Tip Switch),
+        0x09, 0x44,                     # .         Usage (Barrel Switch),
+        0x09, 0x5A,                     # .         Usage (Secondary Barrel Switch),
+        0x09, 0x45,                     # .         Usage (Eraser),
+        0x09, 0x3C,                     # .         Usage (Invert),
+        0x09, 0x32,                     # .         Usage (In Range),
+        0x09, 0x36,                     # .         Usage (In Proximity),
+        0x25, 0x01,                     # .         Logical Maximum (1),
+        0x75, 0x01,                     # .         Report Size (1),
+        0x95, 0x07,                     # .         Report Count (7),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x95, 0x01,                     # .         Report Count (1),
+        0x81, 0x03,                     # .         Input (Constant, Variable),
+        0x0A, 0x30, 0x01,               # .         Usage (X),
+        0x65, 0x11,                     # .         Unit (Centimeter),
+        0x55, 0x0D,                     # .         Unit Exponent (13),
+        0x47, 0x80, 0x3E, 0x00, 0x00,   # .         Physical Maximum (16000),
+        0x27, 0x80, 0x3E, 0x00, 0x00,   # .         Logical Maximum (16000),
+        0x75, 0x18,                     # .         Report Size (24),
+        0x95, 0x01,                     # .         Report Count (1),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x0A, 0x31, 0x01,               # .         Usage (Y),
+        0x47, 0x28, 0x23, 0x00, 0x00,   # .         Physical Maximum (9000),
+        0x27, 0x28, 0x23, 0x00, 0x00,   # .         Logical Maximum (9000),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x09, 0x30,                     # .         Usage (Tip Pressure),
+        0x55, 0x00,                     # .         Unit Exponent (0),
+        0x65, 0x00,                     # .         Unit,
+        0x26, 0xFF, 0x0F,               # .         Logical Maximum (4095),
+        0x75, 0x10,                     # .         Report Size (16),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x75, 0x08,                     # .         Report Size (8),
+        0x95, 0x06,                     # .         Report Count (6),
+        0x81, 0x03,                     # .         Input (Constant, Variable),
+        0x0A, 0x32, 0x01,               # .         Usage (Z),
+        0x25, 0x3F,                     # .         Logical Maximum (63),
+        0x75, 0x08,                     # .         Report Size (8),
+        0x95, 0x01,                     # .         Report Count (1),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x09, 0x5B,                     # .         Usage (Transducer Serial Number),
+        0x09, 0x5C,                     # .         Usage (Transducer Serial Number Hi),
+        0x17, 0x00, 0x00, 0x00, 0x80,   # .         Logical Minimum (-2147483648),
+        0x27, 0xFF, 0xFF, 0xFF, 0x7F,   # .         Logical Maximum (2147483647),
+        0x75, 0x20,                     # .         Report Size (32),
+        0x95, 0x02,                     # .         Report Count (2),
+        0x81, 0x02,                     # .         Input (Variable),
+        0x09, 0x77,                     # .         Usage (Tool Type),
+        0x15, 0x00,                     # .         Logical Minimum (0),
+        0x26, 0xFF, 0x0F,               # .         Logical Maximum (4095),
+        0x75, 0x10,                     # .         Report Size (16),
+        0x95, 0x01,                     # .         Report Count (1),
+        0x81, 0x02,                     # .         Input (Variable),
+        0xC0,                           # .     End Collection,
+        0xC0                            # . End Collection
+    ]
+
+    def __init__(self,
+                 rdesc=report_descriptor,
+                 name=None,
+                 info=(0x3, 0x056a, 0x9999)):
+        super().__init__(rdesc, name, info)
+        self.default_reportID = 16
 
 
 class BaseTest:
@@ -199,7 +376,7 @@ class TestOpaqueTablet(BaseTest.TestTablet):
         uhdev = self.uhdev
 
         self.sync_and_assert_events(
-            uhdev.event(100, 200, pressure=300, inrange=True),
+            uhdev.event(100, 200, pressure=300, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=1), proximity=ProximityState.IN_RANGE),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
@@ -218,10 +395,66 @@ class TestOpaqueTablet(BaseTest.TestTablet):
         )
 
         self.sync_and_assert_events(
-            uhdev.event(120, 230, pressure=0, inrange=False),
+            uhdev.event(120, 230, pressure=0, toolid=ToolID.clear(), proximity=ProximityState.OUT),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0),
             ]
         )
 
         self.sync_and_assert_events(uhdev.event(130, 240, pressure=0), [], auto_syn=False, strict=True)
+
+
+class TestOpaqueCTLTablet(TestOpaqueTablet):
+    def create_device(self):
+        return OpaqueCTLTablet()
+
+    def test_buttons(self):
+        """
+        Test that the barrel buttons (side switches) work as expected.
+
+        Press and release each button individually to verify that we get
+        the expected events.
+        """
+        uhdev = self.uhdev
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=0, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=1), proximity=ProximityState.IN_RANGE),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 200),
+                libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=0, buttons=Buttons(primary=True)),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 1),
+                libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=0, buttons=Buttons(primary=False)),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 0),
+                libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=0, buttons=Buttons(secondary=True)),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS2, 1),
+                libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event(100, 200, pressure=0, buttons=Buttons(secondary=False)),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS2, 0),
+                libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
+            ]
+        )
