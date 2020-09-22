@@ -162,6 +162,8 @@ class BaseTablet(base.UHIDTestDevice):
         self.toolid = ToolID.clear()
         self.proximity = ProximityState.OUT
         self.offset = 0
+        self.ring = -1
+        self.ek0 = False
 
     def match_evdev_rule(self, application, evdev):
         """
@@ -228,6 +230,27 @@ class BaseTablet(base.UHIDTestDevice):
         report.wacombatterycharging = 1
         return super().create_report(report, reportID=reportID)
 
+    def create_report_pad(self, reportID, ring, ek0):
+        report = ReportData()
+
+        if ring is not None:
+            self.ring = ring
+        ring = self.ring
+
+        if ek0 is not None:
+            self.ek0 = ek0
+        ek0 = self.ek0
+
+        if ring >= 0:
+            report.wacomtouchring = ring
+            report.wacomtouchringstatus = 1
+        else:
+            report.wacomtouchring = 0x7f
+            report.wacomtouchringstatus = 0
+
+        report.wacomexpresskey00 = ek0
+        return super().create_report(report, reportID=reportID)
+
     def event(self, x, y, pressure, buttons=None, toolid=None, proximity=None):
         """
         Send an input event on the default report ID.
@@ -249,6 +272,14 @@ class BaseTablet(base.UHIDTestDevice):
         Send a heartbeat event on the requested report ID.
         """
         r = self.create_report_heartbeat(reportID)
+        self.call_input_event(r)
+        return [r]
+
+    def event_pad(self, reportID, ring=None, ek0=None):
+        """
+        Send a pad event on the requested report ID.
+        """
+        r = self.create_report_pad(reportID, ring, ek0)
         self.call_input_event(r)
         return [r]
 
@@ -693,5 +724,59 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
             uhdev.event(110, 200, pressure=300),
             [
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 110),
+            ]
+        )
+
+    def test_empty_pad_sync(self):
+        self.empty_pad_sync(num=3, denom=16, reverse=True)
+
+    def empty_pad_sync(self, num, denom, reverse):
+        """
+        Test that multiple pad collections do not trigger empty syncs.
+        """
+        def offset_rotation(value):
+            """
+            Offset touchring rotation values by the same factor as the
+            Linux kernel. Tablets historically don't use the same origin
+            as HID, and it sometimes changes from tablet to tablet...
+            """
+            evdev = self.uhdev.get_evdev()
+            info = evdev.absinfo[libevdev.EV_ABS.ABS_WHEEL]
+            delta = info.maximum - info.minimum + 1
+            if reverse:
+                value = info.maximum - value
+            value += num * delta // denom
+            if value > info.maximum:
+                value -= delta
+            elif value < info.minimum:
+                value += delta
+            return value
+
+        uhdev = self.uhdev
+        uhdev.application = 'Pad'
+        evdev = uhdev.get_evdev()
+
+        print(evdev.name)
+        self.sync_and_assert_events(
+            uhdev.event_pad(reportID=17, ring=0, ek0=1),
+            [
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_0, 1),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(0)),
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_MISC, 15),
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event_pad(reportID=17, ring=1, ek0=1),
+            [
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(1))
+            ]
+        )
+
+        self.sync_and_assert_events(
+            uhdev.event_pad(reportID=17, ring=2, ek0=0),
+            [
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(2)),
+                libevdev.InputEvent(libevdev.EV_KEY.BTN_0, 0),
             ]
         )
