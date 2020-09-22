@@ -30,12 +30,17 @@ in the driver's device table. It uses the device's HID descriptor to
 decode reports sent by the device.
 """
 
+from .descriptors_wacom import wacom_pth660_v145, wacom_pth660_v150, \
+    wacom_pth860_v145, wacom_pth860_v150, \
+    wacom_pth460_v105
+
 import attr
 from enum import Enum
 from hidtools.hut import HUT
 from hidtools.hid import HidUnit
 import tests.base as base
 import libevdev
+import pytest
 
 import logging
 logger = logging.getLogger('hidtools.test.wacom')
@@ -156,6 +161,7 @@ class BaseTablet(base.UHIDTestDevice):
         self.buttons = Buttons.clear()
         self.toolid = ToolID.clear()
         self.proximity = ProximityState.OUT
+        self.offset = 0
 
     def match_evdev_rule(self, application, evdev):
         """
@@ -228,6 +234,35 @@ class BaseTablet(base.UHIDTestDevice):
         r = self.create_report(x, y, pressure, buttons, toolid, proximity)
         self.call_input_event(r)
         return [r]
+
+    def get_report(self, req, rnum, rtype):
+        if rtype != self.UHID_FEATURE_REPORT:
+            return (1, [])
+
+        rdesc = None
+        for v in self.parsed_rdesc.feature_reports.values():
+            if v.report_ID == rnum:
+                rdesc = v
+
+        if rdesc is None:
+            return (1, [])
+
+        result = (1, [])
+        result = self.create_report_offset(rdesc) or result
+        return result
+
+    def create_report_offset(self, rdesc):
+        require = ['Wacom Offset Left', 'Wacom Offset Top', 'Wacom Offset Right', 'Wacom Offset Bottom']
+        if not set(require).issubset(set([f.usage_name for f in rdesc])):
+            return None
+
+        report = ReportData()
+        report.wacomoffsetleft = self.offset
+        report.wacomoffsettop = self.offset
+        report.wacomoffsetright = self.offset
+        report.wacomoffsetbottom = self.offset
+        r = rdesc.create_report([report], None)
+        return (0, r)
 
 
 class OpaqueTablet(BaseTablet):
@@ -366,6 +401,22 @@ class OpaqueCTLTablet(BaseTablet):
         self.default_reportID = 16
 
 
+class PTHX60_Pen(BaseTablet):
+    """
+    Pen interface of a PTH-660 / PTH-860 / PTH-460 tablet.
+
+    This generation of devices are nearly identical to each other, though
+    the PTH-460 uses a slightly different descriptor construction (splits
+    the pad among several physical collections)
+    """
+    def __init__(self,
+                 rdesc=None,
+                 name=None,
+                 info=None):
+        super().__init__(rdesc, name, info)
+        self.default_reportID = 16
+
+
 class BaseTest:
     class TestTablet(base.BaseTestCase.TestUhid):
         def sync_and_assert_events(self, report, expected_events, auto_syn=True, strict=False):
@@ -385,12 +436,13 @@ class BaseTest:
 
         def get_usages(self, uhdev):
             def get_report_usages(report):
+                application = report.application
                 for field in report.fields:
                     if field.usages is not None:
                         for usage in field.usages:
-                            yield (field, usage)
+                            yield (field, usage, application)
                     else:
-                        yield(field, field.usage)
+                        yield(field, field.usage, application)
 
             desc = uhdev.parsed_rdesc
             reports = [
@@ -429,10 +481,26 @@ class BaseTest:
             required = {
                 usage_id('Generic Desktop', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
                 usage_id('Generic Desktop', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id('Digitizers', 'X Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id('Digitizers', 'Y Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id('Digitizers', 'Twist'): PhysRange(PhysRange.DEGREE, 358, 360),
+                usage_id('Wacom', 'X Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id('Wacom', 'Y Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id('Wacom', 'Twist'): PhysRange(PhysRange.DEGREE, 358, 360),
                 usage_id('Wacom', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
                 usage_id('Wacom', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id('Wacom', 'Wacom TouchRing'): PhysRange(PhysRange.DEGREE, 358, 360),
+                usage_id('Wacom', 'Wacom Offset Left'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
+                usage_id('Wacom', 'Wacom Offset Top'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
+                usage_id('Wacom', 'Wacom Offset Right'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
+                usage_id('Wacom', 'Wacom Offset Bottom'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
             }
-            for field, usage in self.get_usages(self.uhdev):
+            for field, usage, application in self.get_usages(self.uhdev):
+                if application == usage_id('Generic Desktop', 'Mouse'):
+                    # Ignore the vestigial Mouse collection which exists
+                    # on Wacom tablets only for backwards compatibility.
+                    continue
+
                 expect_physical = usage in required
 
                 phys_set = field.physical_min != 0 or field.physical_max != 0
@@ -553,3 +621,34 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
             ]
         )
+
+
+PTHX60_Devices = [
+    {"rdesc": wacom_pth660_v145, "info": (0x3, 0x056a, 0x0357)},
+    {"rdesc": wacom_pth660_v150, "info": (0x3, 0x056a, 0x0357)},
+    {"rdesc": wacom_pth860_v145, "info": (0x3, 0x056a, 0x0358)},
+    {"rdesc": wacom_pth860_v150, "info": (0x3, 0x056a, 0x0358)},
+    {"rdesc": wacom_pth460_v105, "info": (0x3, 0x056a, 0x0392)},
+]
+
+PTHX60_Names = [
+    "PTH-660/v145",
+    "PTH-660/v150",
+    "PTH-860/v145",
+    "PTH-860/v150",
+    "PTH-460/v105",
+]
+
+
+class TestPTHX60_Pen(TestOpaqueCTLTablet):
+    @pytest.fixture(autouse=True, scope="class", params=PTHX60_Devices, ids=PTHX60_Names)
+    def set_device_params(self, request):
+        request.cls.device_params = request.param
+
+    def create_device(self):
+        return PTHX60_Pen(**self.device_params)
+
+    @pytest.mark.xfail
+    def test_descriptor_physicals(self):
+        # XFAIL: Various documented errata
+        super().test_descriptor_physicals()
