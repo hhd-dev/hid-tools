@@ -255,6 +255,47 @@ class PS3Controller(BaseGamepad):
         return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Joystick')
 
 
+class PSTouchPoint(object):
+    """ Represents a touch point on a PlayStation gamepad. """
+    def __init__(self, id, x, y):
+        self.contactid = id
+        self.tipswitch = True
+        self.x = x
+        self.y = y
+
+
+class PSTouchReport(object):
+    """ Represents a single touch report within a PlayStation gamepad input report.
+    A PSTouchReport consists of a timestamp and upto two touch points.
+    """
+    def __init__(self, points, timestamp=0):
+        self.timestamp = timestamp
+
+        if len(points) > 2:
+            raise ValueError("Invalid number of touch points provided for PSTouchReport.")
+
+        # Always ensure we store 2 touch points.
+        if len(points) == 0:
+            self.points = [None, None]
+        elif len(points) == 1:
+            self.points = [points[0], None]
+        else:
+            self.points = points
+
+    def fill_values(self, report, offset):
+        """ Fill touch report data into main input report. """
+        report[offset] = self.timestamp
+        for p in self.points:
+            if p is not None:
+                report[offset + 1] = (p.contactid & 0x7f) | (0x0 if p.tipswitch else 0x80)
+                report[offset + 2] = p.x & 0xff
+                report[offset + 3] = (p.x >> 8) & 0xf | ((p.y & 0xf) << 4)
+                report[offset + 4] = (p.y >> 4) & 0xff
+            else:
+                report[offset + 1] = 0x80  # Mark inactive.
+            offset += 4
+
+
 class PS4Controller(BaseGamepad):
     buttons_map = {
         1: 'BTN_WEST',              # square
@@ -288,8 +329,103 @@ class PS4Controller(BaseGamepad):
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
 
+        # The PS4 touchpad has its own section within the PS4 controller's main input report.
+        # It contains data for multiple "touch reports", the latest and older ones.
+        # The size and location for the Touchpad report depends on the bus type USB or BT, where
+        # the USB size 28 bytes and BT has 37 bytes.
+        # In USB-mode the gamepad reports touch data in reportID 1 and for BT in the undocumented
+        # reportID 17.
+        if self.bus == 3:
+            self.max_touch_reports = 3
+            self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
+        elif self.bus == 5:
+            self.max_touch_reports = 4
+            self.touchpad_offset = 35  # Touchpad section starts at byte 35 for BT-mode.
+
+        # Used for book keeping
+        self.touch_reports = []
+
     def is_ready(self):
         return super().is_ready() and len(self.input_nodes) == 3 and len(self.led_classes) == 4
+
+    def fill_touchpad_values(self, report):
+        """ Fill touchpad "sub-report" section of main input report with touch data. """
+
+        # Layout of PS4Touchpad report:
+        # +0 valid report count (max 3 for USB and 4 for BT)
+        # +1-10 TouchReport0 (latest data)
+        # +11-19 TouchReport1
+        # +20-28 TouchReport2
+        # +29-37 TouchReport3, but only in BT-mode.
+        #
+        # TouchReport layout
+        # +0 timestamp count = 682.7μs
+        # +1-4 TouchPoint0
+        # +5-9 TouchPoint1
+        #
+        # TouchPoint layout
+        # +0 bit7 active/inactive, bit6:0 touch id
+        # +1 lower 8-bit of x-axis
+        # +2 7:4 lower 4-bit of y-axis, 3:0 highest 4-bits of x-axis
+        # +3 higher 8-bit of y-axis
+
+        offset = self.touchpad_offset  # Byte 0 of touchpad report.
+        report[offset] = len(self.touch_reports)
+
+        offset += 1  # Move to first touchpad report
+        for i in range(self.max_touch_reports):
+            if i < len(self.touch_reports):
+                self.touch_reports[i].fill_values(report, offset)
+            else:
+                # Inactive touch reports need to have points marked as inactive.
+                report[offset + 1] = 0x80
+                report[offset + 5] = 0x80
+
+            offset += 9
+
+    def store_touchpad_state(self, touch):
+        if touch is None:
+            return
+        elif touch is not None and len(touch) > 2:
+            raise ValueError("More points provided than hardware supports.")
+        elif len(touch) == 0:
+            self.touch_reports = None
+        else:
+            touch_report = PSTouchReport(touch)
+            # PS4 controller stores history newest to oldest, so do the same.
+            self.touch_reports.insert(0, touch_report)
+            # Remove oldest reports out of hardware limits.
+            self.touch_reports = self.touch_reports[0:self.max_touch_reports - 1]
+
+    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, inject=True):
+        """
+        Send an input event on the default report ID.
+
+        :param left: a tuple of absolute (x, y) value of the left joypad
+            where ``None`` is "leave unchanged"
+        :param right: a tuple of absolute (x, y) value of the right joypad
+            where ``None`` is "leave unchanged"
+        :param hat_switch: an absolute angular value of the hat switch
+            where ``None`` is "leave unchanged"
+        :param buttons: a dict of index/bool for the button states,
+            where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
+        :param inject: bool whether to inject new event into the kernel.
+            When set to False this can be used to build up touch history.
+        """
+
+        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch)
+
+        if inject:
+            self.call_input_event(r)
+
+            # We allow history to accumulate when inject is False. After injecting,
+            # clear all state.
+            if len(self.touch_reports) > 1:
+                self.touch_reports = [self.touch_reports[0]]
+
+        return [r]
 
 
 class PS4ControllerBluetooth(PS4Controller):
@@ -503,7 +639,7 @@ class PS4ControllerBluetooth(PS4Controller):
 
         return (1, [])
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
         """
         Return an input report for this device.
 
@@ -515,6 +651,8 @@ class PS4ControllerBluetooth(PS4Controller):
             where ``None`` is "leave unchanged"
         :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param reportID: the numeric report ID for this report, if needed
         """
 
@@ -538,6 +676,11 @@ class PS4ControllerBluetooth(PS4Controller):
         for i in range(len(base_report) - 1):
             # Start of data is 3 bytes shifted relative to Report 1.
             report[3 + i] = base_report[1 + i]
+
+        if touch:
+            self.store_touchpad_state(touch)
+
+        self.fill_touchpad_values(report)
 
         # CRC is calculated over the first 74 bytes.
         seed = zlib.crc32(bytes([0xa1]))
@@ -847,3 +990,28 @@ class PS4ControllerUSB(PS4Controller):
             return (1, [])
 
         return (1, [])
+
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
+        """
+        Return an input report for this device.
+
+        :param left: a tuple of absolute (x, y) value of the left joypad
+            where ``None`` is "leave unchanged"
+        :param right: a tuple of absolute (x, y) value of the right joypad
+            where ``None`` is "leave unchanged"
+        :param hat_switch: an absolute angular value of the hat switch
+            where ``None`` is "leave unchanged"
+        :param buttons: a dict of index/bool for the button states,
+            where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
+        :param reportID: the numeric report ID for this report, if needed
+        """
+
+        report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+
+        if touch:
+            self.store_touchpad_state(touch)
+
+        self.fill_touchpad_values(report)
+        return report
