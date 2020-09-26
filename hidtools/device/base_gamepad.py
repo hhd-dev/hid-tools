@@ -1,6 +1,7 @@
 import libevdev
 
 from hidtools.device.base_device import BaseDevice
+from hidtools.util import BusType
 
 
 class InvalidHIDCommunication(Exception):
@@ -500,7 +501,7 @@ class SaitekGamepad(JoystickGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name=None):
-        super().__init__(rdesc, name, (3, 0x06a3, 0xff0d))
+        super().__init__(rdesc, name, (BusType.USB, 0x06a3, 0xff0d))
         self.buttons = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 
 
@@ -596,5 +597,5 @@ class AsusGamepad(BaseGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name=None):
-        super().__init__(rdesc, name, (3, 0x18d1, 0x2c40))
+        super().__init__(rdesc, name, (BusType.USB, 0x18d1, 0x2c40))
         self.buttons = (1, 2, 4, 5, 7, 8, 14, 15, 13)

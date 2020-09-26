@@ -25,6 +25,7 @@ import os
 import struct
 import sys
 from hidtools.hid import ReportDescriptor
+from hidtools.util import BusType
 
 
 def _ioctl(fd, EVIOC, code, return_type, buf=None):
@@ -165,8 +166,7 @@ class HidrawDevice(object):
 
     .. attribute:: bustype
 
-        The numerical bus type (``0x3`` for USB, ``0x5`` for Bluetooth, see
-        ``linux/input.h``)
+        The :class:`hidtools.util.BusType` for this device.
 
     .. attribute:: vendor_id
 
@@ -195,7 +195,8 @@ class HidrawDevice(object):
         fd = device.fileno()
         self.device = device
         self.name = _HIDIOCGRAWNAME(fd)
-        self.bustype, self.vendor_id, self.product_id = _HIDIOCGRAWINFO(fd)
+        bustype, self.vendor_id, self.product_id = _HIDIOCGRAWINFO(fd)
+        self.bustype = BusType(bustype)
         self.vendor_id &= 0xFFFF
         self.product_id &= 0xFFFF
         size = _HIDIOCGRDESCSIZE(fd)

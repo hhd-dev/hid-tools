@@ -19,6 +19,7 @@
 #
 
 from .test_keyboard import ArrayKeyboard, TestArrayKeyboard
+from hidtools.util import BusType
 
 import libevdev
 import logging
@@ -147,7 +148,7 @@ class AppleKeyboard(ArrayKeyboard):
     def __init__(self,
                  rdesc=report_descriptor,
                  name='Apple Wireless Keyboard',
-                 input_info=(0x5, 0x05ac, 0x0256)):
+                 input_info=(BusType.BLUETOOTH, 0x05ac, 0x0256)):
         super().__init__(rdesc, name, input_info)
         self.default_reportID = 1
 

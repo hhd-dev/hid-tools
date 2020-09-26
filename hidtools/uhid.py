@@ -19,6 +19,7 @@
 #
 
 import hidtools.hid
+from hidtools.util import BusType
 import functools
 import os
 import select
@@ -154,6 +155,7 @@ class UHIDDevice(object):
         self._rdesc = None
         self.parsed_rdesc = None
         self._info = None
+        self._bustype = None
         self._fd = os.open('/dev/uhid', os.O_RDWR)
         self._start = self.start
         self._stop = self.stop
@@ -261,13 +263,15 @@ class UHIDDevice(object):
     @info.setter
     def info(self, info):
         self._info = info
+        # In case bus type is passed as 'int', wrap it in BusType.
+        self._bustype = info[0] if isinstance(info[0], BusType) else BusType(info[0])
 
     @property
     def bus(self):
         """
-        The device's bus type (0x3 for USB, 0x5 for Bluetooth, etc.)
+        The device's bus type :class:`hidtools.util.BusType`
         """
-        return self._info[0]
+        return self._bustype
 
     @property
     def vid(self):

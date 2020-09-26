@@ -18,6 +18,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import enum
+
+
+class BusType(enum.IntEnum):
+    """
+    The numerical bus type (``0x3`` for USB, ``0x5`` for Bluetooth, see
+        ``linux/input.h``)
+    """
+    USB = 0x3
+    BLUETOOTH = 0x5
+    VIRTUAL = 0x6
+    I2C = 0x18
+
 
 def twos_comp(val, bits):
     """compute the 2's complement of val.

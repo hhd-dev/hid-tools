@@ -19,6 +19,7 @@
 #
 
 from .test_keyboard import ArrayKeyboard, TestArrayKeyboard
+from hidtools.util import BusType
 
 import libevdev
 import logging
@@ -130,7 +131,7 @@ class ITEKeyboard(ArrayKeyboard):
         0xc0,                          # End Collection                      187
     ]
 
-    def __init__(self, rdesc=report_descriptor, name=None, input_info=(0x3, 0x06cb, 0x2968)):
+    def __init__(self, rdesc=report_descriptor, name=None, input_info=(BusType.USB, 0x06cb, 0x2968)):
         super().__init__(rdesc, name, input_info)
 
     def event(self, keys, reportID=None, application=None):

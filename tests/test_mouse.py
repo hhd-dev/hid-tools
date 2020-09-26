@@ -20,6 +20,7 @@
 
 from . import base
 import hidtools.hid
+from hidtools.util import BusType
 import libevdev
 import logging
 import pytest
@@ -323,7 +324,7 @@ class MIDongleMIWirelessMouse(TwoWheelMouse):
         0x81, 0x06,         # .Input (Data,Var,Rel)
         0xc0,               # End Collection
     ]
-    device_input_info = (0x3, 0x2717, 0x003b)
+    device_input_info = (BusType.USB, 0x2717, 0x003b)
     device_name = "uhid test MI Dongle MI Wireless Mouse"
 
     def __init__(self, rdesc=report_descriptor, name=device_name, input_info=device_input_info):

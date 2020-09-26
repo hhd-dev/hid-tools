@@ -3,6 +3,7 @@ import struct
 import zlib
 
 from hidtools.device.base_gamepad import AxisMapping, BaseGamepad
+from hidtools.util import BusType
 
 import logging
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
@@ -335,10 +336,10 @@ class PS4Controller(BaseGamepad):
         # the USB size 28 bytes and BT has 37 bytes.
         # In USB-mode the gamepad reports touch data in reportID 1 and for BT in the undocumented
         # reportID 17.
-        if self.bus == 3:
+        if self.bus == BusType.USB:
             self.max_touch_reports = 3
             self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
-        elif self.bus == 5:
+        elif self.bus == BusType.BLUETOOTH:
             self.max_touch_reports = 4
             self.touchpad_offset = 35  # Touchpad section starts at byte 35 for BT-mode.
 
@@ -949,7 +950,7 @@ class PS4ControllerUSB(PS4Controller):
     ]
 
     def __init__(self, rdesc=report_descriptor):
-        super().__init__(rdesc, 'Sony Computer Entertainment Wireless Controller', (3, 0x054c, 0x05c4))
+        super().__init__(rdesc, 'Sony Computer Entertainment Wireless Controller', (BusType.USB, 0x054c, 0x05c4))
 
     def get_report(self, req, rnum, rtype):
         rdesc = None

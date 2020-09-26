@@ -26,6 +26,7 @@ import logging
 
 import hidtools.hid as hid
 from hidtools.uhid import UHIDDevice
+from hidtools.util import BusType
 
 logger = logging.getLogger('hidtools.device.base_device')
 
@@ -92,7 +93,7 @@ class BaseDevice(UHIDDevice):
         if name is None:
             name = f'uhid gamepad test {self.__class__.__name__}'
         if input_info is None:
-            input_info = (3, 1, 2)
+            input_info = (BusType.USB, 1, 2)
         self.name = name
         self.info = input_info
         self.default_reportID = None
