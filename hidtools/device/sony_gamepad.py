@@ -1,5 +1,6 @@
 import random
 import struct
+import zlib
 
 from hidtools.device.base_gamepad import AxisMapping, BaseGamepad
 
@@ -289,6 +290,265 @@ class PS4Controller(BaseGamepad):
 
     def is_ready(self):
         return super().is_ready() and len(self.input_nodes) == 3 and len(self.led_classes) == 4
+
+
+class PS4ControllerBluetooth(PS4Controller):
+    report_descriptor = [
+        0x05, 0x01,                    # Usage Page (Generic Desktop)        0
+        0x09, 0x05,                    # Usage (Game Pad)                    2
+        0xa1, 0x01,                    # Collection (Application)            4
+        0x85, 0x01,                    # .Report ID (1)                      6
+        0x09, 0x30,                    # .Usage (X)                          8
+        0x09, 0x31,                    # .Usage (Y)                          10
+        0x09, 0x32,                    # .Usage (Z)                          12
+        0x09, 0x35,                    # .Usage (Rz)                         14
+        0x15, 0x00,                    # .Logical Minimum (0)                16
+        0x26, 0xff, 0x00,              # .Logical Maximum (255)              18
+        0x75, 0x08,                    # .Report Size (8)                    21
+        0x95, 0x04,                    # .Report Count (4)                   23
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               25
+        0x09, 0x39,                    # .Usage (Hat switch)                 27
+        0x15, 0x00,                    # .Logical Minimum (0)                29
+        0x25, 0x07,                    # .Logical Maximum (7)                31
+        0x75, 0x04,                    # .Report Size (4)                    33
+        0x95, 0x01,                    # .Report Count (1)                   35
+        0x81, 0x42,                    # .Input (Data,Var,Abs,Null)          37
+        0x05, 0x09,                    # .Usage Page (Button)                39
+        0x19, 0x01,                    # .Usage Minimum (1)                  41
+        0x29, 0x0e,                    # .Usage Maximum (14)                 43
+        0x15, 0x00,                    # .Logical Minimum (0)                45
+        0x25, 0x01,                    # .Logical Maximum (1)                47
+        0x75, 0x01,                    # .Report Size (1)                    49
+        0x95, 0x0e,                    # .Report Count (14)                  51
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               53
+        0x75, 0x06,                    # .Report Size (6)                    55
+        0x95, 0x01,                    # .Report Count (1)                   57
+        0x81, 0x01,                    # .Input (Cnst,Arr,Abs)               59
+        0x05, 0x01,                    # .Usage Page (Generic Desktop)       61
+        0x09, 0x33,                    # .Usage (Rx)                         63
+        0x09, 0x34,                    # .Usage (Ry)                         65
+        0x15, 0x00,                    # .Logical Minimum (0)                67
+        0x26, 0xff, 0x00,              # .Logical Maximum (255)              69
+        0x75, 0x08,                    # .Report Size (8)                    72
+        0x95, 0x02,                    # .Report Count (2)                   74
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               76
+        0x06, 0x04, 0xff,              # .Usage Page (Vendor Usage Page 0xff04) 78
+        0x85, 0x02,                    # .Report ID (2)                      81
+        0x09, 0x24,                    # .Usage (Vendor Usage 0x24)          83
+        0x95, 0x24,                    # .Report Count (36)                  85
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             87
+        0x85, 0xa3,                    # .Report ID (163)                    89
+        0x09, 0x25,                    # .Usage (Vendor Usage 0x25)          91
+        0x95, 0x30,                    # .Report Count (48)                  93
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             95
+        0x85, 0x05,                    # .Report ID (5)                      97
+        0x09, 0x26,                    # .Usage (Vendor Usage 0x26)          99
+        0x95, 0x28,                    # .Report Count (40)                  101
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             103
+        0x85, 0x06,                    # .Report ID (6)                      105
+        0x09, 0x27,                    # .Usage (Vendor Usage 0x27)          107
+        0x95, 0x34,                    # .Report Count (52)                  109
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             111
+        0x85, 0x07,                    # .Report ID (7)                      113
+        0x09, 0x28,                    # .Usage (Vendor Usage 0x28)          115
+        0x95, 0x30,                    # .Report Count (48)                  117
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             119
+        0x85, 0x08,                    # .Report ID (8)                      121
+        0x09, 0x29,                    # .Usage (Vendor Usage 0x29)          123
+        0x95, 0x2f,                    # .Report Count (47)                  125
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             127
+        0x85, 0x09,                    # .Report ID (9)                      129
+        0x09, 0x2a,                    # .Usage (Vendor Usage 0x2a)          131
+        0x95, 0x13,                    # .Report Count (19)                  133
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             135
+        0x06, 0x03, 0xff,              # .Usage Page (Vendor Usage Page 0xff03) 137
+        0x85, 0x03,                    # .Report ID (3)                      140
+        0x09, 0x21,                    # .Usage (Vendor Usage 0x21)          142
+        0x95, 0x26,                    # .Report Count (38)                  144
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             146
+        0x85, 0x04,                    # .Report ID (4)                      148
+        0x09, 0x22,                    # .Usage (Vendor Usage 0x22)          150
+        0x95, 0x2e,                    # .Report Count (46)                  152
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             154
+        0x85, 0xf0,                    # .Report ID (240)                    156
+        0x09, 0x47,                    # .Usage (Vendor Usage 0x47)          158
+        0x95, 0x3f,                    # .Report Count (63)                  160
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             162
+        0x85, 0xf1,                    # .Report ID (241)                    164
+        0x09, 0x48,                    # .Usage (Vendor Usage 0x48)          166
+        0x95, 0x3f,                    # .Report Count (63)                  168
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             170
+        0x85, 0xf2,                    # .Report ID (242)                    172
+        0x09, 0x49,                    # .Usage (Vendor Usage 0x49)          174
+        0x95, 0x0f,                    # .Report Count (15)                  176
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             178
+        0x06, 0x00, 0xff,              # .Usage Page (Vendor Defined Page 1) 180
+        0x85, 0x11,                    # .Report ID (17)                     183
+        0x09, 0x20,                    # .Usage (Vendor Usage 0x20)          185
+        0x15, 0x00,                    # .Logical Minimum (0)                187
+        0x26, 0xff, 0x00,              # .Logical Maximum (255)              189
+        0x75, 0x08,                    # .Report Size (8)                    192
+        0x95, 0x4d,                    # .Report Count (77)                  194
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               196
+        0x09, 0x21,                    # .Usage (Vendor Usage 0x21)          198
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              200
+        0x85, 0x12,                    # .Report ID (18)                     202
+        0x09, 0x22,                    # .Usage (Vendor Usage 0x22)          204
+        0x95, 0x8d,                    # .Report Count (141)                 206
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               208
+        0x09, 0x23,                    # .Usage (Vendor Usage 0x23)          210
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              212
+        0x85, 0x13,                    # .Report ID (19)                     214
+        0x09, 0x24,                    # .Usage (Vendor Usage 0x24)          216
+        0x95, 0xcd,                    # .Report Count (205)                 218
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               220
+        0x09, 0x25,                    # .Usage (Vendor Usage 0x25)          222
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              224
+        0x85, 0x14,                    # .Report ID (20)                     226
+        0x09, 0x26,                    # .Usage (Vendor Usage 0x26)          228
+        0x96, 0x0d, 0x01,              # .Report Count (269)                 230
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               233
+        0x09, 0x27,                    # .Usage (Vendor Usage 0x27)          235
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              237
+        0x85, 0x15,                    # .Report ID (21)                     239
+        0x09, 0x28,                    # .Usage (Vendor Usage 0x28)          241
+        0x96, 0x4d, 0x01,              # .Report Count (333)                 243
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               246
+        0x09, 0x29,                    # .Usage (Vendor Usage 0x29)          248
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              250
+        0x85, 0x16,                    # .Report ID (22)                     252
+        0x09, 0x2a,                    # .Usage (Vendor Usage 0x2a)          254
+        0x96, 0x8d, 0x01,              # .Report Count (397)                 256
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               259
+        0x09, 0x2b,                    # .Usage (Vendor Usage 0x2b)          261
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              263
+        0x85, 0x17,                    # .Report ID (23)                     265
+        0x09, 0x2c,                    # .Usage (Vendor Usage 0x2c)          267
+        0x96, 0xcd, 0x01,              # .Report Count (461)                 269
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               272
+        0x09, 0x2d,                    # .Usage (Vendor Usage 0x2d)          274
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              276
+        0x85, 0x18,                    # .Report ID (24)                     278
+        0x09, 0x2e,                    # .Usage (Vendor Usage 0x2e)          280
+        0x96, 0x0d, 0x02,              # .Report Count (525)                 282
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               285
+        0x09, 0x2f,                    # .Usage (Vendor Usage 0x2f)          287
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              289
+        0x85, 0x19,                    # .Report ID (25)                     291
+        0x09, 0x30,                    # .Usage (Vendor Usage 0x30)          293
+        0x96, 0x22, 0x02,              # .Report Count (546)                 295
+        0x81, 0x02,                    # .Input (Data,Var,Abs)               298
+        0x09, 0x31,                    # .Usage (Vendor Usage 0x31)          300
+        0x91, 0x02,                    # .Output (Data,Var,Abs)              302
+        0x06, 0x80, 0xff,              # .Usage Page (Vendor Usage Page 0xff80) 304
+        0x85, 0x82,                    # .Report ID (130)                    307
+        0x09, 0x22,                    # .Usage (Vendor Usage 0x22)          309
+        0x95, 0x3f,                    # .Report Count (63)                  311
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             313
+        0x85, 0x83,                    # .Report ID (131)                    315
+        0x09, 0x23,                    # .Usage (Vendor Usage 0x23)          317
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             319
+        0x85, 0x84,                    # .Report ID (132)                    321
+        0x09, 0x24,                    # .Usage (Vendor Usage 0x24)          323
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             325
+        0x85, 0x90,                    # .Report ID (144)                    327
+        0x09, 0x30,                    # .Usage (Vendor Usage 0x30)          329
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             331
+        0x85, 0x91,                    # .Report ID (145)                    333
+        0x09, 0x31,                    # .Usage (Vendor Usage 0x31)          335
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             337
+        0x85, 0x92,                    # .Report ID (146)                    339
+        0x09, 0x32,                    # .Usage (Vendor Usage 0x32)          341
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             343
+        0x85, 0x93,                    # .Report ID (147)                    345
+        0x09, 0x33,                    # .Usage (Vendor Usage 0x33)          347
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             349
+        0x85, 0xa0,                    # .Report ID (160)                    351
+        0x09, 0x40,                    # .Usage (Vendor Usage 0x40)          353
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             355
+        0x85, 0xa4,                    # .Report ID (164)                    357
+        0x09, 0x44,                    # .Usage (Vendor Usage 0x44)          359
+        0xb1, 0x02,                    # .Feature (Data,Var,Abs)             361
+        0xc0,                          # End Collection                      363
+    ]
+
+    def __init__(self, rdesc=report_descriptor, name='Wireless Controller'):
+        super().__init__(rdesc, name, (5, 0x054c, 0x05c4))
+
+    def get_report(self, req, rnum, rtype):
+        rdesc = None
+        for v in self.parsed_rdesc.feature_reports.values():
+            if v.report_ID == rnum:
+                rdesc = v
+
+        logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
+
+        if rnum == 0x05:
+            # Report to retrieve motion sensor calibration data.
+            r = [0x05, 0x1e, 0x00, 0x05, 0x00, 0xe2, 0xff, 0xf2, 0x22, 0xbe, 0x22, 0x8d, 0x22, 0x4f,
+                 0xdd, 0x4d, 0xdd, 0x39, 0xdd, 0x1c, 0x02, 0x1c, 0x02, 0xe3, 0x1f, 0x8b, 0xdf, 0x8c, 0x1e,
+                 0xb4, 0xde, 0x30, 0x20, 0x71, 0xe0, 0x10, 0x00, 0xca, 0xfc, 0x64, 0x4d]
+            return (0, r)
+
+        elif rnum == 0xa3:
+            # Report to retrieve hardware and firmware version.
+            r = [0xa3, 0x41, 0x70, 0x72, 0x20, 0x20, 0x38, 0x20, 0x32, 0x30, 0x31, 0x34, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x30, 0x39, 0x3a, 0x34, 0x36, 0x3a, 0x30, 0x36, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x43, 0x03, 0x00, 0x00, 0x00, 0x51, 0x00, 0x05,
+                 0x00, 0x00, 0x80, 0x03, 0x00]
+            return (0, r)
+
+        if rdesc is None:
+            return (1, [])
+
+        return (1, [])
+
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+        """
+        Return an input report for this device.
+
+        :param left: a tuple of absolute (x, y) value of the left joypad
+            where ``None`` is "leave unchanged"
+        :param right: a tuple of absolute (x, y) value of the right joypad
+            where ``None`` is "leave unchanged"
+        :param hat_switch: an absolute angular value of the hat switch
+            where ``None`` is "leave unchanged"
+        :param buttons: a dict of index/bool for the button states,
+            where ``None`` is "leave unchanged"
+        :param reportID: the numeric report ID for this report, if needed
+        """
+
+        # Layout of Report 17:
+        # +0 reportID (17)
+        # +1 ??
+        # +2 ??
+        # +3-5 X/Y/RX/RY
+        # +6-8 buttons
+        # +9-10 Z 'L2'/ RZ 'R2'
+        # +37-73 touch report
+        # +74-77 crc32
+
+        report = [0] * 78
+        report[0] = 17  # Report ID
+
+        # The full Bluetooth HID report (17) is vendor specific and the HID parser has
+        # no clue on how to interpret the data. However it knows how to parse HID report 1,
+        # which is a subset of report 17. Leverage this report as a base to build the full report.
+        base_report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+        for i in range(len(base_report) - 1):
+            # Start of data is 3 bytes shifted relative to Report 1.
+            report[3 + i] = base_report[1 + i]
+
+        # CRC is calculated over the first 74 bytes.
+        seed = zlib.crc32(bytes([0xa1]))
+        crc = zlib.crc32(bytes(report[0:74]), seed)
+
+        report[74] = crc & 0xff
+        report[75] = (crc >> 8) & 0xff
+        report[76] = (crc >> 16) & 0xff
+        report[77] = (crc >> 24) & 0xff
+
+        return report
 
 
 class PS4ControllerUSB(PS4Controller):
