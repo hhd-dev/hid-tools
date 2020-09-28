@@ -19,7 +19,7 @@
 #
 
 from .test_gamepad import BaseTest
-from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerUSB
+from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerBluetooth, PS4ControllerUSB
 
 import logging
 import pytest
@@ -59,6 +59,11 @@ class TestPS3Controller(SonyBaseTest.SonyTest):
                 v.brightness = v.max_brightness
                 self.uhdev.dispatch(10)
                 assert self.uhdev.hw_leds.get_led(idx)[0]
+
+
+class TestPS4ControllerBluetooth(SonyBaseTest.SonyTest):
+    def create_device(self):
+        return PS4ControllerBluetooth()
 
 
 class TestPS4ControllerUSB(SonyBaseTest.SonyTest):
