@@ -19,7 +19,7 @@
 #
 
 from .test_gamepad import BaseTest
-from hidtools.device.sony_gamepad import PS3Controller
+from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerUSB
 
 import logging
 import pytest
@@ -28,14 +28,21 @@ logger = logging.getLogger('hidtools.test.sony')
 
 class SonyBaseTest:
     class SonyTest(BaseTest.TestGamepad):
-        @pytest.fixture(autouse=True)
-        def start_controller(self):
-            # emulate a 'PS' button press to tell the kernel we are ready to accept events
-            self.assert_button(17)
+        pass
 
-            # drain any remaining udev events
-            while self.uhdev.dispatch(10):
-                pass
+
+class TestPS3Controller(SonyBaseTest.SonyTest):
+    def create_device(self):
+        return PS3Controller()
+
+    @pytest.fixture(autouse=True)
+    def start_controller(self):
+        # emulate a 'PS' button press to tell the kernel we are ready to accept events
+        self.assert_button(17)
+
+        # drain any remaining udev events
+        while self.uhdev.dispatch(10):
+            pass
 
         def test_led(self):
             for k, v in self.uhdev.led_classes.items():
@@ -54,6 +61,6 @@ class SonyBaseTest:
                 assert self.uhdev.hw_leds.get_led(idx)[0]
 
 
-class TestPS3Controller(SonyBaseTest.SonyTest):
+class TestPS4ControllerUSB(SonyBaseTest.SonyTest):
     def create_device(self):
-        return PS3Controller()
+        return PS4ControllerUSB()
