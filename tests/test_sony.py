@@ -102,7 +102,7 @@ class SonyBaseTest:
             assert libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_POSITION_Y) not in events
 
             t1.tipswitch = False
-            r = uhdev.event(touch=[None, t1])
+            r = uhdev.event(touch=[t1])
 
             events = uhdev.next_sync_events("Touch Pad")
             self.debug_reports(r, uhdev, events)

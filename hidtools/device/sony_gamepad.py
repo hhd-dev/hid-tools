@@ -271,29 +271,53 @@ class PSTouchReport(object):
     """
     def __init__(self, points, timestamp=0):
         self.timestamp = timestamp
+        self.contact_ids = []
 
         if len(points) > 2:
             raise ValueError("Invalid number of touch points provided for PSTouchReport.")
 
+        # convert the list of points to a dict
+        self.points = {p.contactid: p for p in points}
+
         # Always ensure we store 2 touch points.
         if len(points) == 0:
-            self.points = [None, None]
+            self.contact_ids = [None, None]
         elif len(points) == 1:
-            self.points = [points[0], None]
+            self.contact_ids = [points[0].contactid, None]
         else:
-            self.points = points
+            self.contact_ids = [p.contactid for p in points]
 
-    def fill_values(self, report, offset):
+    def fill_values(self, last_touch_report, report, offset):
         """ Fill touch report data into main input report. """
         report[offset] = self.timestamp
-        for p in self.points:
-            if p is not None:
+
+        # ensure we keep the previous order of points
+        if last_touch_report is not None:
+
+            # first pass, copy the last_touch_report list, and remove all ids
+            # that are not valid anymore
+            contact_ids = last_touch_report.contact_ids[:]
+            for pos, i in enumerate(last_touch_report.contact_ids):
+                if i not in self.contact_ids:
+                    contact_ids[pos] = None
+
+            # second pass, fill the holes
+            for i in self.contact_ids:
+                if i not in contact_ids:
+                    contact_ids[contact_ids.index(None)] = i
+
+            # store the result
+            self.contact_ids = contact_ids
+
+        for i in self.contact_ids:
+            if i is None:
+                report[offset + 1] = 0x80  # Mark inactive.
+            else:
+                p = self.points[i]
                 report[offset + 1] = (p.contactid & 0x7f) | (0x0 if p.tipswitch else 0x80)
                 report[offset + 2] = p.x & 0xff
                 report[offset + 3] = (p.x >> 8) & 0xf | ((p.y & 0xf) << 4)
                 report[offset + 4] = (p.y >> 4) & 0xff
-            else:
-                report[offset + 1] = 0x80  # Mark inactive.
             offset += 4
 
 
@@ -377,7 +401,7 @@ class PS4Controller(BaseGamepad):
         offset += 1 + 9 * (self.max_touch_reports - 1)  # Move to last touchpad report
         for i in range(self.max_touch_reports - 1, -1, -1):
             if i < len(self.touch_reports):
-                self.touch_reports[i].fill_values(report, offset)
+                self.touch_reports[i].fill_values(self.last_touch_report, report, offset)
                 self.last_touch_report = self.touch_reports[i]
             else:
                 # Inactive touch reports need to have points marked as inactive.
