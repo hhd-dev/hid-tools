@@ -395,6 +395,9 @@ class PS4Controller(BaseGamepad):
             self.touch_reports = None
             self.last_touch_report = None
         else:
+            # clean up already sent data
+            if self.touch_reports and self.last_touch_report == self.touch_reports[-1]:
+                self.touch_reports = self.touch_reports[:-1]
             touch_report = PSTouchReport(touch)
             # PS4 controller stores history newest to oldest, so do the same.
             self.touch_reports.insert(0, touch_report)
