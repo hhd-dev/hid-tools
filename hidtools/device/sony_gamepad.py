@@ -345,6 +345,7 @@ class PS4Controller(BaseGamepad):
 
         # Used for book keeping
         self.touch_reports = []
+        self.last_touch_report = None
 
     def is_ready(self):
         return super().is_ready() and len(self.input_nodes) == 3 and len(self.led_classes) == 4
@@ -373,16 +374,17 @@ class PS4Controller(BaseGamepad):
         offset = self.touchpad_offset  # Byte 0 of touchpad report.
         report[offset] = len(self.touch_reports)
 
-        offset += 1  # Move to first touchpad report
-        for i in range(self.max_touch_reports):
+        offset += 1 + 9 * (self.max_touch_reports - 1)  # Move to last touchpad report
+        for i in range(self.max_touch_reports - 1, -1, -1):
             if i < len(self.touch_reports):
                 self.touch_reports[i].fill_values(report, offset)
+                self.last_touch_report = self.touch_reports[i]
             else:
                 # Inactive touch reports need to have points marked as inactive.
                 report[offset + 1] = 0x80
                 report[offset + 5] = 0x80
 
-            offset += 9
+            offset -= 9
 
     def store_touchpad_state(self, touch):
         if touch is None:
@@ -391,6 +393,7 @@ class PS4Controller(BaseGamepad):
             raise ValueError("More points provided than hardware supports.")
         elif len(touch) == 0:
             self.touch_reports = None
+            self.last_touch_report = None
         else:
             touch_report = PSTouchReport(touch)
             # PS4 controller stores history newest to oldest, so do the same.
