@@ -66,7 +66,7 @@ class BaseGamepad(BaseDevice):
         self.fields = []
         for r in self.parsed_rdesc.input_reports.values():
             if r.application_name == self.application:
-                self.fields = [f.usage_name for f in r]
+                self.fields.extend([f.usage_name for f in r])
 
     def store_axes(self, which, gamepad, data):
         amap = self.axes_map[which]
