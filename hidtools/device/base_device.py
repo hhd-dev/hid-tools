@@ -77,13 +77,13 @@ class LED(object):
 
 class BaseDevice(UHIDDevice):
     input_type_mapping = {
-        'ID_INPUT_TOUCHSCREEN': 'Touch Screen',
-        'ID_INPUT_TOUCHPAD': 'Touch Pad',
-        'ID_INPUT_TABLET': 'Pen',
-        'ID_INPUT_MOUSE': 'Mouse',
-        'ID_INPUT_KEY': 'Key',
-        'ID_INPUT_JOYSTICK': 'Joystick',
-        'ID_INPUT_ACCELEROMETER': 'Accelerometer',
+        'ID_INPUT_TOUCHSCREEN': ['Touch Screen'],
+        'ID_INPUT_TOUCHPAD': ['Touch Pad'],
+        'ID_INPUT_TABLET': ['Pen'],
+        'ID_INPUT_MOUSE': ['Mouse'],
+        'ID_INPUT_KEY': ['Key'],
+        'ID_INPUT_JOYSTICK': ['Joystick', 'Game Pad'],
+        'ID_INPUT_ACCELEROMETER': ['Accelerometer'],
     }
 
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
@@ -129,9 +129,15 @@ class BaseDevice(UHIDDevice):
         # associate the Input type to the matching HID application
         # we reuse the guess work from udev
         types = []
-        for name, type in BaseDevice.input_type_mapping.items():
-            if name in device.properties:
-                types.append(type)
+        for name, type_list in BaseDevice.input_type_mapping.items():
+            for type in type_list:
+                # do not duplicate event nodes if the application matches
+                # one of the type
+                if len(type_list) > 1:
+                    if self.application in type_list and type != self.application:
+                        continue
+                if name in device.properties:
+                    types.append(type)
 
         if not types:
             # abort, the device has not been processed by udev
