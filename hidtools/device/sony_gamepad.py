@@ -172,7 +172,7 @@ class PS3Controller(JoystickGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name='Sony PLAYSTATION(R)3 Controller'):
-        super().__init__(rdesc, name=name, input_info=(3, 0x054c, 0x0268))
+        super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x054c, 0x0268))
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 18))
         self.current_mode = 'plugged-in'
@@ -762,7 +762,7 @@ class PS4ControllerBluetooth(PS4Controller):
     ]
 
     def __init__(self, rdesc=report_descriptor, name='Wireless Controller'):
-        super().__init__(rdesc, name, (5, 0x054c, 0x05c4))
+        super().__init__(rdesc, name, (BusType.BLUETOOTH, 0x054c, 0x05c4))
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
