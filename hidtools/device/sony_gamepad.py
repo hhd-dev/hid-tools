@@ -2,7 +2,7 @@ import random
 import struct
 import zlib
 
-from hidtools.device.base_gamepad import AxisMapping, BaseGamepad
+from hidtools.device.base_gamepad import AxisMapping, BaseGamepad, JoystickGamepad
 from hidtools.util import BusType
 
 import logging
@@ -61,7 +61,7 @@ class PS3LEDs(object):
         return bool(self.leds_bitmap & (1 << idx + 1)), self.leds[idx]
 
 
-class PS3Controller(BaseGamepad):
+class PS3Controller(JoystickGamepad):
     buttons_map = {
         1: 'BTN_SELECT',
         2: 'BTN_THUMBL',            # L3
@@ -172,7 +172,7 @@ class PS3Controller(BaseGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name='Sony PLAYSTATION(R)3 Controller'):
-        super().__init__(rdesc, name, (3, 0x054c, 0x0268))
+        super().__init__(rdesc, name=name, input_info=(3, 0x054c, 0x0268))
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 18))
         self.current_mode = 'plugged-in'
@@ -350,7 +350,7 @@ class PS4Controller(BaseGamepad):
     }
 
     def __init__(self, rdesc, name, input_info):
-        super().__init__(rdesc, name, input_info)
+        super().__init__(rdesc, name=name, input_info=input_info)
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
 

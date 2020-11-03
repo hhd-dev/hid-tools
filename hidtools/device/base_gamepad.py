@@ -54,9 +54,9 @@ class BaseGamepad(BaseDevice):
         },
     }
 
-    def __init__(self, rdesc, name=None, input_info=None):
+    def __init__(self, rdesc, application='Game Pad', name=None, input_info=None):
         assert rdesc is not None
-        super().__init__(name, 'Joystick', input_info=input_info, rdesc=rdesc)
+        super().__init__(name, application, input_info=input_info, rdesc=rdesc)
         self.buttons = (1, 2, 3)
         self._buttons = {}
         self.left = (127, 127)
@@ -176,7 +176,10 @@ class JoystickGamepad(BaseGamepad):
         },
     }
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+    def __init__(self, rdesc, application='Joystick', name=None, input_info=None):
+        super().__init__(rdesc, application, name, input_info)
+
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None, application=None):
         """
         Return an input report for this device.
 
@@ -189,8 +192,11 @@ class JoystickGamepad(BaseGamepad):
         :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
+        :param application: the application for this report, if needed
         """
-        return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Joystick')
+        if application is None:
+            application = 'Joystick'
+        return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application=application)
 
     def store_right_joystick(self, gamepad, data):
         gamepad.rudder, gamepad.throttle = data
@@ -501,7 +507,7 @@ class SaitekGamepad(JoystickGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name=None):
-        super().__init__(rdesc, name, (BusType.USB, 0x06a3, 0xff0d))
+        super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x06a3, 0xff0d))
         self.buttons = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
 
 
@@ -597,5 +603,5 @@ class AsusGamepad(BaseGamepad):
     ]
 
     def __init__(self, rdesc=report_descriptor, name=None):
-        super().__init__(rdesc, name, (BusType.USB, 0x18d1, 0x2c40))
+        super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x18d1, 0x2c40))
         self.buttons = (1, 2, 4, 5, 7, 8, 14, 15, 13)
