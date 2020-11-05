@@ -21,6 +21,7 @@ import fcntl
 import libevdev
 import os
 import pathlib
+import pyudev
 
 import logging
 
@@ -75,6 +76,27 @@ class LED(object):
         self.__brightness.int_value = value
 
 
+class PowerSupply(object):
+    """ Represents Linux power_supply_class sysfs nodes. """
+    def __init__(self, udev_object):
+        self.sys_path = pathlib.Path(udev_object.sys_path)
+        self._capacity = SysfsFile(self.sys_path / 'capacity')
+        self._status = SysfsFile(self.sys_path / 'status')
+        self._type = SysfsFile(self.sys_path / 'type')
+
+    @property
+    def capacity(self):
+        return self._capacity.int_value
+
+    @property
+    def status(self):
+        return self._status.str_value
+
+    @property
+    def type(self):
+        return self._type.str_value
+
+
 class BaseDevice(UHIDDevice):
     input_type_mapping = {
         'ID_INPUT_TOUCHSCREEN': ['Touch Screen'],
@@ -101,6 +123,7 @@ class BaseDevice(UHIDDevice):
         self.application = application
         self.input_nodes = {}
         self.led_classes = {}
+        self.power_supply_class = None
         self._opened_files = []
         if rdesc is None:
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
@@ -163,6 +186,9 @@ class BaseDevice(UHIDDevice):
         led = LED(device)
         self.led_classes[led.sys_path.name] = led
 
+    def udev_power_supply_event(self, device):
+        self.power_supply_class = PowerSupply(device)
+
     def udev_event(self, event):
         if event.action != 'add':
             return
@@ -175,6 +201,15 @@ class BaseDevice(UHIDDevice):
             return self.udev_input_event(device)
         elif subsystem == 'leds':
             return self.udev_led_event(device)
+        elif subsystem == 'hwmon':
+            # Often power_supply is managed by hwmon and it will appear during 'add'
+            # and not the power_supply itself directly.
+            if "power_supply" in device.sys_path:
+                # The 'device' directory brings us back to the power_supply.
+                power_supply = pyudev.Devices.from_sys_path(device.context, device.sys_path + "/device")
+                return self.udev_power_supply_event(power_supply)
+        elif subsystem == "power_supply":
+            return self.udev_power_supply_event(device)
 
         logger.debug(f'{subsystem}: {device}')
 
