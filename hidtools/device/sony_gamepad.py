@@ -20,6 +20,31 @@ class GamepadData(object):
     pass
 
 
+class PSBattery(object):
+    """ Represents a battery in a PlayStation controller. """
+    def __init__(self):
+        self.cable_connected = True
+        self.capacity = 100 # capacity level %
+        self.full = True # battery full or not. Note: 100% doesn't guarantee 'full'.
+
+    @property
+    def capacity(self):
+        return self._capacity
+
+    @capacity.setter
+    def capacity(self, value):
+        if value < 0 or value > 100:
+            raise ValueError("Invalid capacity")
+
+        self._capacity = value
+
+        # Set full to False when not at 100%. A user will explicitly
+        # need to mark a 100% capacity battery as full by manually
+        # toggling 'full'.
+        if value != 100:
+            self.full = False
+
+
 class PS3Rumble(object):
     def __init__(self):
         self.right_duration = 0  # Right motor duration (0xff means forever)
@@ -426,6 +451,7 @@ class PS4Controller(BaseGamepad):
         super().__init__(rdesc, name=name, input_info=input_info)
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
+        self.battery = PSBattery()
 
         # The PS4 touchpad has its own section within the PS4 controller's main input report.
         # It contains data for multiple "touch reports", the latest and older ones.
@@ -436,11 +462,13 @@ class PS4Controller(BaseGamepad):
         if self.bus == BusType.USB:
             self.max_touch_reports = 3
             self.accelerometer_offset = 19
+            self.battery_offset = 30
             self.gyroscope_offset = 13
             self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
         elif self.bus == BusType.BLUETOOTH:
             self.max_touch_reports = 4
             self.accelerometer_offset = 21
+            self.battery_offset = 32
             self.gyroscope_offset = 15
             self.touchpad_offset = 35  # Touchpad section starts at byte 35 for BT-mode.
 
@@ -464,6 +492,25 @@ class PS4Controller(BaseGamepad):
         report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
         report[offset + 4] = self.accelerometer.raw_z & 0xff
         report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+
+    def fill_battery_values(self, report):
+        """ Fill battery section of main input report with battery status. """
+
+        # Battery capacity and charging status is stored in 1 byte.
+        # Lower 3-bit of contains battery capacity:
+        # - 0 to 10 corresponds to 0-100%
+        # - 11 battery full (for some reason different than 100%)
+        # Bit 4 contains cable connection status.
+
+        if self.battery.full:
+            battery_capacity = 11
+        else:
+            battery_capacity = int(self.battery.capacity / 10) & 0xf
+
+        # Cable connected
+        cable_connected = 1 if self.battery.cable_connected or self.bus == BusType.USB else 0
+
+        report[self.battery_offset] = (cable_connected << 4) | battery_capacity
 
     def fill_gyroscope_values(self, report):
         """ Fill gyroscope section of main input report with raw gyroscope data. """
@@ -820,6 +867,7 @@ class PS4ControllerBluetooth(PS4Controller):
         # +3-5 X/Y/RX/RY
         # +6-8 buttons
         # +9-10 Z 'L2'/ RZ 'R2'
+        # +32 battery info: bit4 cable connected/disconnected, bit3:0 capacity
         # +37-73 touch report
         # +74-77 crc32
 
@@ -839,6 +887,8 @@ class PS4ControllerBluetooth(PS4Controller):
 
         self.store_gyroscope_state(gyro)
         self.fill_gyroscope_values(report)
+
+        self.fill_battery_values(report)
 
         if touch:
             self.store_touchpad_state(touch)
@@ -1182,6 +1232,8 @@ class PS4ControllerUSB(PS4Controller):
 
         self.store_gyroscope_state(gyro)
         self.fill_gyroscope_values(report)
+
+        self.fill_battery_values(report)
 
         if touch:
             self.store_touchpad_state(touch)
