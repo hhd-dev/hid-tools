@@ -24,8 +24,8 @@ class PSBattery(object):
     """ Represents a battery in a PlayStation controller. """
     def __init__(self):
         self.cable_connected = True
-        self.capacity = 100 # capacity level %
-        self.full = True # battery full or not. Note: 100% doesn't guarantee 'full'.
+        self.capacity = 100  # capacity level %
+        self.full = True  # battery full or not. Note: 100% doesn't guarantee 'full'.
 
     @property
     def capacity(self):

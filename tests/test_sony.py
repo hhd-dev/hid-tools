@@ -20,6 +20,7 @@
 
 from .test_gamepad import BaseTest
 from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerBluetooth, PS4ControllerUSB, PSTouchPoint
+from hidtools.util import BusType
 
 import libevdev
 import logging
@@ -97,6 +98,36 @@ class SonyBaseTest:
                 assert libevdev.InputEvent(libevdev.EV_ABS.ABS_RZ) in events
                 value = evdev.value[libevdev.EV_ABS.ABS_RZ]
                 assert rz - 64 <= value <= rz + 64
+
+        def test_battery(self):
+            uhdev = self.uhdev
+
+            # DS4 capacity levels are in increments of 10.
+            # Battery is never below 5%.
+            for i in range(5, 105, 10):
+                uhdev.battery.capacity = i
+                uhdev.event()
+                assert uhdev.power_supply_class.capacity == i
+
+            # Discharging tests only make sense for BlueTooth.
+            if uhdev.bus == BusType.BLUETOOTH:
+                uhdev.battery.cable_connected = False
+                uhdev.battery.capacity = 45
+                uhdev.event()
+                assert uhdev.power_supply_class.status == "Discharging"
+
+            uhdev.battery.cable_connected = True
+            uhdev.battery.capacity = 5
+            uhdev.event()
+            assert uhdev.power_supply_class.status == "Charging"
+
+            uhdev.battery.capacity = 100
+            uhdev.event()
+            assert uhdev.power_supply_class.status == "Charging"
+
+            uhdev.battery.full = True
+            uhdev.event()
+            assert uhdev.power_supply_class.status == "Full"
 
         def test_mt_single_touch(self):
             """send a single touch in the first slot of the device,
