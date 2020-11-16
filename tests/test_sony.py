@@ -65,6 +65,39 @@ class SonyBaseTest:
                 value = evdev.value[libevdev.EV_ABS.ABS_Z]
                 assert z - 1 <= value <= z + 1
 
+        def test_gyroscope(self):
+            uhdev = self.uhdev
+            evdev = uhdev.get_evdev("Accelerometer")
+
+            for rx in range(-2000000, 2000000, 200000):
+                r = uhdev.event(gyro=(rx, None, None))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_RX) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_RX]
+                # Sensor internal value is 16-bit, but calibrated is 22-bit, so
+                # 6-bit (64) difference, so allow a range of +/- 64.
+                assert rx - 64 <= value <= rx + 64
+
+            for ry in range(-2000000, 2000000, 200000):
+                r = uhdev.event(gyro=(None, ry, None))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_RY) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_RY]
+                assert ry - 64 <= value <= ry + 64
+
+            for rz in range(-2000000, 2000000, 200000):
+                r = uhdev.event(gyro=(None, None, rz))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_RZ) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_RZ]
+                assert rz - 64 <= value <= rz + 64
+
         def test_mt_single_touch(self):
             """send a single touch in the first slot of the device,
             and release it."""
