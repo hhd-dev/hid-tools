@@ -32,6 +32,39 @@ class SonyBaseTest:
         pass
 
     class SonyPS4ControllerTest(SonyTest):
+        def test_accelerometer(self):
+            uhdev = self.uhdev
+            evdev = uhdev.get_evdev("Accelerometer")
+
+            for x in range(-32000, 32000, 4000):
+                r = uhdev.event(accel=(x, None, None))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_X) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_X]
+                # Check against range due to small loss in precision due
+                # to inverse calibration, followed by calibration by hid-sony.
+                assert x - 1 <= value <= x + 1
+
+            for y in range(-32000, 32000, 4000):
+                r = uhdev.event(accel=(None, y, None))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Y) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_Y]
+                assert y - 1 <= value <= y + 1
+
+            for z in range(-32000, 32000, 4000):
+                r = uhdev.event(accel=(None, None, z))
+                events = uhdev.next_sync_events("Accelerometer")
+                self.debug_reports(r, uhdev, events)
+
+                assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Z) in events
+                value = evdev.value[libevdev.EV_ABS.ABS_Z]
+                assert z - 1 <= value <= z + 1
+
         def test_mt_single_touch(self):
             """send a single touch in the first slot of the device,
             and release it."""
