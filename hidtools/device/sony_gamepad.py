@@ -416,6 +416,11 @@ class PS4Controller(BaseGamepad):
         "y": {"bias": -352, "numer": 16384, "denom": 16344},
         "z": {"bias": 81, "numer": 16384, "denom": 16319}
     }
+    gyroscope_calibration_data = {
+        "x": {"bias": 30, "numer": 1105920, "denom": 17827},
+        "y": {"bias": 5, "numer": 1105920, "denom": 17777},
+        "z": {"bias": -30, "numer": 1105920, "denom": 17748}
+    }
 
     def __init__(self, rdesc, name, input_info):
         super().__init__(rdesc, name=name, input_info=input_info)
@@ -431,13 +436,16 @@ class PS4Controller(BaseGamepad):
         if self.bus == BusType.USB:
             self.max_touch_reports = 3
             self.accelerometer_offset = 19
+            self.gyroscope_offset = 13
             self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
         elif self.bus == BusType.BLUETOOTH:
             self.max_touch_reports = 4
             self.accelerometer_offset = 21
+            self.gyroscope_offset = 15
             self.touchpad_offset = 35  # Touchpad section starts at byte 35 for BT-mode.
 
         self.accelerometer = PSSensor(self.accelerometer_calibration_data)
+        self.gyroscope = PSSensor(self.gyroscope_calibration_data)
 
         # Used for book keeping
         self.touch_reports = []
@@ -456,6 +464,17 @@ class PS4Controller(BaseGamepad):
         report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
         report[offset + 4] = self.accelerometer.raw_z & 0xff
         report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+
+    def fill_gyroscope_values(self, report):
+        """ Fill gyroscope section of main input report with raw gyroscope data. """
+        offset = self.gyroscope_offset
+
+        report[offset] = self.gyroscope.raw_x & 0xff
+        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xff
+        report[offset + 2] = self.gyroscope.raw_y & 0xff
+        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xff
+        report[offset + 4] = self.gyroscope.raw_z & 0xff
+        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xff
 
     def fill_touchpad_values(self, report):
         """ Fill touchpad "sub-report" section of main input report with touch data. """
@@ -501,6 +520,14 @@ class PS4Controller(BaseGamepad):
         if accel[2] is not None:
             self.accelerometer.z = accel[2]
 
+    def store_gyroscope_state(self, gyro):
+        if gyro[0] is not None:
+            self.gyroscope.x = gyro[0]
+        if gyro[1] is not None:
+            self.gyroscope.y = gyro[1]
+        if gyro[2] is not None:
+            self.gyroscope.z = gyro[2]
+
     def store_touchpad_state(self, touch):
         if touch is None:
             return
@@ -519,7 +546,7 @@ class PS4Controller(BaseGamepad):
             # Remove oldest reports out of hardware limits.
             self.touch_reports = self.touch_reports[0:self.max_touch_reports - 1]
 
-    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), inject=True):
+    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), inject=True):
         """
         Send an input event on the default report ID.
 
@@ -535,11 +562,13 @@ class PS4Controller(BaseGamepad):
             where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param accel: a tuple of absolute (x, y, z) values for the accelerometer
             where ``None`` is "leave unchanged"
+        :param gyro: a tuple of absolute (x, y, z) values for the gyroscope
+            where ``None`` is "leave unchanged"
         :param inject: bool whether to inject new event into the kernel.
             When set to False this can be used to build up touch history.
         """
 
-        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch, accel=accel)
+        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch, accel=accel, gyro=gyro)
 
         if inject:
             self.call_input_event(r)
@@ -763,7 +792,7 @@ class PS4ControllerBluetooth(PS4Controller):
 
         return (1, [])
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
         """
         Return an input report for this device.
 
@@ -778,6 +807,8 @@ class PS4ControllerBluetooth(PS4Controller):
         :param touch: a list of up to two touch points :class:`PSTouchPoint`,
             where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param accel: a tuple of absolute (x, y, z) values for the accelerometer
+            where ``None`` is "leave unchanged"
+        :param gyro: a tuple of absolute (x, y, z) values for the gyroscope
             where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
@@ -805,6 +836,9 @@ class PS4ControllerBluetooth(PS4Controller):
 
         self.store_accelerometer_state(accel)
         self.fill_accelerometer_values(report)
+
+        self.store_gyroscope_state(gyro)
+        self.fill_gyroscope_values(report)
 
         if touch:
             self.store_touchpad_state(touch)
@@ -1120,7 +1154,7 @@ class PS4ControllerUSB(PS4Controller):
 
         return (1, [])
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
         """
         Return an input report for this device.
 
@@ -1136,6 +1170,8 @@ class PS4ControllerUSB(PS4Controller):
             where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param accel: a tuple of absolute (x, y, z) values for the accelerometer
             where ``None`` is "leave unchanged"
+        :param gyro: a tuple of absolute (x, y, z) values for the gyroscope
+            where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
 
@@ -1143,6 +1179,9 @@ class PS4ControllerUSB(PS4Controller):
 
         self.store_accelerometer_state(accel)
         self.fill_accelerometer_values(report)
+
+        self.store_gyroscope_state(gyro)
+        self.fill_gyroscope_values(report)
 
         if touch:
             self.store_touchpad_state(touch)
