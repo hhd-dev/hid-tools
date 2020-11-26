@@ -19,7 +19,7 @@
 #
 
 from .test_gamepad import BaseTest
-from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerBluetooth, PS4ControllerUSB, PSTouchPoint
+from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerBluetooth, PS4ControllerUSB, PS5ControllerBluetooth, PS5ControllerUSB, PSTouchPoint
 from hidtools.util import BusType
 
 import libevdev
@@ -247,3 +247,13 @@ class TestPS4ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
 class TestPS4ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
         return PS4ControllerUSB()
+
+
+class TestPS5ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
+    def create_device(self):
+        return PS5ControllerBluetooth()
+
+
+class TestPS5ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
+    def create_device(self):
+        return PS5ControllerUSB()
