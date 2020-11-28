@@ -1295,15 +1295,38 @@ class PS5Controller(BaseGamepad):
         },
     }
 
+    # DualSense reports uncalibrated sensor data. Calibration coefficients
+    # can be retrieved using feature report 0x09.
+    # The values below are the processed calibration values for the
+    # DualSene matching the feature reports of PS5ControllerBluetooth/USB
+    # as dumped from hid-playstation 'dualsense_get_calibration_data'.
+    accelerometer_calibration_data = {
+        "x": {"bias": 0, "numer": 16384, "denom": 16374},
+        "y": {"bias": -114, "numer": 16384, "denom": 16362},
+        "z": {"bias": 2, "numer": 16384, "denom": 16395}
+    }
+    gyroscope_calibration_data = {
+        "x": {"bias": -1, "numer": 1105920, "denom": 17727},
+        "y": {"bias": -14, "numer": 1105920, "denom": 17728},
+        "z": {"bias": 4, "numer": 1105920, "denom": 17769}
+    }
+
     def __init__(self, rdesc, name, input_info):
         super().__init__(rdesc, name=name, input_info=input_info)
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
 
         if self.bus == BusType.USB:
+            self.accelerometer_offset = 22
+            self.gyroscope_offset = 16
             self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
         elif self.bus == BusType.BLUETOOTH:
+            self.accelerometer_offset = 23
+            self.gyroscope_offset = 17
             self.touchpad_offset = 34  # Touchpad section starts at byte 34 for BT-mode.
+
+        self.accelerometer = PSSensor(self.accelerometer_calibration_data)
+        self.gyroscope = PSSensor(self.gyroscope_calibration_data)
 
         # Used for book keeping
         self.touch_report = None
@@ -1313,6 +1336,28 @@ class PS5Controller(BaseGamepad):
         return (super().is_ready() and
                 len(self.input_nodes) == 3 and
                 len(self.led_classes) == 7)
+
+    def fill_accelerometer_values(self, report):
+        """ Fill accelerometer section of main input report with raw accelerometer data. """
+        offset = self.accelerometer_offset
+
+        report[offset] = self.accelerometer.raw_x & 0xff
+        report[offset + 1] = (self.accelerometer.raw_x >> 8) & 0xff
+        report[offset + 2] = self.accelerometer.raw_y & 0xff
+        report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
+        report[offset + 4] = self.accelerometer.raw_z & 0xff
+        report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+
+    def fill_gyroscope_values(self, report):
+        """ Fill gyroscope section of main input report with raw gyroscope data. """
+        offset = self.gyroscope_offset
+
+        report[offset] = self.gyroscope.raw_x & 0xff
+        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xff
+        report[offset + 2] = self.gyroscope.raw_y & 0xff
+        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xff
+        report[offset + 4] = self.gyroscope.raw_z & 0xff
+        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xff
 
     def fill_touchpad_values(self, report):
         """ Fill touchpad "sub-report" section of main input report with touch data. """
@@ -1340,6 +1385,22 @@ class PS5Controller(BaseGamepad):
             # Inactive touch reports need to have points marked as inactive.
             report[offset] = 0x80
             report[offset + 4] = 0x80
+
+    def store_accelerometer_state(self, accel):
+        if accel[0] is not None:
+            self.accelerometer.x = accel[0]
+        if accel[1] is not None:
+            self.accelerometer.y = accel[1]
+        if accel[2] is not None:
+            self.accelerometer.z = accel[2]
+
+    def store_gyroscope_state(self, gyro):
+        if gyro[0] is not None:
+            self.gyroscope.x = gyro[0]
+        if gyro[1] is not None:
+            self.gyroscope.y = gyro[1]
+        if gyro[2] is not None:
+            self.gyroscope.z = gyro[2]
 
     def store_touchpad_state(self, touch):
         if touch is None:
@@ -1394,7 +1455,7 @@ class PS5Controller(BaseGamepad):
 
         return (1, [])
 
-    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None):
+    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None)):
         """
         Send an input event on the default report ID.
 
@@ -1410,7 +1471,7 @@ class PS5Controller(BaseGamepad):
             where ``None`` is "leave unchanged and '[]' is release all fingers.
         """
 
-        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch)
+        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch, accel=accel, gyro=gyro)
         self.call_input_event(r)
         return [r]
 
@@ -1567,7 +1628,7 @@ class PS5ControllerBluetooth(PS5Controller):
         report[count + 2] = (crc >> 16) & 0xff
         report[count + 3] = (crc >> 24) & 0xff
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
         """
         Return an input report for this device.
 
@@ -1581,6 +1642,10 @@ class PS5ControllerBluetooth(PS5Controller):
             where ``None`` is "leave unchanged"
         :param touch: a list of up to two touch points :class:`PSTouchPoint`,
             where ``None`` is "leave unchanged and '[]' is release all fingers.
+        :param accel: a tuple of absolute (x, y, z) values for the accelerometer
+            where ``None`` is "leave unchanged"
+        :param gyro: a tuple of absolute (x, y, z) values for the gyroscope
+            where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
 
@@ -1603,6 +1668,12 @@ class PS5ControllerBluetooth(PS5Controller):
         report[9] = base_report[5]  # buttons
         report[10] = base_report[6]  # buttons
         report[11] = base_report[7]  # buttons
+
+        self.store_accelerometer_state(accel)
+        self.fill_accelerometer_values(report)
+
+        self.store_gyroscope_state(gyro)
+        self.fill_gyroscope_values(report)
 
         if touch:
             self.store_touchpad_state(touch)
@@ -1759,7 +1830,7 @@ class PS5ControllerUSB(PS5Controller):
     def __init__(self, rdesc=report_descriptor):
         super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.USB, 0x054c, 0x0ce6))
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
         """
         Return an input report for this device.
 
@@ -1773,14 +1844,23 @@ class PS5ControllerUSB(PS5Controller):
             where ``None`` is "leave unchanged"
         :param touch: a list of up to two touch points :class:`PSTouchPoint`,
             where ``None`` is "leave unchanged and '[]' is release all fingers.
+        :param accel: a tuple of absolute (x, y, z) values for the accelerometer
+            where ``None`` is "leave unchanged"
+        :param gyro: a tuple of absolute (x, y, z) values for the gyroscope
+            where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
 
         report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
 
+        self.store_accelerometer_state(accel)
+        self.fill_accelerometer_values(report)
+
+        self.store_gyroscope_state(gyro)
+        self.fill_gyroscope_values(report)
+
         if touch:
             self.store_touchpad_state(touch)
 
         self.fill_touchpad_values(report)
-
         return report
