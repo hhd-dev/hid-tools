@@ -369,10 +369,7 @@ class PSTouchReport(object):
         else:
             self.contact_ids = [p.contactid for p in points]
 
-    def fill_values(self, last_touch_report, report, offset):
-        """ Fill touch report data into main input report. """
-        report[offset] = self.timestamp
-
+    def _update_contact_ids(self, last_touch_report):
         # ensure we keep the previous order of points
         if last_touch_report is not None:
 
@@ -390,6 +387,13 @@ class PSTouchReport(object):
 
             # store the result
             self.contact_ids = contact_ids
+
+    def fill_values(self, last_touch_report, report, offset):
+        """ Fill touch report data into main input report. """
+
+        self._update_contact_ids(last_touch_report)
+
+        report[offset] = self.timestamp
 
         for i in self.contact_ids:
             if i is None:
