@@ -1249,6 +1249,24 @@ class PS4ControllerUSB(PS4Controller):
         return report
 
 
+class PS5TouchReport(PSTouchReport):
+    def fill_values(self, last_touch_report, report, offset):
+        self._update_contact_ids(last_touch_report)
+
+        for i in self.contact_ids:
+            if i is None:
+                report[offset] = 0x80  # Mark inactive.
+            else:
+                p = self.points[i]
+                report[offset] = (p.contactid & 0x7f) | (0x0 if p.tipswitch else 0x80)
+                report[offset + 1] = p.x & 0xff
+                report[offset + 2] = (p.x >> 8) & 0xf | ((p.y & 0xf) << 4)
+                report[offset + 3] = (p.y >> 4) & 0xff
+            offset += 4
+
+        report[offset + 8] = self.timestamp
+
+
 class PS5Controller(BaseGamepad):
     buttons_map = {
         1: 'BTN_WEST',              # square
@@ -1282,10 +1300,57 @@ class PS5Controller(BaseGamepad):
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
 
+        if self.bus == BusType.USB:
+            self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
+        elif self.bus == BusType.BLUETOOTH:
+            self.touchpad_offset = 34  # Touchpad section starts at byte 34 for BT-mode.
+
+        # Used for book keeping
+        self.touch_report = None
+        self.last_touch_report = None
+
     def is_ready(self):
         return (super().is_ready() and
                 len(self.input_nodes) == 3 and
                 len(self.led_classes) == 7)
+
+    def fill_touchpad_values(self, report):
+        """ Fill touchpad "sub-report" section of main input report with touch data. """
+
+        # Layout of PS5Touchpad report:
+        # 1x TouchReport
+        #
+        # TouchReport layout
+        # +0-3 TouchPoint0
+        # +4-7 TouchPoint1
+        # +8 timestamp count = 682.7μs
+        #
+        # TouchPoint layout
+        # +0 bit7 active/inactive, bit6:0 touch id
+        # +1 lower 8-bit of x-axis
+        # +2 7:4 lower 4-bit of y-axis, 3:0 highest 4-bits of x-axis
+        # +3 higher 8-bit of y-axis
+
+        offset = self.touchpad_offset  # Byte 0 of touchpad report.
+
+        if self.touch_report:
+            self.touch_report.fill_values(self.last_touch_report, report, offset)
+            self.last_touch_report = self.touch_report
+        else:
+            # Inactive touch reports need to have points marked as inactive.
+            report[offset] = 0x80
+            report[offset + 4] = 0x80
+
+    def store_touchpad_state(self, touch):
+        if touch is None:
+            return
+        elif touch is not None and len(touch) > 2:
+            raise ValueError("More points provided than hardware supports.")
+        elif len(touch) == 0:
+            self.touch_report = None
+            self.last_touch_report = None
+        else:
+            self.touch_report = PS5TouchReport(touch)
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
@@ -1328,6 +1393,26 @@ class PS5Controller(BaseGamepad):
             return (1, [])
 
         return (1, [])
+
+    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None):
+        """
+        Send an input event on the default report ID.
+
+        :param left: a tuple of absolute (x, y) value of the left joypad
+            where ``None`` is "leave unchanged"
+        :param right: a tuple of absolute (x, y) value of the right joypad
+            where ``None`` is "leave unchanged"
+        :param hat_switch: an absolute angular value of the hat switch
+            where ``None`` is "leave unchanged"
+        :param buttons: a dict of index/bool for the button states,
+            where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
+        """
+
+        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch)
+        self.call_input_event(r)
+        return [r]
 
 
 class PS5ControllerBluetooth(PS5Controller):
@@ -1482,7 +1567,7 @@ class PS5ControllerBluetooth(PS5Controller):
         report[count + 2] = (crc >> 16) & 0xff
         report[count + 3] = (crc >> 24) & 0xff
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
         """
         Return an input report for this device.
 
@@ -1494,6 +1579,8 @@ class PS5ControllerBluetooth(PS5Controller):
             where ``None`` is "leave unchanged"
         :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param reportID: the numeric report ID for this report, if needed
         """
 
@@ -1516,6 +1603,11 @@ class PS5ControllerBluetooth(PS5Controller):
         report[9] = base_report[5]  # buttons
         report[10] = base_report[6]  # buttons
         report[11] = base_report[7]  # buttons
+
+        if touch:
+            self.store_touchpad_state(touch)
+
+        self.fill_touchpad_values(report)
 
         # CRC is calculated over the first 74 bytes.
         self._sign_report(report, 0xa1, 74)
@@ -1667,7 +1759,7 @@ class PS5ControllerUSB(PS5Controller):
     def __init__(self, rdesc=report_descriptor):
         super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.USB, 0x054c, 0x0ce6))
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, reportID=None):
         """
         Return an input report for this device.
 
@@ -1679,8 +1771,16 @@ class PS5ControllerUSB(PS5Controller):
             where ``None`` is "leave unchanged"
         :param buttons: a dict of index/bool for the button states,
             where ``None`` is "leave unchanged"
+        :param touch: a list of up to two touch points :class:`PSTouchPoint`,
+            where ``None`` is "leave unchanged and '[]' is release all fingers.
         :param reportID: the numeric report ID for this report, if needed
         """
 
         report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+
+        if touch:
+            self.store_touchpad_state(touch)
+
+        self.fill_touchpad_values(report)
+
         return report
