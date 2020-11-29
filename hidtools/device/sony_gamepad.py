@@ -1315,13 +1315,16 @@ class PS5Controller(BaseGamepad):
         super().__init__(rdesc, name=name, input_info=input_info)
         self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
         self.buttons = tuple(range(1, 13))
+        self.battery = PSBattery()
 
         if self.bus == BusType.USB:
             self.accelerometer_offset = 22
+            self.battery_offset = 53
             self.gyroscope_offset = 16
             self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
         elif self.bus == BusType.BLUETOOTH:
             self.accelerometer_offset = 23
+            self.battery_offset = 54
             self.gyroscope_offset = 17
             self.touchpad_offset = 34  # Touchpad section starts at byte 34 for BT-mode.
 
@@ -1335,7 +1338,8 @@ class PS5Controller(BaseGamepad):
     def is_ready(self):
         return (super().is_ready() and
                 len(self.input_nodes) == 3 and
-                len(self.led_classes) == 7)
+                len(self.led_classes) == 7 and
+                self.power_supply_class is not None)
 
     def fill_accelerometer_values(self, report):
         """ Fill accelerometer section of main input report with raw accelerometer data. """
@@ -1347,6 +1351,32 @@ class PS5Controller(BaseGamepad):
         report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
         report[offset + 4] = self.accelerometer.raw_z & 0xff
         report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+
+    def fill_battery_values(self, report):
+        """ Fill battery section of main input report with battery status. """
+
+        # Battery capacity and charging status is stored in 1 byte.
+        # Lower 4-bit contains battery capacity:
+        # - 0 to 10 corresponds to 0-100%
+        # Highest 4-bit contains charging status:
+        # - 0 = discharging
+        # - 1 = charging
+        # - 2 = charging complete
+        # - 10 = charging prohibited (voltage or temperature out of range)
+        # - 11 = charging temperature error
+        # - 15 = charging error
+
+        if self.battery.full:
+            battery_capacity = 10
+            charging_status = 2  # charging complete
+        else:
+            battery_capacity = int(self.battery.capacity / 10) & 0xf
+            if self.battery.cable_connected or self.bus == BusType.USB:
+                charging_status = 1  # charging
+            else:
+                charging_status = 0  # discharging
+
+        report[self.battery_offset] = (charging_status << 4) | battery_capacity
 
     def fill_gyroscope_values(self, report):
         """ Fill gyroscope section of main input report with raw gyroscope data. """
@@ -1680,6 +1710,8 @@ class PS5ControllerBluetooth(PS5Controller):
 
         self.fill_touchpad_values(report)
 
+        self.fill_battery_values(report)
+
         # CRC is calculated over the first 74 bytes.
         self._sign_report(report, 0xa1, 74)
 
@@ -1863,4 +1895,7 @@ class PS5ControllerUSB(PS5Controller):
             self.store_touchpad_state(touch)
 
         self.fill_touchpad_values(report)
+
+        self.fill_battery_values(report)
+
         return report
