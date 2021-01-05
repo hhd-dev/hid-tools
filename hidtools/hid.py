@@ -690,7 +690,7 @@ class HidField(object):
 
     def copy(self):
         """
-        Return a full copy of this HIDField.
+        Return a full copy of this :class:`HIDField`.
         """
         c = copy.copy(self)
         if self.usages is not None:
@@ -979,7 +979,7 @@ class HidReport(object):
 
     .. attribute:: fields
 
-        The HidFields comprising this report
+        The :class:`HidField` elements comprising this report
 
     """
     def __init__(self, report_ID, application):
