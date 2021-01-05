@@ -92,8 +92,7 @@ def _IOC_HIDIOCGRDESC(none, len):
 def _HIDIOCGRDESC(fd, size):
     """ get report descriptors """
     format = "I4096c"
-    value = '\0' * 4096
-    tmp = struct.pack("i", size) + value[:4096].encode('utf-8').ljust(4096, b'\0')
+    tmp = struct.pack("i", size) + bytes(4096)
     _buffer = array.array('B', tmp)
     fcntl.ioctl(fd, _IOC_HIDIOCGRDESC(None, struct.calcsize(format)), _buffer)
     size, = struct.unpack("i", _buffer[:4])
