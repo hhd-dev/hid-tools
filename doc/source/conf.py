@@ -43,6 +43,7 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinxcontrib.apidoc',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.ifconfig',
@@ -165,3 +166,8 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
+
+apidoc_module_dir = '../../'
+apidoc_output_dir = './'
+apidoc_separate_modules = True
+apidoc_excluded_paths = ['setup.py', 'tests/conftest.py']
