@@ -1459,7 +1459,7 @@ class HidReport(object):
             sep = '/'
         prev = None
         for report_item in self:
-            if report_item.is_const:
+            if report_item.is_const and (self.type != HidReport.Type.FEATURE or report_item.usage == 0):
                 output += f'{sep} # '
                 continue
 

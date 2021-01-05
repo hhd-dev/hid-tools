@@ -994,10 +994,13 @@ class TestReportDescriptor:
         # pretty convoluted to get the first value out of a dict...
         report = next(iter(rdesc.feature_reports.values()))
         # Make sure that our expected usages are present as separate fields
-        # in the report
+        # in the report, and that they're represented in the string format
         feature_usages = (f.usage for f in report.fields)
+        printout = report.format_report([0] * report.size)
         for usage in range(0xc02c1, 0xc02c6 + 1):  # see bytes 63/66
             assert usage in feature_usages, f'Usage {usage:#x} missing in report'
+            string = hidtools.hut.HUT[0xc][usage].name
+            assert string in printout
 
 
 class TestHidUnit:
