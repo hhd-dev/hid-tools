@@ -184,7 +184,7 @@ class HidrawDevice(object):
 
         All events accumulated so far, a list of :class:`HidrawEvent`
 
-    ... attribute:: time_offset
+    .. attribute:: time_offset
 
         The offset to be used for recording events. By default the offset is
         the timestamp of the first event. When recording multiple devices,
