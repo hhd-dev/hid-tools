@@ -634,12 +634,13 @@ class HidField(object):
 
     .. attribute:: usage
 
-        A string with HID field's Usage, e.g. "Wheel". If the field has
-        multiple usages, this refers to the first one.
+        The numerical HID field's Usage, e.g. 0x38 for "Wheel". If the field
+        has multiple usages, this refers to the first one.
 
     .. attribute:: usage_page
 
-        The string with HID field's Usage Page, e.g. "Generic Desktop"
+        The numerical HID field's Usage Page, e.g. 0x01 for "Generic
+        Desktop"
 
     .. attribute:: report_ID
 
