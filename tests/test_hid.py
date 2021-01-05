@@ -902,6 +902,55 @@ class TestReportDescriptor:
 
         assert initial_rdesc.bytes == parsed_rdesc.bytes
 
+    def test_report_type(self):
+        # MS Comfort Sculpt keyboard, has a input, output and feature report
+        report_descriptor = [
+            0x05, 0x01,                    # Usage Page (Generic Desktop)        0
+            0x09, 0x06,                    # Usage (Keyboard)                    2
+            0xa1, 0x01,                    # Collection (Application)            4
+            0x05, 0x08,                    # .Usage Page (LEDs)                  6
+            0x19, 0x01,                    # .Usage Minimum (1)                  8
+            0x29, 0x03,                    # .Usage Maximum (3)                  10
+            0x15, 0x00,                    # .Logical Minimum (0)                12
+            0x25, 0x01,                    # .Logical Maximum (1)                14
+            0x75, 0x01,                    # .Report Size (1)                    16
+            0x95, 0x03,                    # .Report Count (3)                   18
+            0x91, 0x02,                    # .Output (Data,Var,Abs)              20
+            0x95, 0x05,                    # .Report Count (5)                   22
+            0x91, 0x01,                    # .Output (Cnst,Arr,Abs)              24
+            0x05, 0x07,                    # .Usage Page (Keyboard)              26
+            0x1a, 0xe0, 0x00,              # .Usage Minimum (224)                28
+            0x2a, 0xe7, 0x00,              # .Usage Maximum (231)                31
+            0x95, 0x08,                    # .Report Count (8)                   34
+            0x81, 0x02,                    # .Input (Data,Var,Abs)               36
+            0x75, 0x08,                    # .Report Size (8)                    38
+            0x95, 0x01,                    # .Report Count (1)                   40
+            0x81, 0x01,                    # .Input (Cnst,Arr,Abs)               42
+            0x19, 0x00,                    # .Usage Minimum (0)                  44
+            0x2a, 0x91, 0x00,              # .Usage Maximum (145)                46
+            0x26, 0xff, 0x00,              # .Logical Maximum (255)              49
+            0x95, 0x06,                    # .Report Count (6)                   52
+            0x81, 0x00,                    # .Input (Data,Arr,Abs)               54
+            0x05, 0x0c,                    # .Usage Page (Consumer Devices)      56
+            0x0a, 0xc0, 0x02,              # .Usage (Extended Keyboard Attributes Collection) 58
+            0xa1, 0x02,                    # .Collection (Logical)               61
+            0x1a, 0xc1, 0x02,              # ..Usage Minimum (705)               63
+            0x2a, 0xc6, 0x02,              # ..Usage Maximum (710)               66
+            0x95, 0x06,                    # ..Report Count (6)                  69
+            0xb1, 0x03,                    # ..Feature (Cnst,Var,Abs)            71
+            0xc0,                          # .End Collection                     73
+            0xc0,                          # End Collection                      74
+        ]
+        rdesc = hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
+        for r in rdesc.input_reports.values():
+            assert r.type == hidtools.hid.HidReport.Type.INPUT
+
+        for r in rdesc.output_reports.values():
+            assert r.type == hidtools.hid.HidReport.Type.OUTPUT
+
+        for r in rdesc.feature_reports.values():
+            assert r.type == hidtools.hid.HidReport.Type.FEATURE
+
     def test_const_feature_report(self):
         # MS Comfort Sculpt keyboard, has a const Feature report (byte 69)
         report_descriptor = [

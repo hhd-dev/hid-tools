@@ -1256,7 +1256,14 @@ class HidReport(object):
         The :class:`HidField` elements comprising this report
 
     """
-    def __init__(self, report_ID, application):
+
+    class Type(enum.Enum):
+        """The type of a :class:`HidReport`"""
+        INPUT = enum.auto()
+        OUTPUT = enum.auto()
+        FEATURE = enum.auto()
+
+    def __init__(self, report_ID, application, type):
         self.fields = []
         self.report_ID = report_ID
         self.application = application
@@ -1264,6 +1271,7 @@ class HidReport(object):
         self._bitsize = 0
         if self.numbered:
             self._bitsize = 8
+        self._type = type
 
     def append(self, field):
         """
@@ -1298,6 +1306,13 @@ class HidReport(object):
             return HUT[page_id][value]
         except KeyError:
             return 'Vendor'
+
+    @property
+    def type(self):
+        """
+        One of the types in :class:`HidReport.Type`
+        """
+        return self._type
 
     @property
     def numbered(self):
@@ -1642,6 +1657,13 @@ class ReportDescriptor(object):
             'Output': self.output_reports,
             'Feature': self.feature_reports,
         }
+        report_type = {
+            'Input': HidReport.Type.INPUT,
+            'Output': HidReport.Type.OUTPUT,
+            'Feature': HidReport.Type.FEATURE,
+        }
+
+        assert type in report_lists
 
         try:
             cur = self.current_report[type]
@@ -1655,7 +1677,7 @@ class ReportDescriptor(object):
             try:
                 cur = report_lists[type][self.local.report_ID]
             except KeyError:
-                cur = HidReport(self.local.report_ID, self.glob.application)
+                cur = HidReport(self.local.report_ID, self.glob.application, report_type[type])
                 report_lists[type][self.local.report_ID] = cur
         return cur
 
