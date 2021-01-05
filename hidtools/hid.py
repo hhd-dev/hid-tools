@@ -1209,10 +1209,7 @@ class HidField(object):
                    1)
         items = []
 
-        if value & (0x1 << 0):  # Const item
-            item.size *= count
-            return [item]
-        elif value & (0x1 << 1):  # Variable item
+        if value & 0x3:  # Const or Variable item
             if usage_min and usage_max:
                 usage = usage_min
                 for i in range(count):
@@ -1221,7 +1218,7 @@ class HidField(object):
                     items.append(item)
                     if usage < usage_max:
                         usage += 1
-            else:
+            elif usages:
                 for i in range(count):
                     if i < len(usages):
                         usage = usages[i]
@@ -1230,6 +1227,10 @@ class HidField(object):
                     item = item.copy()
                     item.usage = usage
                     items.append(item)
+            # A const field used for padding may not have any usages
+            else:
+                item.size *= count
+                return [item]
         else:  # Array item
             if usage_min and usage_max:
                 usages = list(range(usage_min, usage_max + 1))
