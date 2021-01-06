@@ -124,6 +124,33 @@ def _HIDIOCGRAWNAME(fd):
     return "".join(string).rstrip('\x00')
 
 
+# define HIDIOCGFEATURE(len) _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x07, len)
+def _IOC_HIDIOCGFEATURE(none, len):
+    return _IOC(_IOC_WRITE | _IOC_READ, 'H', 0x07, len)
+
+
+def _HIDIOCGFEATURE(fd, report_id, rsize):
+    """ get feature report """
+    assert report_id <= 255 and report_id >= -1
+
+    buf = bytearray([report_id & 0xff]) + bytearray(rsize)
+    fcntl.ioctl(fd, _IOC_HIDIOCGFEATURE(None, len(buf)), buf)
+    return list(buf)  # Note: first byte is report ID
+
+
+# define HIDIOCSFEATURE(len) _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x06, len)
+def _IOC_HIDIOCSFEATURE(none, len):
+    return _IOC(_IOC_WRITE | _IOC_READ, 'H', 0x06, len)
+
+
+def _HIDIOCSFEATURE(fd, data):
+    """ set feature report """
+
+    buf = bytearray(data)
+    sz = fcntl.ioctl(fd, _IOC_HIDIOCSFEATURE(None, len(buf)), buf)
+    return sz
+
+
 class HidrawEvent(object):
     """
     A single event from a hidraw device. The first event always has a timestamp of 0.0,
@@ -314,3 +341,31 @@ class HidrawDevice(object):
         for e in self.events[self._dump_offset:]:
             self._dump_event(e, file)
         self._dump_offset = len(self.events)
+
+    def get_feature_report(self, report_ID):
+        """
+        Fetch the Feature Report with the given report ID
+
+        Note that the returned array contains the report ID as the first
+        byte, but only if the report is a numbered report.
+
+        :return: an array of bytes with the Feature Report data.
+        """
+        report = self.report_descriptor.feature_reports[report_ID]
+        fd = self.device.fileno()
+        return _HIDIOCGFEATURE(fd, report_ID, report.size)
+
+    def set_feature_report(self, report_ID, data):
+        """
+        Set the Feature Report with the given report ID
+
+        Note that the data array must always contain the report ID as the
+        first byte.
+        """
+        # throw an exception for invalid ids
+        self.report_descriptor.feature_reports[report_ID]
+        assert data[0] == report_ID
+        fd = self.device.fileno()
+        sz = _HIDIOCSFEATURE(fd, data)
+        if sz != len(data):
+            raise OSError('Failed to write data: {data} - bytes written: {sz}')
