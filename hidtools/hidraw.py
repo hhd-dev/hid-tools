@@ -186,10 +186,11 @@ class HidrawDevice(object):
 
     .. attribute:: time_offset
 
-        The offset to be used for recording events. By default the offset is
-        the timestamp of the first event. When recording multiple devices,
-        the time_offset from the first device to receive an event should be
-        copied to the other device to ensure all recordings are in sync.
+        The offset to be be applied for incoming events. Where the offset is
+        not set by the caller, the offset is the timestamp of the first event.
+        This offset can be used to synchronize events from multiple devices,
+        simply apply the offset of the first device to receive an event to
+        all other devices to get synchronized time stamps for all devices.
     """
     def __init__(self, device):
         fd = device.fileno()
@@ -215,7 +216,7 @@ class HidrawDevice(object):
 
     def read_events(self):
         """
-        Read events from the device and store them in the device.
+        Read events from the device and append them to :attr:`events`.
 
         This function simply calls :func:`os.read`, it is the caller's task to
         either make sure the device is set nonblocking or to handle any
