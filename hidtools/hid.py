@@ -101,7 +101,24 @@ for type, items in hid_items.items():
         hid_type[k] = type
 
 
-INV_COLLECTIONS = dict([(v, k) for k, v in collections.items()])
+_INV_COLLECTIONS = dict([(v, k) for k, v in collections.items()])
+
+
+def collection_type(value):
+    """
+    Return the string name type for the given collection value (e.g.
+    "LOGICAL")
+    """
+    try:
+        c = _INV_COLLECTIONS[value]
+    except KeyError:
+        if 0x07 <= value <= 0x7f:
+            c = 'RESERVED'
+        elif 0x80 <= value <= 0xff:
+            c = 'VENDOR_DEFINED'
+        else:  # not supposed to happen
+            raise
+    return c
 
 
 class ParseError(Exception):
@@ -266,7 +283,7 @@ class _HidRDescItem(object):
                     "Unit Exponent"):
             descr += f' ({str(value)})'
         elif item == "Collection":
-            descr += f' ({INV_COLLECTIONS[value].capitalize()})'
+            descr += f' ({collection_type(value).capitalize()})'
             indent += 1
         elif item == "End Collection":
             indent -= 1
@@ -1420,16 +1437,7 @@ class ReportDescriptor(object):
         elif item == "Collection":
             self._concatenate_usages()
 
-            try:
-                c = INV_COLLECTIONS[value]
-            except KeyError:
-                if 0x07 <= value <= 0x7f:
-                    c = 'RESERVED'
-                elif 0x80 <= value <= 0xff:
-                    c = 'VENDOR_DEFINED'
-                else:  # not supposed to happen
-                    raise
-
+            c = collection_type(value)
             try:
                 if c == 'PHYSICAL':
                     self.collection[1] += 1
