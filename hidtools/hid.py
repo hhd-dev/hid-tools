@@ -509,10 +509,10 @@ class _HidRDescItem(object):
                 systems = ("None", "SILinear", "SIRotation", "EngLinear", "EngRotation")
                 lengths = ("None", "Centimeter", "Radians", "Inch", "Degrees")
                 masses = ("None", "Gram", "Gram", "Slug", "Slug")
-                times = ("Seconds", "Seconds", "Seconds", "Seconds")
+                times = ("None", "Seconds", "Seconds", "Seconds", "Seconds")
                 temperatures = ("None", "Kelvin", "Kelvin", "Fahrenheit", "Fahrenheit")
-                currents = ("Ampere", "Ampere", "Ampere", "Ampere")
-                luminous_intensities = ("Candela", "Candela", "Candela", "Candela")
+                currents = ("None", "Ampere", "Ampere", "Ampere", "Ampere")
+                luminous_intensities = ("None", "Candela", "Candela", "Candela", "Candela")
                 units = (lengths, masses, times, temperatures,
                          currents, luminous_intensities)
 
