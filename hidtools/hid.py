@@ -21,10 +21,10 @@
 import copy
 import enum
 import itertools
+import re
 import sys
 from hidtools.hut import HUT
 from hidtools.util import twos_comp, to_twos_comp
-from parse import parse as _parse
 import logging
 logger = logging.getLogger('hidtools.hid')
 
@@ -448,10 +448,10 @@ class _HidRDescItem(object):
         """
         data = None
         if '(' in line:
-            r = _parse('{ws:s}{name} ({data})', line)
-            assert(r is not None)
-            name = r['name']
-            data = r['data']
+            m = re.match(r'\s*(?P<name>[^(]+)\((?P<data>.+)\)', line)
+            assert m is not None
+            name = m.group('name').strip()
+            data = m.group('data')
             if data.lower().startswith('0x'):
                 try:
                     data = int(data[2:], 16)
@@ -502,19 +502,11 @@ class _HidRDescItem(object):
                 units = (lengths, masses, times, temperatures,
                          currents, luminous_intensities)
 
-                r = None
-                if '^' in data:
-                    r = _parse('{unit}^{exp:d},{system}', data)
-                    assert(r is not None)
-                else:
-                    r = _parse('{unit},{system}', data)
-                    assert(r is not None)
-                unit = r['unit']
-                try:
-                    exp = r['exp']
-                except KeyError:
-                    exp = 1
-                system = r['system']
+                m = re.match(r'(?P<unit>[^,^]+)(\^(?P<exp>\d+))?(,(?P<system>[^)]+))?', data)
+                assert m is not None
+                unit = m['unit']
+                exp = m['exp'] or 1  # No exponent == default exponent of 1
+                system = m['system'] or 'None'
 
                 system = systems.index(system)
 
