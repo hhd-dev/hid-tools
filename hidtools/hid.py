@@ -472,7 +472,12 @@ class _HidRDescItem(object):
 
         if isinstance(data, str):
             if name == "Usage Page":
-                value = HUT.usage_page_from_name(data).page_id
+                up = HUT.usage_page_from_name(data)
+                if up is None:
+                    if data.startswith('Vendor Usage Page '):
+                        value = int(data[len('Vendor Usage Page'):], 16)
+                else:
+                    value = HUT.usage_page_from_name(data).page_id
                 usage_page = value
             elif name == "Usage":
                 try:
