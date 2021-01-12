@@ -74,8 +74,8 @@ def open_binary(path):
     return None
 
 
-def interpret_file_hidrecorder(lines):
-    r_lines = [l for l in lines if l.startswith('R: ')]
+def interpret_file_hidrecorder(fd):
+    r_lines = [l for l in fd if l.startswith('R: ')]
     if not r_lines:
         return None
 
@@ -123,8 +123,7 @@ def open_report_descriptor(path):
 
     with open(path, 'r') as fd:
         logger.debug(f'Opening {path} as text file')
-        lines = fd.readlines()
-        rdesc = interpret_file_hidrecorder(lines)
+        rdesc = interpret_file_hidrecorder(fd)
         if rdesc is not None:
             return rdesc
 
