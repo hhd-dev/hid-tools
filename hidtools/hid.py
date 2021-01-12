@@ -66,15 +66,61 @@ hid_items = {
     },
 }
 
-collections = {
-    'PHYSICAL'			: 0,
-    'APPLICATION'		: 1,
-    'LOGICAL'			: 2,
-    'REPORT'			: 3,
-    'NAMED_ARRAY'		: 4,
-    'USAGE_SWITCH'		: 5,
-    'USAGE_MODIFIER'		: 6,
-}
+
+class HidCollection:
+    class Type(enum.IntEnum):
+        PHYSICAL = 0
+        APPLICATION = 1
+        LOGICAL = 2
+        REPORT = 3
+        NAMED_ARRAY = 4
+        USAGE_SWITCH = 5
+        USAGE_MODIFIER = 6
+
+    def __init__(self, value):
+        assert value <= 0xff
+        self.value = value
+        self.name = str(self)
+        try:
+            self.type = HidCollection.Type(value)
+        except ValueError:
+            self.type = None
+
+    @property
+    def is_reserved(self):
+        return 0x07 <= self.value <= 0x7f
+
+    @property
+    def is_vendor_defined(self):
+        return 0x80 <= self.value <= 0xff
+
+    @classmethod
+    def from_str(cls, string):
+        '''
+        Return the value of this HidCollection given the human-readable
+        string.
+        '''
+        for v in HidCollection.Type:
+            if v.name == string.strip().upper():
+                return v.value
+        match = re.match(r'\s*(vendor[ -_]defined)\s+(0x|x)?(?P<value>[0-9a-f]{2,})', string, flags=re.IGNORECASE)
+        if not match:
+            raise ValueError(f'Invalid HidCollection: {string}')
+
+        return int(match['value'], 16)
+
+    def __str__(self):
+        try:
+            return HidCollection.Type(self.value).name
+        except ValueError:
+            if self.is_reserved:
+                c = f'RESERVED {self.value:#x}'
+            elif self.is_vendor_defined:
+                c = f'VENDOR_DEFINED {self.value:#x}'
+            else:  # not supposed to happen
+                raise
+            return c
+
 
 sensor_mods = {
     0x00: 'Mod None',
@@ -101,26 +147,6 @@ for type, items in hid_items.items():
     for k, v in items.items():
         inv_hid[v] = k
         hid_type[k] = type
-
-
-_INV_COLLECTIONS = dict([(v, k) for k, v in collections.items()])
-
-
-def collection_type(value):
-    """
-    Return the string name type for the given collection value (e.g.
-    "LOGICAL")
-    """
-    try:
-        c = _INV_COLLECTIONS[value]
-    except KeyError:
-        if 0x07 <= value <= 0x7f:
-            c = f'RESERVED {value:#x}'
-        elif 0x80 <= value <= 0xff:
-            c = f'VENDOR_DEFINED {value:#x}'
-        else:  # not supposed to happen
-            raise
-    return c
 
 
 class ParseError(Exception):
@@ -285,7 +311,7 @@ class _HidRDescItem(object):
                     "Unit Exponent"):
             descr += f' ({str(value)})'
         elif item == "Collection":
-            descr += f' ({collection_type(value).capitalize()})'
+            descr += f' ({HidCollection(value).name.capitalize()})'
             indent += 1
         elif item == "End Collection":
             indent -= 1
@@ -493,12 +519,7 @@ class _HidRDescItem(object):
                     if value is None:
                         raise
             elif name == "Collection":
-                try:
-                    value = collections[data.upper()]
-                except KeyError:
-                    value = hex_value(data, 'Vendor_defined ')
-                    if value is None:
-                        raise
+                value = HidCollection.from_str(data)
             elif name in 'Input Output Feature':
                 value = 0
                 possible_types = (
@@ -1627,15 +1648,15 @@ class ReportDescriptor(object):
         elif item == "Collection":
             self._concatenate_usages()
 
-            c = collection_type(value)
+            c = HidCollection(value)
             try:
-                if c == 'PHYSICAL':
+                if c.type == HidCollection.Type.PHYSICAL:
                     self.collection[1] += 1
                     self.glob.physical = self.local.usages[-1]
-                elif c == 'APPLICATION':
+                elif c.type == HidCollection.Type.APPLICATION:
                     self.collection[0] += 1
                     self.glob.application = self.local.usages[-1]
-                elif c == 'LOGICAL':
+                elif c.type == HidCollection.Type.LOGICAL:
                     self.collection[2] += 1
                     self.glob.logical = self.local.usages[-1]
             except IndexError:
