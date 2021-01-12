@@ -472,7 +472,13 @@ class _HidRDescItem(object):
                 value = HUT.usage_page_from_name(data).page_id
                 usage_page = value
             elif name == "Usage":
-                value = HUT[usage_page].from_name[data].usage
+                try:
+                    value = HUT[usage_page].from_name[data].usage
+                except KeyError:
+                    if data.startswith('Vendor Usage '):
+                        value = int(data[len('Vendor Usage '):], 16)
+                    else:
+                        raise
             elif name == "Collection":
                 value = collections[data.upper()]
             elif name in 'Input Output Feature':
