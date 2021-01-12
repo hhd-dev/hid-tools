@@ -470,12 +470,18 @@ class _HidRDescItem(object):
 
         value = None
 
+        def hex_value(string, prefix):
+            if string.startswith(prefix):
+                return int(data[len(prefix):], 16)
+            return None
+
         if isinstance(data, str):
             if name == "Usage Page":
                 up = HUT.usage_page_from_name(data)
                 if up is None:
-                    if data.startswith('Vendor Usage Page '):
-                        value = int(data[len('Vendor Usage Page'):], 16)
+                    prefix = 'Vendor Usage Page '
+                    assert data.startswith(prefix)
+                    value = hex_value(data, prefix)
                 else:
                     value = HUT.usage_page_from_name(data).page_id
                 usage_page = value
@@ -483,12 +489,16 @@ class _HidRDescItem(object):
                 try:
                     value = HUT[usage_page].from_name[data].usage
                 except KeyError:
-                    if data.startswith('Vendor Usage '):
-                        value = int(data[len('Vendor Usage '):], 16)
-                    else:
+                    value = hex_value(data, 'Vendor Usage ')
+                    if value is None:
                         raise
             elif name == "Collection":
-                value = collections[data.upper()]
+                try:
+                    value = collections[data.upper()]
+                except KeyError:
+                    value = hex_value(data, 'Vendor_defined ')
+                    if value is None:
+                        raise
             elif name in 'Input Output Feature':
                 value = 0
                 possible_types = (
