@@ -500,9 +500,9 @@ class _HidRDescItem(object):
                 times = ("Seconds", "Seconds", "Seconds", "Seconds")
                 temperatures = ("None", "Kelvin", "Kelvin", "Fahrenheit", "Fahrenheit")
                 currents = ("Ampere", "Ampere", "Ampere", "Ampere")
-                luminous_intensisties = ("Candela", "Candela", "Candela", "Candela")
+                luminous_intensities = ("Candela", "Candela", "Candela", "Candela")
                 units = (lengths, masses, times, temperatures,
-                         currents, luminous_intensisties)
+                         currents, luminous_intensities)
 
                 r = None
                 if '^' in data:
