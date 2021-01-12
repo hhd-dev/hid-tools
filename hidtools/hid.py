@@ -115,9 +115,9 @@ def collection_type(value):
         c = _INV_COLLECTIONS[value]
     except KeyError:
         if 0x07 <= value <= 0x7f:
-            c = 'RESERVED'
+            c = f'RESERVED {value:#x}'
         elif 0x80 <= value <= 0xff:
-            c = 'VENDOR_DEFINED'
+            c = f'VENDOR_DEFINED {value:#x}'
         else:  # not supposed to happen
             raise
     return c
