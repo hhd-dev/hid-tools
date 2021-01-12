@@ -526,23 +526,28 @@ class _HidRDescItem(object):
                 units = (lengths, masses, times, temperatures,
                          currents, luminous_intensities)
 
-                m = re.match(r'(?P<unit>[^,^]+)(\^(?P<exp>\d+))?(,(?P<system>[^)]+))?', data)
-                assert m is not None
-                unit = m['unit']
-                exp = m['exp'] or 1  # No exponent == default exponent of 1
-                system = m['system'] or 'None'
+                # FIXME: the regex code is wrong for Unit(None), make it a
+                # special case
+                if data == 'None':
+                    value = 0
+                else:
+                    m = re.match(r'(?P<unit>[^,^]+)(\^(?P<exp>\d+))?(,(?P<system>[^)]+))?', data)
+                    assert m is not None
+                    unit = m['unit']
+                    exp = m['exp'] or 1  # No exponent == default exponent of 1
+                    system = m['system'] or 'None'
 
-                system = systems.index(system)
+                    system = systems.index(system)
 
-                for i, u in enumerate(units):
-                    if unit in u:
-                        unit = i + 1
-                        break
+                    for i, u in enumerate(units):
+                        if unit in u:
+                            unit = i + 1
+                            break
 
-                unit_value = to_twos_comp(exp, 4)
-                unit_value <<= unit * 4
+                    unit_value = to_twos_comp(exp, 4)
+                    unit_value <<= unit * 4
 
-                value = unit_value | system
+                    value = unit_value | system
         else:  # data has been converted to an int already
             if name == "Usage Page":
                 usage_page = data
