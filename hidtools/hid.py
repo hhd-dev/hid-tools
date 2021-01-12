@@ -1423,9 +1423,9 @@ class ReportDescriptor(object):
             try:
                 c = INV_COLLECTIONS[value]
             except KeyError:
-                if value in range(0x07, 0x7F):
+                if 0x07 <= value <= 0x7f:
                     c = 'RESERVED'
-                elif value in range(0x80, 0xFF):
+                elif 0x80 <= value <= 0xff:
                     c = 'VENDOR_DEFINED'
                 else:  # not supposed to happen
                     raise
