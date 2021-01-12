@@ -553,21 +553,17 @@ class _HidRDescItem(object):
                 usage_page = data
             value = data
 
-        bit_size = 0
+        v_count = 0
         if value is not None:
-            bit_size = len(f'{value + 1:x}') * 4
+            if value <= 0xff:
+                v_count = 1
+            elif value <= 0xffff:
+                v_count = 2
+            else:
+                v_count = 4
         else:
             value = 0
         tag = hid_items[hid_type[name]][name]
-        v_count = 0
-        if bit_size == 0:
-            pass
-        elif bit_size <= 8:
-            v_count = 1
-        elif bit_size <= 16:
-            v_count = 2
-        else:
-            v_count = 4
 
         if name == "Unit Exponent" and value < 0:
             value += 16
