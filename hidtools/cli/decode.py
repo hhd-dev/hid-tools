@@ -75,14 +75,20 @@ def open_binary(path):
 
 
 def interpret_file_hidrecorder(fd):
-    r_lines = [l for l in fd if l.startswith('R: ')]
-    if not r_lines:
-        return None
-
     rdescs = []
-    for l in r_lines:
-        bytes = l[3:]  # drop R:
-        rdescs.append(hidtools.hid.ReportDescriptor.from_string(bytes))
+    data = fd.read()
+    # The proper (machine-readable) hid-recorder output
+    r_lines = [l for l in data.splitlines() if l.startswith('R: ')]
+    if r_lines:
+        for l in r_lines:
+            bytes = l[3:]  # drop R:
+            rdescs.append(hidtools.hid.ReportDescriptor.from_string(bytes))
+
+    # The human-readable version (the comment in the hid-recorder output)
+    if any(filter(lambda x: x.strip().startswith('Usage Page ('), data.splitlines())):
+        rdescs = [hidtools.hid.ReportDescriptor.from_human_descr(data)]
+        if not rdescs:
+            return None
 
     return rdescs
 
