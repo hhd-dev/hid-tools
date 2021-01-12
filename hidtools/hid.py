@@ -462,6 +462,9 @@ class _HidRDescItem(object):
                     data = int(data)
                 except ValueError:
                     pass
+        # Strip any superfluous stuff from an EndCollection line
+        elif 'End Collection' in line:
+            name = 'End Collection'
         else:
             name = line.strip()
 
