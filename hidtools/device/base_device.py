@@ -109,6 +109,7 @@ class BaseDevice(UHIDDevice):
     }
 
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
+        self._opened_files = []
         if rdesc_str is None and rdesc is None:
             raise Exception('Please provide at least a rdesc or rdesc_str')
         super().__init__()
@@ -124,7 +125,6 @@ class BaseDevice(UHIDDevice):
         self.input_nodes = {}
         self.led_classes = {}
         self.power_supply_class = None
-        self._opened_files = []
         if rdesc is None:
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
         else:
