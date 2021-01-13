@@ -166,8 +166,8 @@ class ButtonMouse(BaseMouse):
         button_mask = sum(1 << i for i, b in enumerate([left, right, middle]) if b)
         x = max(-127, min(127, x))
         y = max(-127, min(127, y))
-        x = base.to_twos_comp(x, 8)
-        y = base.to_twos_comp(y, 8)
+        x = hidtools.util.to_twos_comp(x, 8)
+        y = hidtools.util.to_twos_comp(y, 8)
         return [button_mask, x, y]
 
 
