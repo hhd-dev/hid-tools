@@ -139,7 +139,7 @@ class BaseTestCase:
 def reload_udev_rules():
     import subprocess
     subprocess.run("udevadm control --reload-rules".split())
-    subprocess.run("udevadm hwdb --update".split())
+    subprocess.run("systemd-hwdb update".split())
 
 
 def create_udev_rule(uuid):
