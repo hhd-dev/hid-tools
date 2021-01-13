@@ -21,13 +21,9 @@
 import libevdev
 import os
 import pytest
-import sys
 import time
 
 import logging
-
-# FIXME: this is really wrong :)
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)) + '/..')  # noqa
 
 from hidtools.util import twos_comp, to_twos_comp # noqa
 from hidtools.device.base_device import BaseDevice, SysfsFile # noqa
