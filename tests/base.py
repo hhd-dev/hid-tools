@@ -25,7 +25,7 @@ import time
 
 import logging
 
-from hidtools.device.base_device import BaseDevice, SysfsFile # noqa
+from hidtools.device.base_device import BaseDevice, SysfsFile
 
 logger = logging.getLogger('hidtools.test.base')
 
