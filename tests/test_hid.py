@@ -22,6 +22,8 @@
 
 from . import base
 import hidtools
+from hidtools.hid import HidUnit, Unit
+import pytest
 import logging
 logger = logging.getLogger('hidtools.test.hid')
 
@@ -517,3 +519,142 @@ class TestReportDescriptor:
 
         # we only check for the parsing to not crash
         hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
+
+
+class TestHidUnit:
+    def test_unit_none(self):
+        for x in range(1, 5):
+            assert HidUnit.from_bytes(bytes(x)) is None
+        assert HidUnit.from_value(0) is None
+
+    @pytest.mark.parametrize('exp', range(0x1, 0x10))
+    def test_exponent(self, exp):
+        value = 0x1 | (exp << 4)
+        unit = HidUnit.from_value(value)
+        expected_exponent = exp if exp < 0x8 else (exp - 16)
+        assert unit.units == {Unit.CENTIMETER: expected_exponent}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_length(self, system):
+        value = system.value | 0x70  # exp of 7
+        unit = HidUnit.from_value(value)
+        expected_unit = {
+            HidUnit.System.NONE: None,
+            HidUnit.System.SI_LINEAR: Unit.CENTIMETER,
+            HidUnit.System.SI_ROTATION: Unit.RADIANS,
+            HidUnit.System.ENGLISH_LINEAR: Unit.INCH,
+            HidUnit.System.ENGLISH_ROTATION: Unit.DEGREES,
+        }[system]
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {expected_unit: 7}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_mass(self, system):
+        value = system.value | 0x700  # exp of 7
+        unit = HidUnit.from_value(value)
+        expected_unit = {
+            HidUnit.System.NONE: None,
+            HidUnit.System.SI_LINEAR: Unit.GRAM,
+            HidUnit.System.SI_ROTATION: Unit.GRAM,
+            HidUnit.System.ENGLISH_LINEAR: Unit.SLUG,
+            HidUnit.System.ENGLISH_ROTATION: Unit.SLUG,
+        }[system]
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {expected_unit: 7}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_time(self, system):
+        value = system.value | 0x7000  # exp of 7
+        unit = HidUnit.from_value(value)
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {Unit.SECONDS: 7}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_temperature(self, system):
+        value = system.value | 0x70000  # exp of 7
+        unit = HidUnit.from_value(value)
+        expected_unit = {
+            HidUnit.System.NONE: None,
+            HidUnit.System.SI_LINEAR: Unit.KELVIN,
+            HidUnit.System.SI_ROTATION: Unit.KELVIN,
+            HidUnit.System.ENGLISH_LINEAR: Unit.FAHRENHEIT,
+            HidUnit.System.ENGLISH_ROTATION: Unit.FAHRENHEIT,
+        }[system]
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {expected_unit: 7}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_current(self, system):
+        value = system.value | 0x700000  # exp of 7
+        unit = HidUnit.from_value(value)
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {Unit.AMPERE: 7}
+
+    @pytest.mark.parametrize('system', HidUnit.System)
+    def test_unit_lum_intensity(self, system):
+        value = system.value | 0x7000000  # exp of 7
+        unit = HidUnit.from_value(value)
+        if system == HidUnit.System.NONE:
+            assert unit is None
+        else:
+            assert unit.units == {Unit.CANDELA: 7}
+
+    # Examples from HID Spec (page 39)
+    def test_hid_examples(self):
+        # Velocity (cm/s)
+        unit = HidUnit.from_value(0xf011)
+        assert unit.units == {
+            Unit.CENTIMETER: 1,
+            Unit.SECONDS: -1,
+        }
+        # Momentum
+        unit = HidUnit.from_value(0xf111)
+        assert unit.units == {
+            Unit.CENTIMETER: 1,
+            Unit.GRAM: 1,
+            Unit.SECONDS: -1,
+        }
+        # Acceleration
+        unit = HidUnit.from_value(0xE011)
+        assert unit.units == {
+            Unit.CENTIMETER: 1,
+            Unit.SECONDS: -2,
+        }
+        # Force
+        unit = HidUnit.from_value(0xE111)
+        assert unit.units == {
+            Unit.CENTIMETER: 1,
+            Unit.GRAM: 1,
+            Unit.SECONDS: -2,
+        }
+        # Energy
+        unit = HidUnit.from_value(0xE121)
+        assert unit.units == {
+            Unit.CENTIMETER: 2,
+            Unit.GRAM: 1,
+            Unit.SECONDS: -2,
+        }
+        # Angular Acceleration
+        unit = HidUnit.from_value(0xE012)
+        assert unit.units == {
+            Unit.RADIANS: 1,
+            Unit.SECONDS: -2,
+        }
+        # Voltage
+        unit = HidUnit.from_value(0x00F0D121)
+        assert unit.units == {
+            Unit.CENTIMETER: 2,
+            Unit.GRAM: 1,
+            Unit.SECONDS: -3,
+            Unit.AMPERE: -1,
+        }

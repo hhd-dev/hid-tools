@@ -19,6 +19,8 @@
 #
 
 import copy
+import enum
+import itertools
 import sys
 from hidtools.hut import HUT
 from hidtools.util import twos_comp, to_twos_comp
@@ -338,29 +340,8 @@ class _HidRDescItem(object):
                 descr += ",Buff"
             descr += ")"
         elif item == "Unit":
-            systems = ("None", "SILinear", "SIRotation",
-                       "EngLinear", "EngRotation")
-            lengths = ("None", "Centimeter", "Radians", "Inch", "Degrees")
-            masses = ("None", "Gram", "Gram", "Slug", "Slug")
-            times = ("Seconds", "Seconds", "Seconds", "Seconds")
-            temperatures = ("None", "Kelvin", "Kelvin", "Fahrenheit", "Fahrenheit")
-            currents = ("Ampere", "Ampere", "Ampere", "Ampere")
-            luminous_intensisties = ("Candela", "Candela", "Candela", "Candela")
-            units = (lengths, masses, times, temperatures,
-                     currents, luminous_intensisties)
-
-            system = value & 0xf
-
-            descr += " ("
-            for i in range(len(units), 0, -1):
-                v = (value >> i * 4) & 0xf
-                v = twos_comp(v, 4)
-                if v:
-                    descr += units[i - 1][system]
-                    if v != 1:
-                        descr += '^' + str(v)
-                    descr += ","
-            descr += systems[system] + ')'
+            unit = HidUnit.from_value(value)
+            descr += f' ({unit})'
         elif item == "Push":
             pass
         elif item == "Pop":
@@ -642,6 +623,198 @@ class _HidRDescItem(object):
                 dump_file.write(f'                 {HUT[page_id][value]}\n')
             except KeyError:
                 pass
+
+
+class Unit(enum.Enum):
+    CENTIMETER = 'cm'
+    RADIANS = 'rad'
+    INCH = 'in'
+    DEGREES = 'deg'
+    GRAM = 'g'
+    SLUG = 'slug'
+    SECONDS = 's'
+    KELVIN = 'K'
+    FAHRENHEIT = 'F'
+    AMPERE = 'A'
+    CANDELA = 'cd'
+    RESERVED = 'reserved'
+
+
+class HidUnit(object):
+    """
+    A parsed field of a HID Report Descriptor Unit specification.
+
+    .. attribute:: units
+
+        A dict of { unit: exponent } of the applicable units.
+        Where the Unit is None, the return value is None.
+
+    .. attribute:: system
+
+        The system the units belong to, one of :class:`HidUnit.System`.
+
+    """
+
+    NONE = None  # For Unit(None), makes the code more obvious
+
+    class System(enum.IntEnum):
+        NONE = 0
+        SI_LINEAR = 1
+        SI_ROTATION = 2
+        ENGLISH_LINEAR = 3
+        ENGLISH_ROTATION = 4
+
+        def __str__(self):
+            return {
+                HidUnit.System.NONE: 'None',
+                HidUnit.System.SI_LINEAR: 'SILinear',
+                HidUnit.System.SI_ROTATION: 'SIRotation',
+                HidUnit.System.ENGLISH_LINEAR: 'EnglishLinear',
+                HidUnit.System.ENGLISH_ROTATION: 'EnglishRotation',
+            }[self]
+
+        @property
+        def length(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.CENTIMETER,
+                HidUnit.System.SI_ROTATION: Unit.RADIANS,
+                HidUnit.System.ENGLISH_LINEAR: Unit.INCH,
+                HidUnit.System.ENGLISH_ROTATION: Unit.DEGREES,
+            }[self]
+
+        @property
+        def mass(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.GRAM,
+                HidUnit.System.SI_ROTATION: Unit.GRAM,
+                HidUnit.System.ENGLISH_LINEAR: Unit.SLUG,
+                HidUnit.System.ENGLISH_ROTATION: Unit.SLUG,
+            }[self]
+
+        @property
+        def time(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.SECONDS,
+                HidUnit.System.SI_ROTATION: Unit.SECONDS,
+                HidUnit.System.ENGLISH_LINEAR: Unit.SECONDS,
+                HidUnit.System.ENGLISH_ROTATION: Unit.SECONDS,
+            }[self]
+
+        @property
+        def temperature(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.KELVIN,
+                HidUnit.System.SI_ROTATION: Unit.KELVIN,
+                HidUnit.System.ENGLISH_LINEAR: Unit.FAHRENHEIT,
+                HidUnit.System.ENGLISH_ROTATION: Unit.FAHRENHEIT,
+            }[self]
+
+        @property
+        def current(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.AMPERE,
+                HidUnit.System.SI_ROTATION: Unit.AMPERE,
+                HidUnit.System.ENGLISH_LINEAR: Unit.AMPERE,
+                HidUnit.System.ENGLISH_ROTATION: Unit.AMPERE,
+            }[self]
+
+        @property
+        def luminous_intensity(self):
+            return {
+                HidUnit.System.NONE: None,
+                HidUnit.System.SI_LINEAR: Unit.CANDELA,
+                HidUnit.System.SI_ROTATION: Unit.CANDELA,
+                HidUnit.System.ENGLISH_LINEAR: Unit.CANDELA,
+                HidUnit.System.ENGLISH_ROTATION: Unit.CANDELA,
+            }[self]
+
+    def __init__(self, system, units):
+        self.units = units
+        self.system = system
+
+    @classmethod
+    def _parse(cls, data):
+        assert data and len(data) >= 1
+
+        def nibbles(data):
+            for element in data:
+                yield element & 0xF
+                yield (element >> 4) & 0xf
+
+        system = ('System', 'Length', 'Mass', 'Time', 'Temperature', 'Current',
+                  'Intensity', 'Reserved')
+
+        # Creates a dict with the type of system as key and the value of the
+        # nibble (the exponent) as value.
+        exponents = dict(itertools.zip_longest(system, nibbles(data)))
+        system = HidUnit.System(exponents['System'])
+        if system == HidUnit.System.NONE:
+            return HidUnit.NONE
+
+        def convert(exponent):
+            return twos_comp(exponent, 4) if exponent is not None else None
+
+        # Now create the mapping of correct unit types with their exponents, e.g.
+        # {CENTIMETER: 2, SECONDS: -1}.
+        units = {
+            # system: convert(exponents['System']),
+            system.length: convert(exponents['Length']),
+            system.mass: convert(exponents['Mass']),
+            system.time: convert(exponents['Time']),
+            system.temperature: convert(exponents['Temperature']),
+            system.current: convert(exponents['Current']),
+            system.luminous_intensity: convert(exponents['Intensity']),
+        }
+
+        # Filter out any parts that aren't set
+        units = {k: v for k, v in units.items() if v}
+        if units:
+            return HidUnit(system, units)
+        else:
+            return HidUnit.NONE
+
+    @classmethod
+    def from_bytes(cls, data):
+        """
+        Converts the given data bytes into a :class:`HidUnit` object.
+        The data bytes must not include the 0b011001nn prefix byte.
+
+        Where the HID unit system is None, the returned value is None.
+        """
+        assert 1 <= len(data) <= 4
+        return HidUnit._parse(data)
+
+    @classmethod
+    def from_value(cls, value):
+        """
+        Converts the given 8, 16 or 32-bit value into a :class:`HidUnit`
+        object.
+
+        Where the HID unit system is None, the returned value is None.
+        """
+        assert value <= 0xffffffff
+        return cls.from_bytes(value.to_bytes(byteorder='little', length=4))
+
+    def __str__(self):
+        superscripts = {
+            '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶',
+            '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
+        }
+
+        units = []
+        for u, exp in self.units.items():
+            if exp == 1:
+                s = ''
+            else:
+                s = ''.join([superscripts[c] for c in str(exp)])
+            units.append((u.value, s))
+
+        return f'{self.system}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
 
 
 class HidField(object):
