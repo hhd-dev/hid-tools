@@ -136,20 +136,34 @@ class BaseTestCase:
             assert uhdev.get_evdev() is not None
 
 
-def reload_udev_rules():
-    import subprocess
-    subprocess.run("udevadm control --reload-rules".split())
-    subprocess.run("systemd-hwdb update".split())
+class HIDTestUdevRule(object):
+    '''
+    A context-manager compatible class that sets up our udev rules file and
+    deletes it on context exit.
+    '''
+    def __init__(self):
+        self.create_udev_rule()
 
+    def __enter__(self):
+        self.reload_udev_rules()
 
-def create_udev_rule(uuid):
-    os.makedirs('/run/udev/rules.d', exist_ok=True)
-    with open(f'/run/udev/rules.d/91-uhid-test-device-REMOVEME-{uuid}.rules', 'w') as f:
-        f.write('KERNELS=="*input*", ATTRS{name}=="uhid test *", ENV{LIBINPUT_IGNORE_DEVICE}="1"\n')
-        f.write('KERNELS=="*input*", ATTRS{name}=="uhid test * System Multi Axis", ENV{ID_INPUT_TOUCHSCREEN}="", ENV{ID_INPUT_SYSTEM_MULTIAXIS}="1"\n')
-    reload_udev_rules()
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.remove(self.rulesfile.name)
+        self.reload_udev_rules()
 
+    def reload_udev_rules(self):
+        import subprocess
+        subprocess.run("udevadm control --reload-rules".split())
+        subprocess.run("systemd-hwdb update".split())
 
-def teardown_udev_rule(uuid):
-    os.remove(f'/run/udev/rules.d/91-uhid-test-device-REMOVEME-{uuid}.rules')
-    reload_udev_rules()
+    def create_udev_rule(self):
+        import tempfile
+        os.makedirs('/run/udev/rules.d', exist_ok=True)
+        with tempfile.NamedTemporaryFile(prefix='91-uhid-test-device-REMOVEME-',
+                                         suffix='.rules',
+                                         mode='w+',
+                                         dir='/run/udev/rules.d',
+                                         delete=False) as f:
+            f.write('KERNELS=="*input*", ATTRS{name}=="uhid test *", ENV{LIBINPUT_IGNORE_DEVICE}="1"\n')
+            f.write('KERNELS=="*input*", ATTRS{name}=="uhid test * System Multi Axis", ENV{ID_INPUT_TOUCHSCREEN}="", ENV{ID_INPUT_SYSTEM_MULTIAXIS}="1"\n')
+            self.rulesfile = f

@@ -20,18 +20,15 @@
 
 import pytest
 import resource
-import uuid
-from .base import create_udev_rule, teardown_udev_rule
+from .base import HIDTestUdevRule
 
 
+# Set up a udev rule to prevent devices added by tests from interfering with
+# the running session.
 @pytest.fixture(autouse=True, scope="session")
 def udev_rules_setup():
-    uid = uuid.uuid4()
-    print("setting up the udev rule")
-    create_udev_rule(uid)
-    yield
-    print("tearing down the udev rule")
-    teardown_udev_rule(uid)
+    with HIDTestUdevRule():
+        yield
 
 
 @pytest.fixture(autouse=True, scope='session')
