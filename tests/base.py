@@ -98,21 +98,24 @@ class BaseTestCase:
 
         @pytest.fixture(autouse=True)
         def context(self, request):
-            with self.create_device() as self.uhdev:
-                skip_cond = request.node.get_closest_marker('skip_if_uhdev')
-                if skip_cond:
-                    test, message, *rest = skip_cond.args
+            try:
+                with self.create_device() as self.uhdev:
+                    skip_cond = request.node.get_closest_marker('skip_if_uhdev')
+                    if skip_cond:
+                        test, message, *rest = skip_cond.args
 
-                    if test(self.uhdev):
-                        pytest.skip(message)
+                        if test(self.uhdev):
+                            pytest.skip(message)
 
-                self.uhdev.create_kernel_device()
-                now = time.time()
-                while not self.uhdev.is_ready() and time.time() - now < 5:
-                    self.uhdev.dispatch(10)
-                assert self.uhdev.get_evdev() is not None
-                yield
-                self.uhdev = None
+                    self.uhdev.create_kernel_device()
+                    now = time.time()
+                    while not self.uhdev.is_ready() and time.time() - now < 5:
+                        self.uhdev.dispatch(10)
+                    assert self.uhdev.get_evdev() is not None
+                    yield
+                    self.uhdev = None
+            except PermissionError:
+                pytest.skip('Insufficient permissions, run me as root')
 
         @pytest.fixture(autouse=True)
         def check_taint(self):

@@ -195,7 +195,10 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
             0xc0,        # ..End Collection                     53
             0xc0,        # .End Collection                      54
         ]
-        self.uhid_device = UHIDTestDevice('hidraw test', 'Mouse', rdesc=self.rdesc)
+        try:
+            self.uhid_device = UHIDTestDevice('hidraw test', 'Mouse', rdesc=self.rdesc)
+        except PermissionError:
+            pytest.skip('Insufficient permissions, run me as root')
         self.uhid_device.create_kernel_device()
         while not self.uhid_device.device_nodes:
             self.uhid_device.dispatch(10)
