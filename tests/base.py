@@ -94,21 +94,22 @@ class BaseTestCase:
         @pytest.fixture(autouse=True)
         def context(self, request):
             try:
-                with self.create_device() as self.uhdev:
-                    skip_cond = request.node.get_closest_marker('skip_if_uhdev')
-                    if skip_cond:
-                        test, message, *rest = skip_cond.args
+                with HIDTestUdevRule.instance():
+                    with self.create_device() as self.uhdev:
+                        skip_cond = request.node.get_closest_marker('skip_if_uhdev')
+                        if skip_cond:
+                            test, message, *rest = skip_cond.args
 
-                        if test(self.uhdev):
-                            pytest.skip(message)
+                            if test(self.uhdev):
+                                pytest.skip(message)
 
-                    self.uhdev.create_kernel_device()
-                    now = time.time()
-                    while not self.uhdev.is_ready() and time.time() - now < 5:
-                        self.uhdev.dispatch(10)
-                    assert self.uhdev.get_evdev() is not None
-                    yield
-                    self.uhdev = None
+                        self.uhdev.create_kernel_device()
+                        now = time.time()
+                        while not self.uhdev.is_ready() and time.time() - now < 5:
+                            self.uhdev.dispatch(10)
+                        assert self.uhdev.get_evdev() is not None
+                        yield
+                        self.uhdev = None
             except PermissionError:
                 pytest.skip('Insufficient permissions, run me as root')
 
@@ -135,19 +136,33 @@ class BaseTestCase:
 
 
 class HIDTestUdevRule(object):
+    _instance = None
     '''
     A context-manager compatible class that sets up our udev rules file and
     deletes it on context exit.
+
+    This class is tailored to our test setup: it only sets up the udev rule
+    on the **second** context and it cleans it up again on the last context
+    removed. This matches the expected pytest setup: we enter a context for
+    the session once, then once for each test (the first of which will
+    trigger the udev rule) and once the last test exited and the session
+    exited, we clean up after ourselves.
     '''
     def __init__(self):
-        self.create_udev_rule()
+        self.refs = 0
+        self.rulesfile = None
 
     def __enter__(self):
-        self.reload_udev_rules()
+        self.refs += 1
+        if self.refs == 2 and self.rulesfile is None:
+            self.create_udev_rule()
+            self.reload_udev_rules()
 
     def __exit__(self, exc_type, exc_value, traceback):
-        os.remove(self.rulesfile.name)
-        self.reload_udev_rules()
+        self.refs -= 1
+        if self.refs == 0 and self.rulesfile:
+            os.remove(self.rulesfile.name)
+            self.reload_udev_rules()
 
     def reload_udev_rules(self):
         import subprocess
@@ -165,3 +180,9 @@ class HIDTestUdevRule(object):
             f.write('KERNELS=="*input*", ATTRS{name}=="uhid test *", ENV{LIBINPUT_IGNORE_DEVICE}="1"\n')
             f.write('KERNELS=="*input*", ATTRS{name}=="uhid test * System Multi Axis", ENV{ID_INPUT_TOUCHSCREEN}="", ENV{ID_INPUT_SYSTEM_MULTIAXIS}="1"\n')
             self.rulesfile = f
+
+    @classmethod
+    def instance(cls):
+        if not cls._instance:
+            cls._instance = HIDTestUdevRule()
+        return cls._instance

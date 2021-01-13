@@ -23,16 +23,11 @@ import resource
 from .base import HIDTestUdevRule
 
 
-# Set up a udev rule to prevent devices added by tests from interfering with
-# the running session. This should only be done once per session but not all
-# tests need it. So we we just plod on if we failed to set up the udev rule,
-# hoping that the tests themselves will fail or skip correctly.
+# See the comment in HIDTestUdevRule, this doesn't set up but it will clean
+# up once the last test exited.
 @pytest.fixture(autouse=True, scope="session")
-def udev_rules_setup():
-    try:
-        with HIDTestUdevRule():
-            yield
-    except PermissionError:
+def udev_rules_session_setup():
+    with HIDTestUdevRule.instance():
         yield
 
 
