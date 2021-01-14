@@ -542,38 +542,10 @@ class _HidRDescItem(object):
                     if v in data:
                         value |= (0x1 << i)
             elif name == 'Unit':
-                systems = ("None", "SILinear", "SIRotation", "EngLinear", "EngRotation")
-                lengths = ("None", "Centimeter", "Radians", "Inch", "Degrees")
-                masses = ("None", "Gram", "Gram", "Slug", "Slug")
-                times = ("None", "Seconds", "Seconds", "Seconds", "Seconds")
-                temperatures = ("None", "Kelvin", "Kelvin", "Fahrenheit", "Fahrenheit")
-                currents = ("None", "Ampere", "Ampere", "Ampere", "Ampere")
-                luminous_intensities = ("None", "Candela", "Candela", "Candela", "Candela")
-                units = (lengths, masses, times, temperatures,
-                         currents, luminous_intensities)
-
-                # FIXME: the regex code is wrong for Unit(None), make it a
-                # special case
                 if data == 'None':
                     value = 0
                 else:
-                    m = re.match(r'(?P<unit>[^,^]+)(\^(?P<exp>\d+))?(,(?P<system>[^)]+))?', data)
-                    assert m is not None
-                    unit = m['unit']
-                    exp = m['exp'] or 1  # No exponent == default exponent of 1
-                    system = m['system'] or 'None'
-
-                    system = systems.index(system)
-
-                    for i, u in enumerate(units):
-                        if unit in u:
-                            unit = i + 1
-                            break
-
-                    unit_value = to_twos_comp(exp, 4)
-                    unit_value <<= unit * 4
-
-                    value = unit_value | system
+                    value = HidUnit.from_string(data).value
         else:  # data has been converted to an int already
             if name == "Usage Page":
                 usage_page = data
