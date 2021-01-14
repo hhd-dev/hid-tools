@@ -1,17 +1,39 @@
 # vim: set expandtab shiftwidth=2 tabstop=8 textwidth=0:
 
+.templates_sha: &template_sha 18194044f0f984c8815bc9a1a146582f6bf15d41 # see https://docs.gitlab.com/ee/ci/yaml/#includefile
+
+include:
+  # Arch container builder template
+  - project: 'freedesktop/ci-templates'
+    ref: *template_sha
+    file: '/templates/arch.yml'
+
 variables:
   ARCH_PKGS: 'flake8 python-parse python-pyudev python-pypandoc pandoc'
+  FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
+  FDO_DISTRIBUTION_TAG: '2020-01-14.1'
 
-.default_setup:
-  image: archlinux/base
-  before_script:
-    - pacman -S --refresh
-    - pacman -S --sysupgrade --noconfirm
-    - pacman -S --noconfirm $ARCH_PKGS
+stages:
+  - prep
+  - build
+
+container-prep:
+  extends:
+    - .fdo.container-build@arch
+  stage: prep
+  variables:
+    GIT_STRATEGY: none
+    FDO_DISTRIBUTION_PACKAGES: $ARCH_PKGS
+
+.default_image:
+  extends:
+    - .fdo.distribution-image@arch
+  needs:
+    - container-prep
 
 flake:
-  extends: .default_setup
+  extends: .default_image
+  stage: build
   script:
     # The proper way is to run:
     # python3 setup.py flake8
@@ -19,12 +41,14 @@ flake:
     - flake8
 
 install:
-  extends: .default_setup
+  extends: .default_image
+  stage: build
   script:
     - python3 setup.py install
 
 install_no_man_pages:
-  extends: .default_setup
+  extends: .default_image
+  stage: build
   script:
     - pacman -R --noconfirm pandoc python-pypandoc
     - python3 setup.py install
