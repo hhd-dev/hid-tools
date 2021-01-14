@@ -563,9 +563,12 @@ class _HidRDescItem(object):
             value = 0
         tag = hid_items[hid_type[name]][name]
 
-        if name == "Unit Exponent" and value < 0:
-            value += 16
-            value = to_twos_comp(value, v_count * 8)
+        if value < 0:
+            if name == "Unit Exponent":
+                value += 16
+                value = to_twos_comp(value, v_count * 8)
+            elif name in ('Logical Minimum', 'Physical Minimum'):
+                value = to_twos_comp(value, v_count * 8)
 
         v = value
         vs = []
