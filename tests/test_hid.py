@@ -658,3 +658,8 @@ class TestHidUnit:
             Unit.SECONDS: -3,
             Unit.AMPERE: -1,
         }
+
+    # The example values from above
+    @pytest.mark.parametrize('value', [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121])
+    def test_value(self, value):
+        assert HidUnit.from_value(value).value == value

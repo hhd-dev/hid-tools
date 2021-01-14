@@ -854,6 +854,21 @@ class HidUnit(object):
 
         return f'{self.system}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
 
+    @property
+    def value(self):
+        v = self.system.value;
+        def unit_value(unit_type):
+            if unit_type in self.units:
+                return to_twos_comp(self.units[unit_type], 4)
+            return 0
+        v |= unit_value(self.system.length) << 4
+        v |= unit_value(self.system.mass) << 8
+        v |= unit_value(self.system.time) << 12
+        v |= unit_value(self.system.temperature) << 16
+        v |= unit_value(self.system.current) << 20
+        v |= unit_value(self.system.luminous_intensity) << 24
+        return v
+
 
 class HidField(object):
     """
