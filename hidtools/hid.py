@@ -1852,7 +1852,8 @@ class ReportDescriptor(object):
         usage_page = 0
         items = []
         for line in rdesc_str.splitlines():
-            if line.strip() == '':
+            line = line.strip()
+            if not line:
                 continue
             item = _HidRDescItem.from_human_descr(line, usage_page)
             usage_page = item.usage_page >> 16
