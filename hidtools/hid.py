@@ -66,6 +66,11 @@ hid_items = {
     },
 }
 
+superscripts = {
+    '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶',
+    '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
+}
+
 
 class HidCollection:
     class Type(enum.IntEnum):
@@ -702,14 +707,25 @@ class HidUnit(object):
         ENGLISH_LINEAR = 3
         ENGLISH_ROTATION = 4
 
-        def __str__(self):
+        @classmethod
+        def _stringmap(cls):
             return {
                 HidUnit.System.NONE: 'None',
                 HidUnit.System.SI_LINEAR: 'SILinear',
                 HidUnit.System.SI_ROTATION: 'SIRotation',
                 HidUnit.System.ENGLISH_LINEAR: 'EnglishLinear',
                 HidUnit.System.ENGLISH_ROTATION: 'EnglishRotation',
-            }[self]
+            }
+
+        def __str__(self):
+            return self._stringmap()[self]
+
+        @classmethod
+        def from_string(self, string):
+            try:
+                return {v: k for k, v in self._stringmap().items()}[string]
+            except KeyError:
+                return None
 
         @property
         def length(self):
@@ -838,12 +854,10 @@ class HidUnit(object):
         assert value <= 0xffffffff
         return cls.from_bytes(value.to_bytes(byteorder='little', length=4))
 
-    def __str__(self):
-        superscripts = {
-            '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶',
-            '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
-        }
+    def __eq__(self, other):
+        return self.system == other.system and self.units == other.units
 
+    def __str__(self):
         units = []
         for u, exp in self.units.items():
             if exp == 1:
@@ -854,13 +868,38 @@ class HidUnit(object):
 
         return f'{self.system}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
 
+    @classmethod
+    def from_string(self, string):
+        '''
+        The inverse of __str__()
+        '''
+        system_string, unit_string = string.split(': ')
+        system = HidUnit.System.from_string(system_string)
+        unitstrings = unit_string.split(' * ')
+        units = {}
+        for s in unitstrings:
+            match = re.match(r'(?P<unit>[a-zA-z]+)(?P<exp>[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]{1,})?', s)
+            unitstring, expstring = match['unit'], match['exp']
+
+            unit = Unit(unitstring)
+            ssinv = {v: k for k, v in superscripts.items()}
+            if expstring:
+                exponent = int(''.join([ssinv[c] for c in expstring]))
+            else:
+                exponent = 1
+
+            units[unit] = exponent
+        return HidUnit(system, units)
+
     @property
     def value(self):
-        v = self.system.value;
+        v = self.system.value
+
         def unit_value(unit_type):
             if unit_type in self.units:
                 return to_twos_comp(self.units[unit_type], 4)
             return 0
+
         v |= unit_value(self.system.length) << 4
         v |= unit_value(self.system.mass) << 8
         v |= unit_value(self.system.time) << 12

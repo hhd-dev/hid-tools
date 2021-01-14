@@ -663,3 +663,21 @@ class TestHidUnit:
     @pytest.mark.parametrize('value', [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121])
     def test_value(self, value):
         assert HidUnit.from_value(value).value == value
+
+    # The example values from above
+    @pytest.mark.parametrize('value', [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121])
+    def test_from_string(self, value):
+        before = HidUnit.from_value(0xf011)
+        after = HidUnit.from_string(str(before))
+        assert before == after
+
+    # All possible permutations of allowed values
+    # We don't test None/Reserved here
+    @pytest.mark.parametrize('system', range(0x1, 0x5))
+    @pytest.mark.parametrize('exp', range(0x1, 0x10))
+    @pytest.mark.parametrize('nibble', range(0x1, 0x7))
+    def test_from_string_all(self, system, exp, nibble):
+        value = system | (exp << (nibble * 4))
+        before = HidUnit.from_value(value)
+        after = HidUnit.from_string(str(before))
+        assert before == after
