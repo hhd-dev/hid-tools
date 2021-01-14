@@ -9,14 +9,16 @@ include:
     file: '/templates/fedora.yml'
 
 variables:
-  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc'
+  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml'
   FDO_DISTRIBUTION_VERSION: 33
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
   FDO_DISTRIBUTION_TAG: '2020-01-14.1'
+  QEMU_TAG:    'qemu-vm-2020-01-14.3'
 
 stages:
   - prep
   - build
+  - test
 
 container-prep:
   extends:
@@ -24,6 +26,16 @@ container-prep:
   stage: prep
   variables:
     GIT_STRATEGY: none
+
+qemu-prep:
+  extends:
+    - .fdo.qemu-build@fedora
+  stage: prep
+  tags:
+    - kvm
+  variables:
+    GIT_STRATEGY: none
+    FDO_DISTRIBUTION_TAG: $QEMU_TAG
 
 .default_image:
   extends:
@@ -52,3 +64,39 @@ install_no_man_pages:
   script:
     - dnf remove -y pandoc python3-pypandoc
     - python3 setup.py install
+
+.qemu_image:
+  extends:
+    - .fdo.distribution-image@fedora
+  tags:
+    - kvm
+  variables:
+    FDO_DISTRIBUTION_TAG: $QEMU_TAG
+  needs:
+    - qemu-prep
+
+pytest:
+  extends: .qemu_image
+  stage: test
+  script:
+    - echo "[pytest]" > pytest.ini
+    - echo "junit_family=xunit2" >> pytest.ini
+    - /app/vmctl start || (echo "Error - Failed to start the VM." && exit 1)
+    - "scp -r $PWD vm:"
+    - /app/vmctl exec "$CI_PROJECT_NAME/.gitlab-ci/modprobe-hid.sh"
+    - /app/vmctl exec "cd $CI_PROJECT_NAME ; pytest -v --junitxml=junit-$CI_JOB_NAME.xml" && touch .success || true
+    - scp -r "vm:$CI_PROJECT_NAME/junit-*.xml" .
+    - /app/vmctl stop
+    - if [[ ! -e .success ]] ;
+      then
+        exit 1 ;
+      fi
+  artifacts:
+    name: "qemu-pytest-logs-$CI_JOB_NAME"
+    when: always
+    expire_in: 1 week
+    reports:
+      junit: junit-*.xml
+  variables:
+    FDO_DISTRIBUTION_TAG: $QEMU_TAG
+  allow_failure: true
