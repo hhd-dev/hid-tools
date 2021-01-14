@@ -3,13 +3,14 @@
 .templates_sha: &template_sha 18194044f0f984c8815bc9a1a146582f6bf15d41 # see https://docs.gitlab.com/ee/ci/yaml/#includefile
 
 include:
-  # Arch container builder template
+  # Fedora container builder template
   - project: 'freedesktop/ci-templates'
     ref: *template_sha
-    file: '/templates/arch.yml'
+    file: '/templates/fedora.yml'
 
 variables:
-  ARCH_PKGS: 'flake8 python-parse python-pyudev python-pypandoc pandoc'
+  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc'
+  FDO_DISTRIBUTION_VERSION: 33
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
   FDO_DISTRIBUTION_TAG: '2020-01-14.1'
 
@@ -19,15 +20,14 @@ stages:
 
 container-prep:
   extends:
-    - .fdo.container-build@arch
+    - .fdo.container-build@fedora
   stage: prep
   variables:
     GIT_STRATEGY: none
-    FDO_DISTRIBUTION_PACKAGES: $ARCH_PKGS
 
 .default_image:
   extends:
-    - .fdo.distribution-image@arch
+    - .fdo.distribution-image@fedora
   needs:
     - container-prep
 
@@ -50,5 +50,5 @@ install_no_man_pages:
   extends: .default_image
   stage: build
   script:
-    - pacman -R --noconfirm pandoc python-pypandoc
+    - dnf remove -y pandoc python3-pypandoc
     - python3 setup.py install
