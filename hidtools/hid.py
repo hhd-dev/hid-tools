@@ -621,6 +621,21 @@ class _HidRDescItem(object):
         dump_file.write(f'{line} // {descr} {str(offset)}\n')
         return indent
 
+    def dump_rdesc_human(self, indent, dump_file):
+        """
+        Format the hid item in human-only format e.g. ::
+
+           Usage Page (Generic Desktop)        0
+
+        :param int indent: indentation to prefix
+        :param File dump_file: file to write to
+        """
+        offset = self.index_in_report
+        descr, indent = self.get_human_descr(indent)
+        descr += " " * (35 - len(descr))
+        dump_file.write(f'{descr} {str(offset)}\n')
+        return indent
+
     def dump_rdesc_lsusb(self, indent, dump_file):
         """
         Format the hid item in a lsusb -v format.
@@ -1773,7 +1788,7 @@ class ReportDescriptor(object):
         :param File dump_file: the file to write to
         :param str output_type: the output format, one of "default" or "kernel"
         """
-        assert output_type in ["default", "kernel"]
+        assert output_type in ["default", "kernel", "human"]
 
         indent = 0
         for rdesc_item in self.rdesc_items:
@@ -1781,6 +1796,8 @@ class ReportDescriptor(object):
                 indent = rdesc_item.dump_rdesc_array(indent, dump_file)
             elif output_type == "kernel":
                 indent = rdesc_item.dump_rdesc_kernel(indent, dump_file)
+            elif output_type == "human":
+                indent = rdesc_item.dump_rdesc_human(indent, dump_file)
 
     @property
     def size(self):
