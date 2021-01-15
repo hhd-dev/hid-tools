@@ -101,6 +101,7 @@ pytest:
     expire_in: 1 week
     paths:
       - junit-*.xml
+      - console.out
     reports:
       junit: junit-*.xml
   variables:
