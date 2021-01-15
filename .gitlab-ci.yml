@@ -9,16 +9,17 @@ include:
     file: '/templates/fedora.yml'
 
 variables:
-  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml'
+  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq'
   FDO_DISTRIBUTION_VERSION: 33
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  FDO_DISTRIBUTION_TAG: '2020-01-14.1'
-  QEMU_TAG:    'qemu-vm-2020-01-14.3'
+  FDO_DISTRIBUTION_TAG: '2020-01-15.1'
+  QEMU_TAG:    'qemu-vm-2020-01-15.3'
 
 stages:
   - prep
   - build
   - test
+  - analysis
 
 container-prep:
   extends:
@@ -84,10 +85,13 @@ pytest:
     - /app/vmctl start || (echo "Error - Failed to start the VM." && exit 1)
     - "scp -r $PWD vm:"
     - /app/vmctl exec "$CI_PROJECT_NAME/.gitlab-ci/modprobe-hid.sh"
-    - /app/vmctl exec "cd $CI_PROJECT_NAME ; pytest -v --junitxml=junit-$CI_JOB_NAME.xml" && touch .success || true
+    - /app/vmctl exec "cd $CI_PROJECT_NAME ; pytest -v --junitxml=junit-$CI_JOB_NAME.xml ; echo \$? > .exit_code " || true
     - scp -r "vm:$CI_PROJECT_NAME/junit-*.xml" .
+    - scp -r "vm:$CI_PROJECT_NAME/.exit_code" .
+    - cat '.exit_code'
     - /app/vmctl stop
-    - if [[ ! -e .success ]] ;
+    # pytest uses 2 and above for any errors outside the tests themselves
+    - if [[ `cat .exit_code` -gt 1 ]] ;
       then
         exit 1 ;
       fi
@@ -95,8 +99,31 @@ pytest:
     name: "qemu-pytest-logs-$CI_JOB_NAME"
     when: always
     expire_in: 1 week
+    paths:
+      - junit-*.xml
     reports:
       junit: junit-*.xml
   variables:
     FDO_DISTRIBUTION_TAG: $QEMU_TAG
+
+pytest errors:
+  extends:
+    - .fdo.distribution-image@fedora
+  stage: analysis
+  script:
+    - pip install jq yq
+    - errors=`cat junit-*.xml | xq -r '.testsuites.testsuite."@errors"'`
+    - test $errors -ne 0 && echo "pytest encountered $errors errors, please fix"
+    - exit $errors
+  allow_failure: false
+
+pytest failures:
+  extends:
+    - .fdo.distribution-image@fedora
+  stage: analysis
+  script:
+    - pip install jq yq
+    - failures=`cat junit-*.xml | xq -r '.testsuites.testsuite."@failures"'`
+    - test $failures -ne 0 && echo "pytest encountered $failures test case failures"
+    - exit $failures
   allow_failure: true
