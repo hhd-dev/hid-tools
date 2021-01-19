@@ -480,7 +480,10 @@ class PS4Controller(BaseGamepad):
         self.last_touch_report = None
 
     def is_ready(self):
-        return super().is_ready() and len(self.input_nodes) == 3 and len(self.led_classes) == 4
+        return (super().is_ready() and
+                len(self.input_nodes) == 3 and
+                len(self.led_classes) == 4 and
+                self.power_supply_class is not None)
 
     def fill_accelerometer_values(self, report):
         """ Fill accelerometer section of main input report with raw accelerometer data. """

@@ -102,6 +102,8 @@ class SonyBaseTest:
         def test_battery(self):
             uhdev = self.uhdev
 
+            assert uhdev.power_supply_class is not None
+
             # DS4 capacity levels are in increments of 10.
             # Battery is never below 5%.
             for i in range(5, 105, 10):
