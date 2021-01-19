@@ -187,15 +187,27 @@ class BaseDevice(UHIDDevice):
         self.led_classes[led.sys_path.name] = led
 
     def udev_power_supply_event(self, device):
+        # we may be presented the event more than once
+        if self.power_supply_class is not None:
+            return
+
         self.power_supply_class = PowerSupply(device)
 
     def udev_event(self, event):
-        if event.action != 'add':
+        if event.action == 'remove':
             return
 
         device = event
 
         subsystem = device.properties['SUBSYSTEM']
+
+        # power_supply events are presented with a 'change' event
+        if subsystem == "power_supply":
+            return self.udev_power_supply_event(device)
+
+        # others are still using 'add'
+        if event.action != 'add':
+            return
 
         if subsystem == 'input':
             return self.udev_input_event(device)
@@ -208,8 +220,6 @@ class BaseDevice(UHIDDevice):
                 # The 'device' directory brings us back to the power_supply.
                 power_supply = pyudev.Devices.from_sys_path(device.context, device.sys_path + "/device")
                 return self.udev_power_supply_event(power_supply)
-        elif subsystem == "power_supply":
-            return self.udev_power_supply_event(device)
 
         logger.debug(f'{subsystem}: {device}')
 
