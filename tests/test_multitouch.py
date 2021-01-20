@@ -54,6 +54,8 @@ mt_quirks = {
     'STICKY_FINGERS'			: BIT(16),
     'ASUS_CUSTOM_UP'			: BIT(17),
     'WIN8_PTP_BUTTONS'			: BIT(18),
+    'SEPARATE_APP_REPORT'		: BIT(19),
+    'MT_QUIRK_FORCE_MULTI_INPUT': BIT(20),
 }
 
 
