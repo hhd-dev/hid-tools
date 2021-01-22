@@ -236,7 +236,3 @@ class TestHidrawSysfsReportDescriptor(BaseTest.HidDecodeBase):
             with open('output.txt') as outfile:
                 lines = self.get_rdesc_dump(outfile.readlines())
                 assert self.rdesc == self.output_to_bytes(lines)
-
-
-if __name__ == "__main__":
-    pytest.main()
