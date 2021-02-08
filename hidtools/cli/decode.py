@@ -26,6 +26,7 @@ import hidtools.hid
 import hidtools.hidraw
 import logging
 import yaml
+from hidtools.hid import ReportDescriptor
 logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
                     level=logging.INFO)
 base_logger = logging.getLogger('hid')
@@ -77,14 +78,9 @@ def open_binary(path):
 def interpret_file_hidrecorder(fd):
     data = fd.read()
     # The proper (machine-readable) hid-recorder output
-    r_lines = [l for l in data.splitlines() if l.startswith('R: ')]
-    if r_lines:
-        rdescs = []
-        for l in r_lines:
-            bytes = l[3:]  # drop R:
-            rdescs.append(hidtools.hid.ReportDescriptor.from_string(bytes))
-        if rdescs:
-            return rdescs
+    rdescs = [ReportDescriptor.from_string(l[3:]) for l in data.splitlines() if l.startswith('R: ')]
+    if rdescs:
+        return rdescs
 
     # The human-readable version (the comment in the hid-recorder output)
     if any(filter(lambda x: x.strip().startswith('Usage Page ('), data.splitlines())):
