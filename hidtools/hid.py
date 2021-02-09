@@ -1636,8 +1636,9 @@ class ReportDescriptor(object):
             except KeyError:
                 return None
 
-        # if the report is larger than it should, it's OK
-        if report.size >= reportSize:
+        # if the report is larger than it should be, it's OK,
+        # extra bytes will just be ignored
+        if report.size <= reportSize:
             return report
 
         return None
