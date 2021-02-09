@@ -104,6 +104,8 @@ def main(device_list, output):
         print('Insufficient permissions, please run me as root.', file=sys.stderr)
     except KeyboardInterrupt:
         pass
+    except OSError as e:
+        print(f'{str(e)}', file=sys.stderr)
 
 
 if __name__ == '__main__':
