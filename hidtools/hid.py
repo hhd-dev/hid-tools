@@ -185,11 +185,12 @@ class RangeError(Exception):
 
 
 class _HidRDescItem(object):
-    """Represents one item in the Report Descriptor. This is a variable-sized
+    """
+    Represents one item in the Report Descriptor. This is a variable-sized
     element with one header byte and 0, 1, 2, 4 payload bytes.
 
     :param int index_in_report:
-        The index within the report descritor
+        The index within the report descriptor
     :param int hid:
         The numerical hid type (e.g. ``0b00000100`` for Usage Page)
     :param int value:
@@ -680,7 +681,7 @@ class HidUnit(object):
     .. attribute:: units
 
         A dict of { unit: exponent } of the applicable units.
-        Where the Unit is None, the return value is None.
+        Where the Unit is ``None``, the return value is ``None``.
 
     .. attribute:: system
 
@@ -712,6 +713,9 @@ class HidUnit(object):
 
         @classmethod
         def from_string(self, string):
+            """
+            Returns the correct :class:`HidUnit.System` given the string.
+            """
             try:
                 return {v: k for k, v in self._stringmap().items()}[string]
             except KeyError:
@@ -719,6 +723,10 @@ class HidUnit(object):
 
         @property
         def length(self):
+            """
+            Returns the right :class:`Unit` for the length measurement in
+            this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.CENTIMETER,
@@ -729,6 +737,10 @@ class HidUnit(object):
 
         @property
         def mass(self):
+            """
+            Returns the right :class:`Unit` for the mass measurement in
+            this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.GRAM,
@@ -739,6 +751,10 @@ class HidUnit(object):
 
         @property
         def time(self):
+            """
+            Returns the right :class:`Unit` for the time measurement in
+            this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.SECONDS,
@@ -749,6 +765,10 @@ class HidUnit(object):
 
         @property
         def temperature(self):
+            """
+            Returns the right :class:`Unit` for the temperature measurement
+            in this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.KELVIN,
@@ -759,6 +779,10 @@ class HidUnit(object):
 
         @property
         def current(self):
+            """
+            Returns the right :class:`Unit` for the current measurement
+            in this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.AMPERE,
@@ -769,6 +793,10 @@ class HidUnit(object):
 
         @property
         def luminous_intensity(self):
+            """
+            Returns the right :class:`Unit` for the luminous intensity
+            measurement in this system.
+            """
             return {
                 HidUnit.System.NONE: None,
                 HidUnit.System.SI_LINEAR: Unit.CANDELA,
@@ -883,6 +911,10 @@ class HidUnit(object):
 
     @property
     def value(self):
+        """
+        Returns the numerical value for this unit as required by the HID
+        specification.
+        """
         v = self.system.value
 
         def unit_value(unit_type):
