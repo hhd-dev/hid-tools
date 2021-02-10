@@ -30,39 +30,39 @@ logger = logging.getLogger('hidtools.hid')
 
 hid_items = {
     "Main": {
-        "Input"			: 0b10000000,
-        "Output"		: 0b10010000,
-        "Feature"		: 0b10110000,
-        "Collection"		: 0b10100000,
-        "End Collection"	: 0b11000000,
+        "Input"             : 0b10000000,  # noqa: E203
+        "Output"            : 0b10010000,  # noqa: E203
+        "Feature"           : 0b10110000,  # noqa: E203
+        "Collection"        : 0b10100000,  # noqa: E203
+        "End Collection"    : 0b11000000,  # noqa: E203
     },
 
     "Global": {
-        "Usage Page"		: 0b00000100,
-        "Logical Minimum"	: 0b00010100,
-        "Logical Maximum"	: 0b00100100,
-        "Physical Minimum"	: 0b00110100,
-        "Physical Maximum"	: 0b01000100,
-        "Unit Exponent"		: 0b01010100,
-        "Unit"			: 0b01100100,
-        "Report Size"		: 0b01110100,
-        "Report ID"		: 0b10000100,
-        "Report Count"		: 0b10010100,
-        "Push"			: 0b10100100,
-        "Pop"			: 0b10110100,
-    },
+        "Usage Page"        : 0b00000100,  # noqa: E203
+        "Logical Minimum"   : 0b00010100,  # noqa: E203
+        "Logical Maximum"   : 0b00100100,  # noqa: E203
+        "Physical Minimum"  : 0b00110100,  # noqa: E203
+        "Physical Maximum"  : 0b01000100,  # noqa: E203
+        "Unit Exponent"     : 0b01010100,  # noqa: E203
+        "Unit"              : 0b01100100,  # noqa: E203
+        "Report Size"       : 0b01110100,  # noqa: E203
+        "Report ID"         : 0b10000100,  # noqa: E203
+        "Report Count"      : 0b10010100,  # noqa: E203
+        "Push"              : 0b10100100,  # noqa: E203
+        "Pop"               : 0b10110100,  # noqa: E203
+    },                                     # noqa: E203
 
     "Local": {
-        "Usage"			: 0b00001000,
-        "Usage Minimum"		: 0b00011000,
-        "Usage Maximum"		: 0b00101000,
-        "Designator Index"	: 0b00111000,
-        "Designator Minimum"	: 0b01001000,
-        "Designator Maximum"	: 0b01011000,
-        "String Index"		: 0b01111000,
-        "String Minimum"	: 0b10001000,
-        "String Maximum"	: 0b10011000,
-        "Delimiter"		: 0b10101000,
+        "Usage"             : 0b00001000,  # noqa: E203
+        "Usage Minimum"     : 0b00011000,  # noqa: E203
+        "Usage Maximum"     : 0b00101000,  # noqa: E203
+        "Designator Index"  : 0b00111000,  # noqa: E203
+        "Designator Minimum": 0b01001000,  # noqa: E203
+        "Designator Maximum": 0b01011000,  # noqa: E203
+        "String Index"      : 0b01111000,  # noqa: E203
+        "String Minimum"    : 0b10001000,  # noqa: E203
+        "String Maximum"    : 0b10011000,  # noqa: E203
+        "Delimiter"         : 0b10101000,  # noqa: E203
     },
 }
 
