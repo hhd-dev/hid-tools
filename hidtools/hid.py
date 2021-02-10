@@ -1622,7 +1622,6 @@ class ReportDescriptor(object):
             self.usages = []
             self.usage_sizes = []
             self.usage_min = 0
-            self.usage_min_size = 0
             self.usage_max = 0
             self.usage_max_size = 0
             self.report_ID = -1
@@ -1765,7 +1764,6 @@ class ReportDescriptor(object):
             self.local.usages = []
             self.local.usage_sizes = []
             self.local.usage_min = 0
-            self.local.usage_min_size = 0
             self.local.usage_max = 0
             self.local.usage_max_size = 0
         elif item == "Usage Minimum":
@@ -1773,7 +1771,6 @@ class ReportDescriptor(object):
                 self.local.usage_min = value | self.glob.usage_page
             else:
                 self.local.usage_min = value
-            self.local.usage_min_size = size
         elif item == "Usage Maximum":
             if size <= 2:
                 self.local.usage_max = value | self.glob.usage_page
@@ -1820,7 +1817,6 @@ class ReportDescriptor(object):
             self.local.usages = []
             self.local.usage_sizes = []
             self.local.usage_min = 0
-            self.local.usage_min_size = 0
             self.local.usage_max = 0
             self.local.usage_max_size = 0
 
