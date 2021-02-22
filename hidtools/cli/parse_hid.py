@@ -78,8 +78,7 @@ def dump_report(line, rdesc_object, f_out):
 def parse_hid(f_in, f_out, print_events=True):
     rdesc_dict = {}
     device_index = 0
-    while True:
-        line = f_in.readline()
+    for line in f_in:
         if line.startswith("#"):
             continue
         elif line.startswith("R:"):
