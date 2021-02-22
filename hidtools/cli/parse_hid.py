@@ -71,8 +71,7 @@ def dump_report(line, rdesc_object, f_out):
     """
     event = parse_event(line, rdesc_object)
     if event:
-        f_out.write(event)
-        f_out.write("\n")
+        f_out.write(f"{event}\n")
 
 
 def parse_hid(f_in, f_out, print_events=True):
