@@ -1338,7 +1338,6 @@ class PS5Controller(BaseGamepad):
     def is_ready(self):
         return (super().is_ready() and
                 len(self.input_nodes) == 3 and
-                len(self.led_classes) == 7 and
                 self.power_supply_class is not None)
 
     def fill_accelerometer_values(self, report):
