@@ -40,6 +40,17 @@ def setup_rlimit():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
 
+@pytest.fixture(autouse=True, scope='session')
+def start_udevd(pytestconfig):
+    if pytestconfig.getoption("udevd"):
+        import subprocess
+        with subprocess.Popen("/usr/lib/systemd/systemd-udevd") as proc:
+            yield
+            proc.kill()
+    else:
+        yield
+
+
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "skip_if_uhdev(condition, message): mark test to skip if the condition on the uhdev device is met"
@@ -67,3 +78,7 @@ def pytest_generate_tests(metafunc):
                     params.append([module, vid, pid])
                     ids.append(f'{module.name} {vid:04x}:{pid:04x}')
         metafunc.parametrize('usbVidPid', params, ids=ids)
+
+
+def pytest_addoption(parser):
+    parser.addoption("--udevd", action="store_true", default=False)
