@@ -79,6 +79,9 @@ install_no_man_pages:
 pytest:
   extends: .qemu_image
   stage: test
+  needs:
+    - flake
+    - qemu-prep
   script:
     - echo "[pytest]" > pytest.ini
     - echo "junit_family=xunit2" >> pytest.ini
@@ -120,6 +123,8 @@ pytest errors:
   extends:
     - .fdo.distribution-image@fedora
   stage: analysis
+  needs:
+    - pytest
   script:
     - pip install yq
     - errors=`cat junit-*-retry.xml | xq -r '.testsuites.testsuite."@errors"'`
@@ -132,6 +137,8 @@ pytest failures:
   extends:
     - .fdo.distribution-image@fedora
   stage: analysis
+  needs:
+    - pytest
   script:
     - pip install yq
     - failures=`cat junit-*-retry.xml | xq -r '.testsuites.testsuite."@failures"'`
