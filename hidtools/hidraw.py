@@ -131,9 +131,10 @@ def _IOC_HIDIOCGFEATURE(none, len):
 
 def _HIDIOCGFEATURE(fd, report_id, rsize):
     """ get feature report """
-    assert report_id <= 255 and report_id >= -1
+    assert report_id <= 255 and report_id > -1
 
-    buf = bytearray([report_id & 0xff]) + bytearray(rsize)
+    # rsize has the report length in it
+    buf = bytearray([report_id & 0xff]) + bytearray(rsize - 1)
     fcntl.ioctl(fd, _IOC_HIDIOCGFEATURE(None, len(buf)), buf)
     return list(buf)  # Note: first byte is report ID
 
