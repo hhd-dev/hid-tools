@@ -30,6 +30,7 @@ class BusType(enum.IntEnum):
     BLUETOOTH = 0x5
     VIRTUAL = 0x6
     I2C = 0x18
+    HOST = 0x19
 
 
 def twos_comp(val, bits):
