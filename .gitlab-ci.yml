@@ -1,6 +1,6 @@
 # vim: set expandtab shiftwidth=2 tabstop=8 textwidth=0:
 
-.templates_sha: &template_sha 18194044f0f984c8815bc9a1a146582f6bf15d41 # see https://docs.gitlab.com/ee/ci/yaml/#includefile
+.templates_sha: &template_sha 34f4ade99434043f88e164933f570301fd18b125 # see https://docs.gitlab.com/ee/ci/yaml/#includefile
 
 include:
   # Fedora container builder template
@@ -10,10 +10,10 @@ include:
 
 variables:
   FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq'
-  FDO_DISTRIBUTION_VERSION: 33
+  FDO_DISTRIBUTION_VERSION: 35
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  FDO_DISTRIBUTION_TAG: '2020-01-15.1'
-  QEMU_TAG:    'qemu-vm-2020-01-15.3'
+  FDO_DISTRIBUTION_TAG: '2021-11-09.1'
+  QEMU_TAG:    'qemu-vm-2021-11-09.1'
 
 stages:
   - prep
