@@ -112,7 +112,7 @@ pytest errors:
     - .fdo.distribution-image@fedora
   stage: analysis
   script:
-    - pip install jq yq
+    - pip install yq
     - errors=`cat junit-*.xml | xq -r '.testsuites.testsuite."@errors"'`
     - test $errors -ne 0 && echo "pytest encountered $errors errors, please fix"
     - echo "See the previous stage for test logs"
@@ -124,7 +124,7 @@ pytest failures:
     - .fdo.distribution-image@fedora
   stage: analysis
   script:
-    - pip install jq yq
+    - pip install yq
     - failures=`cat junit-*.xml | xq -r '.testsuites.testsuite."@failures"'`
     - test $failures -ne 0 && echo "pytest encountered $failures test case failures"
     - echo "See the previous stage for test logs"
