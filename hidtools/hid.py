@@ -884,7 +884,9 @@ class HidUnit(object):
                 s = ''.join([superscripts[c] for c in str(exp)])
             units.append((u.value, s))
 
-        return f'{self.system}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
+        # python 3.6 seems to not use __str__() for enums, leading to errors
+        # in the test suite
+        return f'{str(self.system)}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
 
     @classmethod
     def from_string(self, string):
