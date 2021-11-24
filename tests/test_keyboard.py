@@ -169,6 +169,10 @@ class ArrayKeyboard(BaseKeyboard):
         # strip modifiers from the array
         array = [v for v in array if v > 0]
 
+        # if array length is bigger than 6, report ErrorRollOver
+        if len(array) > 6:
+            array = [hut[0x07].from_name['ErrorRollOver'].usage] * 6
+
         # strip/complete the array to 6 elements
         array = array[:6] + [0] * (6 - len(array))
 
@@ -426,28 +430,37 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
             '4 and $',
             '5 and %',
             '6 and ^',
-            '7 and &',
-            '8 and *',
-            '9 and (',
-            '0 and )',
         ])
         expected = [syn_event]
-        unexpected = []
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_1, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_2, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_3, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_4, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_5, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_6, 1))
-        unexpected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_7))
-        unexpected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_8))
-        unexpected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_9))
-        unexpected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_0))
         events = uhdev.next_sync_events()
+
         self.debug_reports(r, uhdev, events)
         self.assertInputEventsIn(expected, events)
-        for key in unexpected:
-            assert key not in events
+
+        # ErrRollOver
+        r = uhdev.event([
+            '1 and !',
+            '2 and @',
+            '3 and #',
+            '4 and $',
+            '5 and %',
+            '6 and ^',
+            '7 and &',
+            '8 and *',
+            '9 and (',
+            '0 and )',
+        ])
+        events = uhdev.next_sync_events()
+
+        self.debug_reports(r, uhdev, events)
+
+        assert len(events) == 0
 
         r = uhdev.event([])
         expected = [syn_event]
@@ -460,8 +473,6 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
         self.assertInputEventsIn(expected, events)
-        for key in unexpected:
-            assert key not in events
 
 
 class TestLEDKeyboard(BaseTest.TestKeyboard):
