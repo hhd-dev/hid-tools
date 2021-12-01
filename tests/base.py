@@ -87,15 +87,19 @@ class BaseTestCase:
         def create_device(self):
             raise Exception('please reimplement me in subclasses')
 
+        @pytest.fixture()
+        def new_uhdev(self):
+            return self.create_device()
+
         def assertName(self, uhdev):
             evdev = uhdev.get_evdev()
             assert evdev.name == uhdev.name
 
         @pytest.fixture(autouse=True)
-        def context(self, request):
+        def context(self, new_uhdev, request):
             try:
                 with HIDTestUdevRule.instance():
-                    with self.create_device() as self.uhdev:
+                    with new_uhdev as self.uhdev:
                         skip_cond = request.node.get_closest_marker('skip_if_uhdev')
                         if skip_cond:
                             test, message, *rest = skip_cond.args
