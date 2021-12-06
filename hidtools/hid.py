@@ -1143,6 +1143,54 @@ class HidField(object):
             report[byte_idx] &= ~(bit_mask << bit_shift)
             report[byte_idx] |= value << bit_shift
 
+    def fill_values_array(self, report, data):
+        """
+        Assuming ``data`` is the value for this HID field array and ``report``
+        is a HID report's bytes, this method sets those bits in ``report`` that
+        are his HID field to ``value``.
+
+        Example:
+        - if this field is an array of keys, use
+          ``fill_values(report, ['a or A', 'b or B', ...]``, i.e. one string
+          representation for each pressed key
+
+
+        ``data`` must have at most :attr:`count` elements, matching this
+        field's Report Count.
+
+
+        :param list report: an integer array representing this report,
+            modified in place
+        :param list data: the data for this hid field with one element for
+            each Usage.
+        """
+        if len(data) > self.count:
+            raise Exception("-EINVAL")
+
+        array = []
+
+        for usage_name in data:
+            try:
+                usage = HUT[self.usage_page].from_name[usage_name]
+            except KeyError:
+                continue
+
+            full_usage = usage.usage_page.page_id << 16 | usage.usage
+
+            if full_usage in self.usages:
+                idx = self.usages.index(full_usage)
+                array.append(idx)
+
+        for idx in range(self.count):
+            try:
+                v = array[idx]
+            except IndexError:
+                v = 0
+
+            v += self.logical_min
+
+            self._fill_value(report, v, idx)
+
     def fill_values(self, report, data):
         """
         Assuming ``data`` is the value for this HID field and ``report`` is
@@ -1453,12 +1501,21 @@ class HidReport(object):
         elif global_data is not None and hasattr(global_data, field):
             value = getattr(global_data, field)
 
-        try:
-            value[0]
-        except TypeError:
-            value = [value]
+        if hidInputItem.is_array:
+            if isinstance(value, str):
+                value = [value]
 
-        hidInputItem.fill_values(r_out, value)
+            hidInputItem.fill_values_array(r_out, value)
+
+        # non arrays
+        else:
+            try:
+                value[0]
+            except TypeError:
+                value = [value]
+
+            hidInputItem.fill_values(r_out, value)
+
         self.prev_collection = hidInputItem.collection
         self.prev_seen_usages.append(usage)
 

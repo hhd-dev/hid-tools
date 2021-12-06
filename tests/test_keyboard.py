@@ -153,28 +153,26 @@ class ArrayKeyboard(BaseKeyboard):
 
     def _create_report_data(self):
         data = KeyboardData()
-        array = [k for (k, v) in self.keystates.items() if v]
+        array = []
 
         hut = hidtools.hut.HUT
 
-        for index, usage_name in enumerate(array):
-            usage = hut[0x07].from_name[usage_name].usage
+        # strip modifiers from the array
+        for k, v in self.keystates.items():
+            # we ignore depressed keys
+            if not v:
+                continue
+
+            usage = hut[0x07].from_name[k].usage
             if usage >= 224 and usage <= 231:
                 # modifier
-                setattr(keyboard, usage_name.lower(), 1)
-                usage = 0
-
-            array[index] = usage
-
-        # strip modifiers from the array
-        array = [v for v in array if v > 0]
+                setattr(data, k.lower(), 1)
+            else:
+                array.append(k)
 
         # if array length is bigger than 6, report ErrorRollOver
         if len(array) > 6:
-            array = [hut[0x07].from_name['ErrorRollOver'].usage] * 6
-
-        # strip/complete the array to 6 elements
-        array = array[:6] + [0] * (6 - len(array))
+            array = ['ErrorRollOver'] * 6
 
         data.keyboard = array
         return data
