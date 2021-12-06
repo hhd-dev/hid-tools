@@ -152,7 +152,7 @@ class ArrayKeyboard(BaseKeyboard):
         super().__init__(rdesc, name, input_info)
 
     def _create_report_data(self):
-        keyboard = KeyboardData()
+        data = KeyboardData()
         array = [k for (k, v) in self.keystates.items() if v]
 
         hut = hidtools.hut.HUT
@@ -176,8 +176,8 @@ class ArrayKeyboard(BaseKeyboard):
         # strip/complete the array to 6 elements
         array = array[:6] + [0] * (6 - len(array))
 
-        setattr(keyboard, '0x70000', array)
-        return keyboard
+        data.keyboard = array
+        return data
 
 
 class LEDKeyboard(ArrayKeyboard):

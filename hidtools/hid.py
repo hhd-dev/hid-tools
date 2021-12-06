@@ -1053,6 +1053,26 @@ class HidField(object):
                 pass
         return phys
 
+    @property
+    def logical_name(self):
+        """
+        The logical name or ``None``
+        """
+        logical = self.logical
+        if logical is None:
+            return None
+
+        try:
+            page_id = logical >> 16
+            value = logical & 0xff
+            logical = HUT[page_id][value]
+        except KeyError:
+            try:
+                logical = f'0x{logical:04x}'
+            except:
+                pass
+        return logical
+
     def _get_value(self, report, idx):
         """
         Extract the bits that are this HID field in the list of bytes
@@ -1228,6 +1248,11 @@ class HidField(object):
         usage = usage_min
         if len(usages) > 0:
             usage = usages[0]
+
+        # for arrays, we don't have a given usage
+        # use either the logical if given or the application
+        if not value & 0x3:
+            usage = logical or application
 
         item = cls(report_ID,
                    logical,
@@ -1536,9 +1561,11 @@ class HidReport(object):
                     usage = ""
                 output += f'{sep}{usage} {value_format.format(values[0])} '
             else:
-                usage_page_name = report_item.usage_page_name
-                if not usage_page_name:
-                    usage_page_name = "Array"
+                logical_name = report_item.logical_name
+                if not logical_name:
+                    logical_name = report_item.usage_page_name
+                if not logical_name:
+                    logical_name = "Array"
                 usages = []
                 for v in values:
                     if (v < report_item.logical_min or
@@ -1550,14 +1577,14 @@ class HidReport(object):
                             usage = v
                         else:
                             usage = f'{v:02x}'
-                        if ('vendor' not in usage_page_name.lower() and
+                        if ('vendor' not in logical_name.lower() and
                            v > 0 and
                            v < len(report_item.usages)):
                             usage = report_item.get_usage_name(v)
                             if "no event indicated" in usage.lower():
                                 usage = ''
                         usages.append(f'\'{usage}\'')
-                output += f'{sep}{usage_page_name} [{", ".join(usages)}] '
+                output += f'{sep}{logical_name} [{", ".join(usages)}] '
             sep = '|'
             prev = report_item
         return output
