@@ -1577,10 +1577,10 @@ class HidReport(object):
                             usage = v
                         else:
                             usage = f'{v:02x}'
+                        index = v - report_item.logical_min  # guaranteed to be > 0 with test above
                         if ('vendor' not in logical_name.lower() and
-                           v > 0 and
-                           v < len(report_item.usages)):
-                            usage = report_item.get_usage_name(v)
+                           index < len(report_item.usages)):
+                            usage = report_item.get_usage_name(index)
                             if "no event indicated" in usage.lower():
                                 usage = ''
                         usages.append(f'\'{usage}\'')
