@@ -1,7 +1,7 @@
 all: doc test man
 
-man_pages = $(patsubst %.md,%.1,$(wildcard man/*.md))
-pytest3 = $(shell command -v pytest-3 pytest | head -n1)
+man_pages := $(patsubst %.md,%.1,$(wildcard man/*.md))
+pytest3 := $(shell command -v pytest-3 || command -v pytest)
 
 %.1 : %.md
 	pandoc  -s -t man -f markdown $< > $@
