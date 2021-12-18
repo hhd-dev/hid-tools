@@ -22,6 +22,7 @@ from . import base
 from hidtools.util import BusType
 import libevdev
 import logging
+import pytest
 
 logger = logging.getLogger('hidtools.test.tablet')
 
@@ -172,6 +173,133 @@ class BaseTest:
         def assertName(self, uhdev):
             evdev = uhdev.get_evdev()
             assert evdev.name == uhdev.name + ' Stylus'
+
+        def test_scribble(self):
+            """Pen touches, then scribble on screen
+               Actual reporting from the device: hid=TIPSWITCH,INRANGE (code=TOUCH,TOOL_PEN):
+                 { 0, 1 } <- hover
+                 { 1, 1 } <- touch-down
+                 { 1, 1 } <- still touch, scribble on the screen
+                 { 0, 1 } <- liftoff
+                 { 0, 0 } <- leaves
+            """
+
+            uhdev = self.uhdev
+            evdev = uhdev.get_evdev()
+
+            p = Pen(50, 60)
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
+            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
+            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
+
+            p.tipswitch = True
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1) in events
+
+            p.x += 1
+            p.y -= 1
+            events = self.post(uhdev, p)
+            assert len(events) == 3  # X, Y, SYN
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 51) in events
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 59) in events
+
+            p.tipswitch = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
+
+            p.inrange = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
+
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Barrel Switch' not in uhdev.fields,
+                                   'Device not compatible, missing Barrel Switch usage')
+        def test_primary_button(self):
+            """Primary button (stylus) pressed, reports as pressed even while hovering.
+               Actual reporting from the device: hid=TIPSWITCH,BARRELSWITCH,INRANGE (code=TOUCH,STYLUS,PEN):
+                 { 0, 0, 1 } <- hover
+                 { 0, 1, 1 } <- primary button pressed
+                 { 0, 1, 1 } <- liftoff
+                 { 0, 0, 0 } <- leaves
+            """
+
+            uhdev = self.uhdev
+            evdev = uhdev.get_evdev()
+
+            p = Pen(50, 60)
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
+            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
+            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
+            assert not evdev.value[libevdev.EV_KEY.BTN_STYLUS]
+
+            p.barrelswitch = True
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 1) in events
+
+            p.x += 1
+            p.y -= 1
+            events = self.post(uhdev, p)
+            assert len(events) == 3  # X, Y, SYN
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 51) in events
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 59) in events
+
+            p.barrelswitch = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 0) in events
+
+            p.inrange = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
+
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Barrel Switch' not in uhdev.fields,
+                                   'Device not compatible, missing Barrel Switch usage')
+        def test_contact_primary_button(self):
+            """Primary button (stylus) pressed, reports as pressed even while hovering.
+               Actual reporting from the device: hid=TIPSWITCH,BARRELSWITCH,INRANGE (code=TOUCH,STYLUS,PEN):
+                 { 0, 0, 1 } <- hover
+                 { 0, 1, 1 } <- primary button pressed
+                 { 1, 1, 1 } <- touch-down
+                 { 1, 1, 1 } <- still touch, scribble on the screen
+                 { 0, 1, 1 } <- liftoff
+                 { 0, 0, 0 } <- leaves
+            """
+
+            uhdev = self.uhdev
+            evdev = uhdev.get_evdev()
+
+            p = Pen(50, 60)
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
+            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
+            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
+            assert not evdev.value[libevdev.EV_KEY.BTN_STYLUS]
+
+            p.barrelswitch = True
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 1) in events
+
+            p.tipswitch = True
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1) in events
+            assert evdev.value[libevdev.EV_KEY.BTN_STYLUS]
+
+            p.x += 1
+            p.y -= 1
+            events = self.post(uhdev, p)
+            assert len(events) == 3  # X, Y, SYN
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 51) in events
+            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 59) in events
+
+            p.tipswitch = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
+
+            p.barrelswitch = False
+            p.inrange = False
+            events = self.post(uhdev, p)
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
+            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 0) in events
 
 
 ################################################################################
