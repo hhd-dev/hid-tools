@@ -20,6 +20,7 @@
 
 from . import base
 from hidtools.util import BusType
+import copy
 import libevdev
 import logging
 import pytest
@@ -289,6 +290,31 @@ class BaseTest:
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 0) in events
 
 
+class GXTP_pen(PenDigitizer):
+    def event(self, pen):
+        if not hasattr(self, 'prev_tip_state'):
+            self.prev_tip_state = False
+
+        internal_pen = copy.copy(pen)
+
+        # bug in the controller: when the pen touches the
+        # surface, in-range stays to 1, but when
+        # the pen moves in-range gets reverted to 0
+        if pen.tipswitch and self.prev_tip_state:
+            internal_pen.inrange = False
+
+        self.prev_tip_state = pen.tipswitch
+
+        # another bug in the controller: when the pen is
+        # inverted, invert is set to 1, but as soon as
+        # the pen touches the surface, eraser is correctly
+        # set to 1 but invert is released
+        if pen.eraser:
+            internal_pen.invert = False
+
+        return super().event(internal_pen)
+
+
 ################################################################################
 #
 # Windows 7 compatible devices
@@ -414,4 +440,4 @@ class Testn_trig_1b96_1000(BaseTest.TestTablet):
 
 class TestGXTP_27c6_0113(BaseTest.TestTablet):
     def create_device(self):
-        return PenDigitizer('uhid test GXTP_27c6_0113', rdesc='05 0d 09 04 a1 01 85 01 09 22 a1 02 55 0e 65 11 35 00 15 00 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 15 00 25 01 75 01 95 01 81 02 95 07 81 01 75 08 09 51 95 01 81 02 05 01 26 00 14 75 10 55 0e 65 11 09 30 35 00 46 1f 07 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 15 00 25 01 75 01 95 01 81 02 95 07 81 01 75 08 09 51 95 01 81 02 05 01 26 00 14 75 10 55 0e 65 11 09 30 35 00 46 1f 07 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 54 15 00 25 7f 75 08 95 01 81 02 85 02 09 55 95 01 25 0a b1 02 85 03 06 00 ff 09 c5 15 00 26 ff 00 75 08 96 00 01 b1 02 c0 05 0d 09 02 a1 01 85 08 09 20 a1 00 09 42 09 44 09 3c 09 45 15 00 25 01 75 01 95 04 81 02 95 01 81 03 09 32 81 02 95 02 81 03 95 01 75 08 09 51 81 02 05 01 09 30 75 10 95 01 a4 55 0e 65 11 35 00 26 00 14 46 1f 07 81 42 09 31 26 80 0c 46 77 04 81 42 b4 05 0d 09 30 26 ff 0f 81 02 09 3d 65 14 55 0e 36 d8 dc 46 28 23 16 d8 dc 26 28 23 81 02 09 3e 81 02 c0 c0 06 f0 ff 09 01 a1 01 85 0e 09 01 15 00 25 ff 75 08 95 40 91 02 09 01 15 00 25 ff 75 08 95 40 81 02 c0 05 01 09 06 a1 01 85 04 05 07 09 e3 15 00 25 01 75 01 95 01 81 02 95 07 81 03 c0')
+        return GXTP_pen('uhid test GXTP_27c6_0113', rdesc='05 0d 09 04 a1 01 85 01 09 22 a1 02 55 0e 65 11 35 00 15 00 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 25 01 75 01 95 01 81 02 95 07 81 01 95 01 75 08 09 51 81 02 75 10 05 01 26 00 14 46 1f 07 09 30 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 15 00 25 01 75 01 95 01 81 02 95 07 81 01 75 08 09 51 95 01 81 02 05 01 26 00 14 75 10 55 0e 65 11 09 30 35 00 46 1f 07 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 22 a1 02 09 42 15 00 25 01 75 01 95 01 81 02 95 07 81 01 75 08 09 51 95 01 81 02 05 01 26 00 14 75 10 55 0e 65 11 09 30 35 00 46 1f 07 81 02 26 80 0c 46 77 04 09 31 81 02 05 0d c0 09 54 15 00 25 7f 75 08 95 01 81 02 85 02 09 55 95 01 25 0a b1 02 85 03 06 00 ff 09 c5 15 00 26 ff 00 75 08 96 00 01 b1 02 c0 05 0d 09 02 a1 01 85 08 09 20 a1 00 09 42 09 44 09 3c 09 45 15 00 25 01 75 01 95 04 81 02 95 01 81 03 09 32 81 02 95 02 81 03 95 01 75 08 09 51 81 02 05 01 09 30 75 10 95 01 a4 55 0e 65 11 35 00 26 00 14 46 1f 07 81 42 09 31 26 80 0c 46 77 04 81 42 b4 05 0d 09 30 26 ff 0f 81 02 09 3d 65 14 55 0e 36 d8 dc 46 28 23 16 d8 dc 26 28 23 81 02 09 3e 81 02 c0 c0 06 f0 ff 09 01 a1 01 85 0e 09 01 15 00 25 ff 75 08 95 40 91 02 09 01 15 00 25 ff 75 08 95 40 81 02 c0 05 01 09 06 a1 01 85 04 05 07 09 e3 15 00 25 01 75 01 95 01 81 02 95 07 81 03 c0')
