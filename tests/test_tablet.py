@@ -41,7 +41,7 @@ class Pen(object):
         self.inrange = True
         self.width = 10
         self.height = 10
-        self.barrel = False
+        self.barrelswitch = False
         self.invert = False
         self.eraser = False
         self.x_tilt = False
