@@ -123,6 +123,12 @@ class BaseTest:
         def create_device(self):
             raise Exception('please reimplement me in subclasses')
 
+        def post(self, uhdev, pen):
+            r = uhdev.event(pen)
+            events = uhdev.next_sync_events()
+            self.debug_reports(r, uhdev, events)
+            return events
+
         def test_hover(self):
             """Pen goes from out of range to in-range, without the intent
             to erase"""
@@ -130,20 +136,13 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
             assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
 
             p.inrange = False
-
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
 
         def test_contact(self):
@@ -153,36 +152,21 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
             assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
 
             p.tipswitch = True
-
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1) in events
 
             p.tipswitch = False
-
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
 
             p.inrange = False
-
-            r = uhdev.event(p)
-            events = uhdev.next_sync_events()
-            self.debug_reports(r, uhdev, events)
-
+            events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
 
         def assertName(self, uhdev):
