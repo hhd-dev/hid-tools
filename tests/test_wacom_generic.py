@@ -157,6 +157,23 @@ class BaseTablet(base.UHIDTestDevice):
         self.toolid = ToolID.clear()
         self.proximity = ProximityState.OUT
 
+    def match_evdev_rule(self, application, evdev):
+        """
+        Filter out evdev nodes based on the requested application.
+
+        The Wacom driver may create several device nodes for each USB
+        interface device. It is crucial that we run tests with the
+        expected device node or things will obviously go off the rails.
+        Use the Wacom driver's usual naming conventions to apply a
+        sensible default filter.
+        """
+        if application == 'Pen':
+            return evdev.name.endswith('Pen')
+        elif application == 'Pad':
+            return evdev.name.endswith('Pad')
+        else:
+            return True
+
     def create_report(self, x, y, pressure, buttons=None, toolid=None, proximity=None, reportID=None):
         """
         Return an input report for this device.

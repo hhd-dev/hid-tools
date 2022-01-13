@@ -102,6 +102,7 @@ class BaseDevice(UHIDDevice):
         'ID_INPUT_TOUCHSCREEN': ['Touch Screen'],
         'ID_INPUT_TOUCHPAD': ['Touch Pad'],
         'ID_INPUT_TABLET': ['Pen'],
+        'ID_INPUT_TABLET_PAD': ['Pad'],
         'ID_INPUT_MOUSE': ['Mouse'],
         'ID_INPUT_KEY': ['Key'],
         'ID_INPUT_JOYSTICK': ['Joystick', 'Game Pad'],
