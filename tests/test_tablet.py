@@ -35,18 +35,17 @@ class Pen(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.confidence = True
         self.tipswitch = False
         self.tippressure = 15
         self.azimuth = 0
-        self.inrange = True
+        self.inrange = False
         self.width = 10
         self.height = 10
         self.barrelswitch = False
         self.invert = False
         self.eraser = False
-        self.x_tilt = False
-        self.y_tilt = False
+        self.x_tilt = 0
+        self.y_tilt = 0
         self.twist = 0
 
 
@@ -120,6 +119,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
+            p.inrange = True
             events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
@@ -136,6 +136,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
+            p.inrange = True
             events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
@@ -171,6 +172,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
+            p.inrange = True
             events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
@@ -210,6 +212,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
+            p.inrange = True
             events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
@@ -252,6 +255,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
+            p.inrange = True
             events = self.post(uhdev, p)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
             assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
