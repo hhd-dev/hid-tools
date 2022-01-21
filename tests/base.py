@@ -93,7 +93,7 @@ class BaseTestCase:
 
         def assertName(self, uhdev):
             evdev = uhdev.get_evdev()
-            assert evdev.name == uhdev.name
+            assert uhdev.name in evdev.name
 
         @pytest.fixture(autouse=True)
         def context(self, new_uhdev, request):

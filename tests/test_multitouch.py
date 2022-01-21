@@ -488,10 +488,6 @@ class BaseTest:
         def create_device(self):
             raise Exception('please reimplement me in subclasses')
 
-        def assertName(self, uhdev):
-            evdev = uhdev.get_evdev()
-            assert evdev.name == uhdev.name
-
         def get_slot(self, uhdev, t, default):
             if uhdev.quirks is None:
                 return default
@@ -920,10 +916,6 @@ class BaseTest:
             assert libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_ORIENTATION, 90) in events
 
     class TestPTP(TestWin8Multitouch):
-        def assertName(self, uhdev):
-            evdev = uhdev.get_evdev()
-            assert uhdev.name in evdev.name
-
         def test_ptp_buttons(self):
             """check for button reliability.
             There are 2 types of touchpads: the click pads and the pressure pads.
