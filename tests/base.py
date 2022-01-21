@@ -111,7 +111,9 @@ class BaseTestCase:
                         now = time.time()
                         while not self.uhdev.is_ready() and time.time() - now < 5:
                             self.uhdev.dispatch(10)
-                        assert self.uhdev.get_evdev() is not None
+                        if self.uhdev.get_evdev() is None:
+                            logger.warning(f"available list of input nodes: (default application is '{self.uhdev.application}')")
+                            logger.warning(self.uhdev.input_nodes)
                         yield
                         self.uhdev = None
             except PermissionError:
@@ -134,6 +136,7 @@ class BaseTestCase:
             If this fail, there is something wrong in the device report
             descriptors."""
             uhdev = self.uhdev
+            assert uhdev.get_evdev() is not None
             self.assertName(uhdev)
             assert len(uhdev.next_sync_events()) == 0
             assert uhdev.get_evdev() is not None
