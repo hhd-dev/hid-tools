@@ -19,13 +19,24 @@
 #
 
 from . import base
-from hidtools.util import BusType
 import copy
+from enum import Enum, auto
+from hidtools.util import BusType
 import libevdev
 import logging
 import pytest
 
 logger = logging.getLogger('hidtools.test.tablet')
+
+
+class PenState(Enum):
+    """Pen states according to Microsoft reference:
+    https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+    PEN_IS_OUT_OF_RANGE = auto()
+    PEN_IS_IN_RANGE = auto()
+    PEN_IS_IN_CONTACT = auto()
+    PEN_IS_IN_RANGE_WITH_ERASING_INTENT = auto()
+    PEN_IS_ERASING = auto()
 
 
 class Data(object):
@@ -48,6 +59,96 @@ class Pen(object):
         self.x_tilt = 0
         self.y_tilt = 0
         self.twist = 0
+        self._old_values = None
+        self.current_state = None
+
+    def _restore(self):
+        if self._old_values is not None:
+            for i in ['x', 'y', 'tippressure', 'azimuth', 'width', 'height', 'twist', 'x_tilt', 'y_tilt']:
+                setattr(self, i, getattr(self._old_values, i))
+
+    def move_to(self, state):
+        # fill in the previous values
+        if self.current_state == PenState.PEN_IS_OUT_OF_RANGE:
+            self._restore()
+
+        print(f'\n  *** pen is moving to {state} ***')
+
+        if state == PenState.PEN_IS_OUT_OF_RANGE:
+            self._old_values = copy.copy(self)
+            self.x = 0
+            self.y = 0
+            self.tipswitch = False
+            self.tippressure = 0
+            self.azimuth = 0
+            self.inrange = False
+            self.width = 0
+            self.height = 0
+            self.invert = False
+            self.eraser = False
+            self.x_tilt = 0
+            self.y_tilt = 0
+            self.twist = 0
+        elif state == PenState.PEN_IS_IN_RANGE:
+            self.tipswitch = False
+            self.inrange = True
+            self.invert = False
+            self.eraser = False
+        elif state == PenState.PEN_IS_IN_CONTACT:
+            self.tipswitch = True
+            self.inrange = True
+            self.invert = False
+            self.eraser = False
+        elif state == PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT:
+            self.tipswitch = False
+            self.inrange = True
+            self.invert = True
+            self.eraser = False
+        elif state == PenState.PEN_IS_ERASING:
+            self.tipswitch = False
+            self.inrange = True
+            self.invert = True
+            self.eraser = True
+
+        self.current_state = state
+
+    def __assert_axis(self, evdev, axis, value):
+        if (axis == libevdev.EV_KEY.BTN_TOOL_RUBBER and
+           evdev.value[libevdev.EV_KEY.BTN_TOOL_RUBBER] is None):
+            return
+
+        assert evdev.value[axis] == value, f'assert evdev.value[{axis}] ({evdev.value[axis]}) != {value}'
+
+    def assert_expected_input_events(self, evdev):
+        assert evdev.value[libevdev.EV_ABS.ABS_X] == self.x
+        assert evdev.value[libevdev.EV_ABS.ABS_Y] == self.y
+
+        current_state = self.current_state
+
+        if current_state == PenState.PEN_IS_OUT_OF_RANGE:
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
+
+        elif current_state == PenState.PEN_IS_IN_RANGE:
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 1)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
+
+        elif current_state == PenState.PEN_IS_IN_CONTACT:
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 1)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 1)
+
+        elif current_state == PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT:
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 1)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
+
+        elif current_state == PenState.PEN_IS_ERASING:
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 1)
+            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 1)
 
 
 class PenDigitizer(base.UHIDTestDevice):
@@ -113,90 +214,111 @@ class BaseTest:
             self.debug_reports(r, uhdev, events)
             return events
 
-        def test_hover(self):
-            """Pen goes from out of range to in-range, without the intent
-            to erase"""
+        def _test_states(self, state_list, scribble):
+            """Internal method to test against a list of
+            transition between states.
+            state_list is a list of PenState objects
+            scribble is a boolean which tells if we need
+            to wobble a little the X,Y coordinates of the pen
+            between each state transition."""
             uhdev = self.uhdev
             evdev = uhdev.get_evdev()
 
             p = Pen(50, 60)
-            p.inrange = True
+            p.move_to(PenState.PEN_IS_OUT_OF_RANGE)
             events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
-            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
-            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
+            p.assert_expected_input_events(evdev)
 
-            p.inrange = False
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
+            for state in state_list:
+                if scribble and p.current_state != PenState.PEN_IS_OUT_OF_RANGE:
+                    p.x += 1
+                    p.y -= 1
+                    events = self.post(uhdev, p)
+                    p.assert_expected_input_events(evdev)
+                    assert len(events) >= 3  # X, Y, SYN
+                p.move_to(state)
+                if scribble and p.current_state != PenState.PEN_IS_OUT_OF_RANGE:
+                    p.x += 1
+                    p.y -= 1
+                events = self.post(uhdev, p)
+                p.assert_expected_input_events(evdev)
 
-        def test_contact(self):
-            """Pen goes from out of range to in-range, without the intent
-            to erase, then touch/release"""
-            uhdev = self.uhdev
-            evdev = uhdev.get_evdev()
+        @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
+        @pytest.mark.parametrize("state_list", [
+            pytest.param((), id="out-of-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE,), id="in-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE), id="in-range then out-of-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT), id="in-range then touch"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="in-range then touch then release"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE), id="in-range then touch then release then out-of-range"),
+        ])
+        def test_valid_pen_states(self, state_list, scribble):
+            """This is the first half of the Windows Pen Implementation state machine:
+            we don't have Invert nor Erase bits, so just move in/out-of-range or proximity.
+            https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+            self._test_states(state_list, scribble)
 
-            p = Pen(50, 60)
-            p.inrange = True
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
-            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
-            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
+        @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
+        @pytest.mark.parametrize("state_list", [
+            pytest.param((PenState.PEN_IS_IN_CONTACT,), id="direct-in-contact"),
+            pytest.param((PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_OUT_OF_RANGE), id="direct-in-contact then out-of-range"),
+        ])
+        def test_tolerated_pen_states(self, state_list, scribble):
+            """This is not adhering to the Windows Pen Implementation state machine
+            but we should expect the kernel to behave properly, mostly for historical
+            reasons."""
+            self._test_states(state_list, scribble)
 
-            p.tipswitch = True
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1) in events
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
+                                   'Device not compatible, missing Invert usage')
+        @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
+        @pytest.mark.parametrize("state_list", [
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT,), id="hover-erasing"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE), id="hover-erasing then out-of-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING), id="hover-erasing then erase"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="hover-erasing then erase then release"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE), id="hover-erasing then erase then release then out-of-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_RANGE), id="hover-erasing then in-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then hover-erasing"),
+        ])
+        def test_valid_invert_pen_states(self, state_list, scribble):
+            """This is the second half of the Windows Pen Implementation state machine:
+            we now have Invert and Erase bits, so move in/out or proximity with the intend
+            to erase.
+            https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+            self._test_states(state_list, scribble)
 
-            p.tipswitch = False
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
+                                   'Device not compatible, missing Invert usage')
+        @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
+        @pytest.mark.parametrize("state_list", [
+            pytest.param((PenState.PEN_IS_ERASING,), id="direct-erase"),
+            pytest.param((PenState.PEN_IS_ERASING, PenState.PEN_IS_OUT_OF_RANGE), id="direct-erase then out-of-range"),
+        ])
+        def test_tolerated_invert_pen_states(self, state_list, scribble):
+            """This is the second half of the Windows Pen Implementation state machine:
+            we now have Invert and Erase bits, so move in/out or proximity with the intend
+            to erase.
+            https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+            self._test_states(state_list, scribble)
 
-            p.inrange = False
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
-
-        def assertName(self, uhdev):
-            evdev = uhdev.get_evdev()
-            assert evdev.name == uhdev.name + ' Stylus'
-
-        def test_scribble(self):
-            """Pen touches, then scribble on screen
-               Actual reporting from the device: hid=TIPSWITCH,INRANGE (code=TOUCH,TOOL_PEN):
-                 { 0, 1 } <- hover
-                 { 1, 1 } <- touch-down
-                 { 1, 1 } <- still touch, scribble on the screen
-                 { 0, 1 } <- liftoff
-                 { 0, 0 } <- leaves
-            """
-
-            uhdev = self.uhdev
-            evdev = uhdev.get_evdev()
-
-            p = Pen(50, 60)
-            p.inrange = True
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1) in events
-            assert evdev.value[libevdev.EV_ABS.ABS_X] == 50
-            assert evdev.value[libevdev.EV_ABS.ABS_Y] == 60
-
-            p.tipswitch = True
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1) in events
-
-            p.x += 1
-            p.y -= 1
-            events = self.post(uhdev, p)
-            assert len(events) == 3  # X, Y, SYN
-            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 51) in events
-            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 59) in events
-
-            p.tipswitch = False
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0) in events
-
-            p.inrange = False
-            events = self.post(uhdev, p)
-            assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0) in events
+        @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
+                                   'Device not compatible, missing Invert usage')
+        @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
+        @pytest.mark.parametrize("state_list", [
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then touch then erase then hover-erase"),
+            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then erase then hover-erase"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="hover-erase then erase then touch then in-range"),
+            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="hover-erase then touch then in-range"),
+            pytest.param((PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING), id="touch then erase then touch then erase"),
+        ])
+        def test_tolerated_broken_pen_states(self, state_list, scribble):
+            """Those tests are definitely not part of the Windows specification.
+            However, a half broken device might export those transitions.
+            For example, a pen that has the eraser button might wobble between
+            touching and erasing if the tablet doesn't enforce the Windows
+            state machine."""
+            self._test_states(state_list, scribble)
 
         @pytest.mark.skip_if_uhdev(lambda uhdev: 'Barrel Switch' not in uhdev.fields,
                                    'Device not compatible, missing Barrel Switch usage')
