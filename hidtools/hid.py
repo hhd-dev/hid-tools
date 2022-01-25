@@ -1492,6 +1492,9 @@ class HidReport(object):
             self.prev_seen_usages.clear()
 
         value = 0
+        if hidInputItem.is_array:
+            value = [0]
+
         # Match the HID usage with our attributes, so
         # Contact Count -> contactcount, etc.
         field = usage.replace(' ', '').lower()
