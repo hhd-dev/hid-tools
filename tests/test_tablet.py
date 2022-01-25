@@ -51,23 +51,6 @@ class Pen(object):
 
 
 class PenDigitizer(base.UHIDTestDevice):
-    @classmethod
-    def msCertificationBlob(cls, reportID):
-        return f'''
-        Usage Page (Digitizers)
-        Usage (Touch Screen)
-        Collection (Application)
-         Report ID ({reportID})
-         Usage Page (0xff00)
-         Usage (0xc5)
-         Logical Minimum (0)
-         Logical Maximum (255)
-         Report Size (8)
-         Report Count (256)
-         Feature (Data,Var,Abs)
-        End Collection
-    '''
-
     def __init__(self, name, rdesc_str=None, rdesc=None, application='Pen', physical='Stylus', input_info=(BusType.USB, 1, 2), evdev_name_suffix=None):
         super().__init__(name, application, rdesc_str, rdesc, input_info)
         self.physical = physical
