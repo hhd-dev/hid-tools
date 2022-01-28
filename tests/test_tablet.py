@@ -25,6 +25,7 @@ from hidtools.util import BusType
 import libevdev
 import logging
 import pytest
+from typing import Dict, Tuple
 
 logger = logging.getLogger('hidtools.test.tablet')
 
@@ -150,6 +151,71 @@ class Pen(object):
             self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 1)
             self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 1)
 
+    @staticmethod
+    def legal_transitions() -> Dict[str, Tuple[PenState, ...]]:
+        """This is the first half of the Windows Pen Implementation state machine:
+        we don't have Invert nor Erase bits, so just move in/out-of-range or proximity.
+        https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+        return {
+            "in-range": (PenState.PEN_IS_IN_RANGE,),
+            "in-range -> out-of-range": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE),
+            "in-range -> touch": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT),
+            "in-range -> touch -> release": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE),
+            "in-range -> touch -> release -> out-of-range": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE),
+        }
+
+    @staticmethod
+    def legal_transitions_with_invert() -> Dict[str, Tuple[PenState, ...]]:
+        """This is the second half of the Windows Pen Implementation state machine:
+        we now have Invert and Erase bits, so move in/out or proximity with the intend
+        to erase.
+        https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+        return {
+            "hover-erasing": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT,),
+            "hover-erasing -> out-of-range": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE),
+            "hover-erasing -> erase": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING),
+            "hover-erasing -> erase -> release": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT),
+            "hover-erasing -> erase -> release -> out-of-range": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE),
+            "hover-erasing -> in-range": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_RANGE),
+            "in-range -> hover-erasing": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT),
+        }
+
+    @staticmethod
+    def tolerated_transitions() -> Dict[str, Tuple[PenState, ...]]:
+        """This is not adhering to the Windows Pen Implementation state machine
+        but we should expect the kernel to behave properly, mostly for historical
+        reasons."""
+        return {
+            "direct-in-contact": (PenState.PEN_IS_IN_CONTACT,),
+            "direct-in-contact -> out-of-range": (PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_OUT_OF_RANGE),
+        }
+
+    @staticmethod
+    def tolerated_transitions_with_invert() -> Dict[str, Tuple[PenState, ...]]:
+        """This is the second half of the Windows Pen Implementation state machine:
+        we now have Invert and Erase bits, so move in/out or proximity with the intend
+        to erase.
+        https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
+        return {
+            "direct-erase": (PenState.PEN_IS_ERASING,),
+            "direct-erase -> out-of-range": (PenState.PEN_IS_ERASING, PenState.PEN_IS_OUT_OF_RANGE),
+        }
+
+    @staticmethod
+    def broken_transitions() -> Dict[str, Tuple[PenState, ...]]:
+        """Those tests are definitely not part of the Windows specification.
+        However, a half broken device might export those transitions.
+        For example, a pen that has the eraser button might wobble between
+        touching and erasing if the tablet doesn't enforce the Windows
+        state machine."""
+        return {
+            "in-range -> touch -> erase -> hover-erase": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT),
+            "in-range -> erase -> hover-erase": (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT),
+            "hover-erase -> erase -> touch -> in-range": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE),
+            "hover-erase -> touch -> in-range": (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE),
+            "touch -> erase -> touch -> erase": (PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING),
+        }
+
 
 class PenDigitizer(base.UHIDTestDevice):
     def __init__(self, name, rdesc_str=None, rdesc=None, application='Pen', physical='Stylus', input_info=(BusType.USB, 1, 2), evdev_name_suffix=None):
@@ -244,14 +310,7 @@ class BaseTest:
                 p.assert_expected_input_events(evdev)
 
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
-        @pytest.mark.parametrize("state_list", [
-            pytest.param((), id="out-of-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE,), id="in-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE), id="in-range then out-of-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT), id="in-range then touch"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="in-range then touch then release"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE), id="in-range then touch then release then out-of-range"),
-        ])
+        @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.legal_transitions().items()])
         def test_valid_pen_states(self, state_list, scribble):
             """This is the first half of the Windows Pen Implementation state machine:
             we don't have Invert nor Erase bits, so just move in/out-of-range or proximity.
@@ -259,10 +318,7 @@ class BaseTest:
             self._test_states(state_list, scribble)
 
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
-        @pytest.mark.parametrize("state_list", [
-            pytest.param((PenState.PEN_IS_IN_CONTACT,), id="direct-in-contact"),
-            pytest.param((PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_OUT_OF_RANGE), id="direct-in-contact then out-of-range"),
-        ])
+        @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.tolerated_transitions().items()])
         def test_tolerated_pen_states(self, state_list, scribble):
             """This is not adhering to the Windows Pen Implementation state machine
             but we should expect the kernel to behave properly, mostly for historical
@@ -272,15 +328,7 @@ class BaseTest:
         @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
                                    'Device not compatible, missing Invert usage')
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
-        @pytest.mark.parametrize("state_list", [
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT,), id="hover-erasing"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE), id="hover-erasing then out-of-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING), id="hover-erasing then erase"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="hover-erasing then erase then release"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE), id="hover-erasing then erase then release then out-of-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_RANGE), id="hover-erasing then in-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then hover-erasing"),
-        ])
+        @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.legal_transitions_with_invert().items()])
         def test_valid_invert_pen_states(self, state_list, scribble):
             """This is the second half of the Windows Pen Implementation state machine:
             we now have Invert and Erase bits, so move in/out or proximity with the intend
@@ -291,10 +339,7 @@ class BaseTest:
         @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
                                    'Device not compatible, missing Invert usage')
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
-        @pytest.mark.parametrize("state_list", [
-            pytest.param((PenState.PEN_IS_ERASING,), id="direct-erase"),
-            pytest.param((PenState.PEN_IS_ERASING, PenState.PEN_IS_OUT_OF_RANGE), id="direct-erase then out-of-range"),
-        ])
+        @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.tolerated_transitions_with_invert().items()])
         def test_tolerated_invert_pen_states(self, state_list, scribble):
             """This is the second half of the Windows Pen Implementation state machine:
             we now have Invert and Erase bits, so move in/out or proximity with the intend
@@ -305,13 +350,7 @@ class BaseTest:
         @pytest.mark.skip_if_uhdev(lambda uhdev: 'Invert' not in uhdev.fields,
                                    'Device not compatible, missing Invert usage')
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
-        @pytest.mark.parametrize("state_list", [
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then touch then erase then hover-erase"),
-            pytest.param((PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT), id="in-range then erase then hover-erase"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="hover-erase then erase then touch then in-range"),
-            pytest.param((PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE), id="hover-erase then touch then in-range"),
-            pytest.param((PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING), id="touch then erase then touch then erase"),
-        ])
+        @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.broken_transitions().items()])
         def test_tolerated_broken_pen_states(self, state_list, scribble):
             """Those tests are definitely not part of the Windows specification.
             However, a half broken device might export those transitions.
