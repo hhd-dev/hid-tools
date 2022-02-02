@@ -56,6 +56,49 @@ class PenState(Enum):
 
         return cls((touch, tool))
 
+    def apply(self, events) -> 'PenState':
+        if libevdev.EV_SYN.SYN_REPORT in events:
+            raise ValueError("EV_SYN is in the event sequence")
+        touch = self.touch
+        tool = self.tool
+
+        for ev in events:
+            if ev == libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH):
+                touch = bool(ev.value)
+            elif ev in (libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN),
+                        libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_RUBBER)):
+                if ev.value:
+                    tool = ev.code
+                else:
+                    tool = None
+
+        new_state = PenState((touch, tool))
+        assert new_state in self.valid_transitions(), f'moving from {self} to {new_state} is forbidden'
+
+        return new_state
+
+    def valid_transitions(self) -> Tuple['PenState', ...]:
+        """Following the state machine in the URL above, with a couple of addition
+        for skipping the in-range state, due to historical reasons.
+
+        Note that those transitions are from the evdev point of view, not HID"""
+        if self == PenState.PEN_IS_OUT_OF_RANGE:
+            return (PenState.PEN_IS_OUT_OF_RANGE, PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_ERASING)
+
+        if self == PenState.PEN_IS_IN_RANGE:
+            return (PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE, PenState.PEN_IS_IN_CONTACT)
+
+        if self == PenState.PEN_IS_IN_CONTACT:
+            return (PenState.PEN_IS_IN_CONTACT, PenState.PEN_IS_IN_RANGE, PenState.PEN_IS_OUT_OF_RANGE)
+
+        if self == PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT:
+            return (PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE, PenState.PEN_IS_ERASING)
+
+        if self == PenState.PEN_IS_ERASING:
+            return (PenState.PEN_IS_ERASING, PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT, PenState.PEN_IS_OUT_OF_RANGE)
+
+        return tuple()
+
 
 class Data(object):
     pass
@@ -271,6 +314,24 @@ class BaseTest:
             self.debug_reports(r, uhdev, events)
             return events
 
+        def validate_transitions(self, from_state, pen, evdev, events):
+            # check that the final state is correct
+            pen.assert_expected_input_events(evdev)
+
+            # check that the transitions are valid
+            sync_events = []
+            while libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT) in events:
+                # split the first EV_SYN from the list
+                idx = events.index(libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT))
+                sync_events = events[:idx]
+                events = events[idx + 1:]
+
+                # now check for a valid transition
+                from_state = from_state.apply(sync_events)
+
+            if events:
+                from_state = from_state.apply(sync_events)
+
         def _test_states(self, state_list, scribble):
             """Internal method to test against a list of
             transition between states.
@@ -281,24 +342,29 @@ class BaseTest:
             uhdev = self.uhdev
             evdev = uhdev.get_evdev()
 
+            cur_state = PenState.PEN_IS_OUT_OF_RANGE
+
             p = Pen(50, 60)
             p.move_to(PenState.PEN_IS_OUT_OF_RANGE)
             events = self.post(uhdev, p)
-            p.assert_expected_input_events(evdev)
+            self.validate_transitions(cur_state, p, evdev, events)
+
+            cur_state = p.current_state
 
             for state in state_list:
-                if scribble and p.current_state != PenState.PEN_IS_OUT_OF_RANGE:
+                if scribble and cur_state != PenState.PEN_IS_OUT_OF_RANGE:
                     p.x += 1
                     p.y -= 1
                     events = self.post(uhdev, p)
-                    p.assert_expected_input_events(evdev)
+                    self.validate_transitions(cur_state, p, evdev, events)
                     assert len(events) >= 3  # X, Y, SYN
                 p.move_to(state)
-                if scribble and p.current_state != PenState.PEN_IS_OUT_OF_RANGE:
+                if scribble and state != PenState.PEN_IS_OUT_OF_RANGE:
                     p.x += 1
                     p.y -= 1
                 events = self.post(uhdev, p)
-                p.assert_expected_input_events(evdev)
+                self.validate_transitions(cur_state, p, evdev, events)
+                cur_state = p.current_state
 
         @pytest.mark.parametrize("scribble", [True, False], ids=["scribble", "static"])
         @pytest.mark.parametrize("state_list", [pytest.param(v, id=k) for k, v in Pen.legal_transitions().items()])
