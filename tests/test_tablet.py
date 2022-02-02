@@ -20,7 +20,7 @@
 
 from . import base
 import copy
-from enum import Enum, auto
+from enum import Enum
 from hidtools.util import BusType
 import libevdev
 import logging
@@ -33,11 +33,28 @@ logger = logging.getLogger('hidtools.test.tablet')
 class PenState(Enum):
     """Pen states according to Microsoft reference:
     https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/windows-pen-states"""
-    PEN_IS_OUT_OF_RANGE = auto()
-    PEN_IS_IN_RANGE = auto()
-    PEN_IS_IN_CONTACT = auto()
-    PEN_IS_IN_RANGE_WITH_ERASING_INTENT = auto()
-    PEN_IS_ERASING = auto()
+    PEN_IS_OUT_OF_RANGE = (False, None)
+    PEN_IS_IN_RANGE = (False, libevdev.EV_KEY.BTN_TOOL_PEN)
+    PEN_IS_IN_CONTACT = (True, libevdev.EV_KEY.BTN_TOOL_PEN)
+    PEN_IS_IN_RANGE_WITH_ERASING_INTENT = (False, libevdev.EV_KEY.BTN_TOOL_RUBBER)
+    PEN_IS_ERASING = (True, libevdev.EV_KEY.BTN_TOOL_RUBBER)
+
+    def __init__(self, touch, tool):
+        self.touch = touch
+        self.tool = tool
+
+    @classmethod
+    def from_evdev(cls, evdev) -> 'PenState':
+        touch = bool(evdev.value[libevdev.EV_KEY.BTN_TOUCH])
+        tool = None
+        if evdev.value[libevdev.EV_KEY.BTN_TOOL_RUBBER] and not evdev.value[libevdev.EV_KEY.BTN_TOOL_PEN]:
+            tool = libevdev.EV_KEY.BTN_TOOL_RUBBER
+        elif evdev.value[libevdev.EV_KEY.BTN_TOOL_PEN] and not evdev.value[libevdev.EV_KEY.BTN_TOOL_RUBBER]:
+            tool = libevdev.EV_KEY.BTN_TOOL_PEN
+        elif evdev.value[libevdev.EV_KEY.BTN_TOOL_PEN] or evdev.value[libevdev.EV_KEY.BTN_TOOL_RUBBER]:
+            raise ValueError("2 tools are not allowed")
+
+        return cls((touch, tool))
 
 
 class Data(object):
@@ -123,33 +140,7 @@ class Pen(object):
     def assert_expected_input_events(self, evdev):
         assert evdev.value[libevdev.EV_ABS.ABS_X] == self.x
         assert evdev.value[libevdev.EV_ABS.ABS_Y] == self.y
-
-        current_state = self.current_state
-
-        if current_state == PenState.PEN_IS_OUT_OF_RANGE:
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
-
-        elif current_state == PenState.PEN_IS_IN_RANGE:
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 1)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
-
-        elif current_state == PenState.PEN_IS_IN_CONTACT:
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 1)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 1)
-
-        elif current_state == PenState.PEN_IS_IN_RANGE_WITH_ERASING_INTENT:
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 1)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 0)
-
-        elif current_state == PenState.PEN_IS_ERASING:
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_PEN, 0)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOOL_RUBBER, 1)
-            self.__assert_axis(evdev, libevdev.EV_KEY.BTN_TOUCH, 1)
+        assert self.current_state == PenState.from_evdev(evdev)
 
     @staticmethod
     def legal_transitions() -> Dict[str, Tuple[PenState, ...]]:
