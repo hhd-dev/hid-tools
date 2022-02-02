@@ -60,13 +60,21 @@ class PenState(Enum):
         if libevdev.EV_SYN.SYN_REPORT in events:
             raise ValueError("EV_SYN is in the event sequence")
         touch = self.touch
+        touch_found = False
         tool = self.tool
+        tool_found = False
 
         for ev in events:
             if ev == libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH):
+                if touch_found:
+                    raise ValueError(f"duplicated BTN_TOUCH in {events}")
+                touch_found = True
                 touch = bool(ev.value)
             elif ev in (libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN),
                         libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_RUBBER)):
+                if tool_found:
+                    raise ValueError(f"duplicated BTN_TOOL_* in {events}")
+                tool_found = True
                 if ev.value:
                     tool = ev.code
                 else:
