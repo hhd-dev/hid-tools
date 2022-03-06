@@ -94,7 +94,6 @@ class BaseTest:
 
             buttons = {b1: False, b2: None}
             r = uhdev.event(buttons=buttons)
-            r = uhdev.event(buttons={b1: False, b2: None})
             expected_event = libevdev.InputEvent(key1, 0)
             events = uhdev.next_sync_events()
             self.debug_reports(r, uhdev, events)
