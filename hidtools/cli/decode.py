@@ -152,7 +152,16 @@ class FakeHidraw(hidtools.hidraw.HidrawDevice):
 @click.option('--output', metavar='output-file', default=sys.stdout, nargs=1, type=click.File('w'), help='The file to record to (default: stdout)')
 @click.option('--verbose', default=False, is_flag=True, help='Show debugging information')
 def main(report_descriptor, output, verbose):
-    '''Decode a HID report descriptor to human-readable format'''
+    '''Decode a HID report descriptor to human-readable format.
+
+    \b
+    Supported formats for the report descriptor are:
+    - a syspath to the report descriptor, i.e. /sys/path/.../report_descriptor/
+    - an evdev device node, e.g. /dev/input/event2
+    - a hidraw node, e.g. /dev/hidraw2
+    - a recording produced by hid-recorder
+    - a recording produced by libinput record
+    '''
     try:
         if verbose:
             base_logger.setLevel(logging.DEBUG)
