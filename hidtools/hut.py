@@ -343,7 +343,7 @@ class HidUsageTable(object):
                 assert usage_page is None
 
                 r = parse.parse('({idx:x})\t{page_name}', line)
-                assert(r is not None)
+                assert r is not None
                 usage_page = HidUsagePage()
                 usage_page.page_id = r['idx']
                 usage_page.page_name = r['page_name']

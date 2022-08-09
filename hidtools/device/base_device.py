@@ -243,7 +243,7 @@ class BaseDevice(UHIDDevice):
             to_remove.append(name)
 
         for name in to_remove:
-            del(self.input_nodes[name])
+            del self.input_nodes[name]
 
     def next_sync_events(self, application=None):
         evdev = self.get_evdev(application)

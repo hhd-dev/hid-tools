@@ -91,7 +91,7 @@ def parse_hid(f_in, f_out, print_events=True):
                 f_out.write("**** win 8 certified ****\n")
         elif line.startswith("D:"):
             r = _parse('D:{d:d}', line)
-            assert(r is not None)
+            assert r is not None
             device_index = r['d']
         elif line.startswith("E:"):
             if print_events:

@@ -49,7 +49,7 @@ class BaseKeyboard(base.UHIDTestDevice):
         # First remove the already released keys
         unused_keys = [k for k, v in self.keystates.items() if not v]
         for key in unused_keys:
-            del(self.keystates[key])
+            del self.keystates[key]
 
         # self.keystates contains now the list of currently pressed keys,
         # release them...
