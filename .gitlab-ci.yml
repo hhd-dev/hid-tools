@@ -1,19 +1,23 @@
 # vim: set expandtab shiftwidth=2 tabstop=8 textwidth=0:
 
-.templates_sha: &template_sha 34f4ade99434043f88e164933f570301fd18b125 # see https://docs.gitlab.com/ee/ci/yaml/#includefile
+.templates_sha: &template_sha 6dfff3149f2ea9054a9e3ad9f94b359b57723afc # see https://docs.gitlab.com/ee/ci/yaml/#includefile
 
 include:
   # Fedora container builder template
   - project: 'freedesktop/ci-templates'
     ref: *template_sha
-    file: '/templates/fedora.yml'
+    file:
+      - '/templates/fedora.yml'
 
 variables:
-  FDO_DISTRIBUTION_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq systemd-udev'
+  TEST_PACKAGES: 'python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq systemd-udev'
+  BUILD_PACKAGES: 'file git-core gcc gcc-c++ diffutils make flex bison sparse bc xz findutils hostname elfutils-libelf-devel openssl-devel perl-Term-ANSIColor perl-Encode jq'
   FDO_DISTRIBUTION_VERSION: 36
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  FDO_DISTRIBUTION_TAG: '2022-08-10.2'
-  QEMU_TAG:    'qemu-vm-2022-08-10.1'
+  TEST_CONTAINER_TAG: '2022-08-10.2'
+  BUILD_CONTAINER_TAG: '2022-08-10.1'
+  FDO_DISTRIBUTION_TAG: $TEST_CONTAINER_TAG
+  KERNEL_VERSION: '5.19'
 
 stages:
   - prep
@@ -21,28 +25,82 @@ stages:
   - test
   - analysis
 
-container-prep:
+test container prep:
   extends:
     - .fdo.container-build@fedora
   stage: prep
   variables:
     GIT_STRATEGY: none
+    FDO_DISTRIBUTION_PACKAGES: $TEST_PACKAGES
 
-qemu-prep:
+.build_variables:
+  variables:
+    FDO_DISTRIBUTION_TAG: $BUILD_CONTAINER_TAG
+    FDO_DISTRIBUTION_PACKAGES: $BUILD_PACKAGES
+    FDO_REPO_SUFFIX: build-kernel
+
+.b2c_kernel_url:
+  before_script: &b2c-kernel-url
+    - export KERNEL_URL=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/kernel-$(arch)/v$KERNEL_VERSION/bzImage
+
+build container prep:
   extends:
-    - .fdo.qemu-build@fedora
+    - .fdo.container-build@fedora
+    - .build_variables
   stage: prep
-  tags:
-    - kvm
   variables:
     GIT_STRATEGY: none
-    FDO_DISTRIBUTION_TAG: $QEMU_TAG
+
+rebuild kernel:
+  extends:
+    - .fdo.suffixed-image@fedora
+    - .build_variables
+  stage: build
+  needs:
+    - build container prep
+  script:
+    - echo -e "section_start:`date +%s`:check\r\e[0KCheck for existing bzImage"
+    - *b2c-kernel-url
+    - echo $KERNEL_URL
+    - |
+      curl --header "JOB-TOKEN: $CI_JOB_TOKEN" -LO $KERNEL_URL
+
+    # the kernel is already published, abort
+    # -> if the file type is not 'kernel', file|grep
+    # is true, otherwise, exit 0
+    - file bzImage | grep -v kernel || exit 0
+
+    - echo -e "section_end:`date +%s`:check\r\e[0K"
+
+    - echo -e "section_start:`date +%s`:download\r\e[0KDownload and unpack kernel sources"
+    - curl -LO https://cdn.kernel.org/pub/linux/kernel/v${KERNEL_VERSION/.*/}.x/linux-${KERNEL_VERSION}.tar.xz
+
+    - tar xf linux-${KERNEL_VERSION}.tar.xz
+    - echo -e "section_end:`date +%s`:download\r\e[0K"
+
+    - cd linux-${KERNEL_VERSION}
+
+    - echo -e "section_start:`date +%s`:build[collapsed=true]\r\e[0KBuild the kernel"
+    - ../.gitlab-ci/make-config.sh
+
+    - make -j${FDO_CI_CONCURRENT:-4} bzImage
+    - echo -e "section_end:`date +%s`:build\r\e[0K"
+
+    - echo -e "section_start:`date +%s`:upload\r\e[0KUpload the kernel"
+    - |
+      curl --header "JOB-TOKEN: $CI_JOB_TOKEN" \
+           --upload-file ./arch/$(arch)/boot/bzImage\
+           $KERNEL_URL | tee upload.txt
+
+    # check that the upload was successful
+    - grep '201 Created' upload.txt
+    - echo -e "section_end:`date +%s`:upload\r\e[0K"
 
 .default_image:
   extends:
     - .fdo.distribution-image@fedora
   needs:
-    - container-prep
+    - test container prep
 
 flake:
   extends: .default_image
@@ -66,42 +124,31 @@ install_no_man_pages:
     - dnf remove -y pandoc python3-pypandoc
     - python3 setup.py install
 
-.qemu_image:
+pytest:
   extends:
-    - .fdo.distribution-image@fedora
+    - .fdo.b2c-image@fedora
   tags:
     - kvm
-  variables:
-    FDO_DISTRIBUTION_TAG: $QEMU_TAG
-  needs:
-    - qemu-prep
-
-pytest:
-  extends: .qemu_image
   stage: test
   needs:
     - flake
-    - qemu-prep
+    - rebuild kernel
   script:
+    - *b2c-kernel-url
+    - export B2C_KERNEL=$KERNEL_URL
+
     - echo "[pytest]" > pytest.ini
     - echo "junit_family=xunit2" >> pytest.ini
-    - /app/vmctl start || (echo "Error - Failed to start the VM." && exit 1)
-    - "scp -r $PWD vm:"
-    - /app/vmctl exec "$CI_PROJECT_NAME/.gitlab-ci/modprobe-hid.sh"
-    - /app/vmctl exec "cd $CI_PROJECT_NAME ; pytest -v --junitxml=junit-$CI_JOB_NAME.xml ; echo \$? > .exit_code " || true
-    - scp -r "vm:$CI_PROJECT_NAME/junit-$CI_JOB_NAME.xml" .
-    - scp -r "vm:$CI_PROJECT_NAME/.exit_code" .
-    - |
-      if [[ "$(cat .exit_code)" != "0" ]]
-      then
-        /app/vmctl exec "cd $CI_PROJECT_NAME ; pytest --lf -v --junitxml=junit-$CI_JOB_NAME-retry.xml ; echo \$? > .exit_code " || true
-        scp -r "vm:$CI_PROJECT_NAME/junit-$CI_JOB_NAME-retry.xml" .
-        scp -r "vm:$CI_PROJECT_NAME/.exit_code" .
-      else
-        mv junit-$CI_JOB_NAME.xml junit-$CI_JOB_NAME-retry.xml
-      fi
+    - export B2C_COMMAND="pytest -v --udevd --junitxml=junit-$CI_JOB_NAME.xml || pytest --lf -v --udevd --junitxml=junit-$CI_JOB_NAME-retry.xml"
+    - rm -f junit-$CI_JOB_NAME.xml junit-$CI_JOB_NAME-retry.xml
+    - set +e # Disable exit on error
+    - /app/boot2container ; echo $? > .exit_code
+    - set -e # Re-enable exit on error
     - cat '.exit_code'
-    - /app/vmctl stop
+    - if [ ! -f junit-$CI_JOB_NAME-retry.xml ] ;
+      then
+        mv junit-$CI_JOB_NAME.xml junit-$CI_JOB_NAME-retry.xml ;
+      fi
     # pytest uses 2 and above for any errors outside the tests themselves
     - if [[ `cat .exit_code` -gt 1 ]] ;
       then
@@ -113,11 +160,8 @@ pytest:
     expire_in: 1 week
     paths:
       - junit-*.xml
-      - console.out
     reports:
       junit: junit-*.xml
-  variables:
-    FDO_DISTRIBUTION_TAG: $QEMU_TAG
 
 pytest errors:
   extends:
