@@ -1186,8 +1186,21 @@ class PS4ControllerUSB(PS4Controller):
                  0x1e, 0xb4, 0xde, 0x30, 0x20, 0x71, 0xe0, 0x10, 0x00]
             return (0, r)
 
+        elif rnum == 0x12:
+            # Recommended report to retrieve MAC address of DS4.
+            # Clone devices tend to support this one as well.
+            # MAC address is stored in byte 1-7
+            r = [0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+            # store the uniq value in the report
+            for id, v in enumerate(self.uniq.split(':')):
+                # store in little endian
+                r[6 - id] = int(v, 16)
+
+            return (0, r)
+
         elif rnum == 0x81:
-            # Report to retrieve MAC address of DS4.
+            # Anoter report to retrieve MAC address of DS4.
             # MAC address is stored in byte 1-7
             r = [0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
