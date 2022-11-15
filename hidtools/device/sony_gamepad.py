@@ -1190,7 +1190,7 @@ class PS4ControllerUSB(PS4Controller):
             # Recommended report to retrieve MAC address of DS4.
             # Clone devices tend to support this one as well.
             # MAC address is stored in byte 1-7
-            r = [0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            r = [0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
             # store the uniq value in the report
             for id, v in enumerate(self.uniq.split(':')):
