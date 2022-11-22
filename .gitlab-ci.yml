@@ -20,10 +20,25 @@ variables:
   KERNEL_VERSION: '5.19'
 
 stages:
+  - sanity check
   - prep
   - build
   - test
   - analysis
+
+fail-if-fork-is-not-public:
+  stage: sanity check
+  script:
+    - |
+      if [ $CI_PROJECT_VISIBILITY != "public" ]; then
+           echo "*************************************************************************************"
+           echo "Project visibility must be set to 'public'"
+           echo "Change this in $CI_PROJECT_URL/edit under 'Visibility, project features, permissions'"
+           echo "*************************************************************************************"
+           exit 1
+      fi
+  except:
+    - main@libevdev/hid-tools
 
 test container prep:
   extends:
