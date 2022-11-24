@@ -39,6 +39,7 @@ fail-if-fork-is-not-public:
       fi
   except:
     - main@libevdev/hid-tools
+    - master@libevdev/hid-tools
 
 test container prep:
   extends:
