@@ -74,6 +74,21 @@ simply calling `pytest`. The test suite requires UHID support so make sure
 ```
 $ git clone https://gitlab.freedesktop.org/libevdev/hid-tools
 $ cd hid-tools
+```
+
+**Note** If your testing system is running X, please follow the steps
+below to let X drivers ignore uhid test devices. Otherwise, the X driver
+will recognize and handle the test devices, which would interfere with
+the kernel tests and the running session.
+
+```
+$ sudo cp tests/91-hid-tools-uhid-test.conf /etc/X11/xorg.conf.d/
+```
+
+Restart your X server
+**End of Note**
+
+```
 $ sudo pytest-3
 ```
 
