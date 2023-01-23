@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0
+
 wacom_pth660_v145 = [
     0x05, 0x01,                     # . Usage Page (Desktop),
     0x09, 0x02,                     # . Usage (Mouse),

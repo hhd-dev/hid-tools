@@ -1,22 +1,10 @@
 #!/bin/env python3
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: GPL-2.0
 #
 # Copyright (c) 2017 Benjamin Tissoires <benjamin.tissoires@gmail.com>
 # Copyright (c) 2017 Red Hat, Inc.
 # Copyright (c) 2020 Wacom Technology Corp.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Authors:
 #     Jason Gerecke <jason.gerecke@wacom.com>
@@ -38,7 +26,7 @@ import attr
 from enum import Enum
 from hidtools.hut import HUT
 from hidtools.hid import HidUnit
-import tests.base as base
+from . import base
 import libevdev
 import pytest
 
