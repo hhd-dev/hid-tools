@@ -17,12 +17,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .base import UHIDTestDevice
+from tests_kernel.base import UHIDTestDevice
 from hidtools.cli.decode import main as decode
 from click.testing import CliRunner
 import logging
 import pytest
 import re
+
 logger = logging.getLogger('hidtools.test.cli.decode')
 
 
