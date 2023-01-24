@@ -19,16 +19,43 @@
 #
 
 import os
+from re import Match
 import parse
 import functools
+
+from collections import abc
+from typing import (
+    Annotated,
+    Any,
+    Dict,
+    Hashable,
+    Iterator,
+    NamedTuple,
+    Type,
+    TypeAlias,
+    cast,
+)
 
 DATA_DIRNAME = "data"
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(SCRIPT_DIR, DATA_DIRNAME)
 
 
+class ValueRange(NamedTuple):
+    min: int
+    max: int
+
+
+U8 = Annotated[int, ValueRange(0, 0xFF)]
+U16 = Annotated[int, ValueRange(0, 0xFFFF)]
+U32 = Annotated[int, ValueRange(0, 0xFFFFFFFF)]
+
+dict_items_usage: TypeAlias = abc.ItemsView[U16, "HidUsage"]
+dict_items_usagePage: TypeAlias = abc.ItemsView[U16, "HidUsagePage"]
+
+
 @functools.total_ordering
-class HidUsage(object):
+class HidUsage(Hashable):
     """
     A HID Usage entry as defined in the HID Usage Tablets. ::
 
@@ -59,29 +86,39 @@ class HidUsage(object):
 
     """
 
-    def __init__(self, usage_page, usage, name):
+    def __init__(
+        self: "HidUsage", usage_page: "HidUsagePage", usage: U16, name: str
+    ) -> None:
         self.usage_page = usage_page
         self.usage = usage
         self.name = name
 
     # Route everything down to the name, this way we basically behave like a
     # string
-    def __getattr__(self, attr):
+    def __getattr__(self: "HidUsage", attr: str) -> Any:
         return getattr(self.name, attr)
 
-    def __repr__(self):
+    def __repr__(self: "HidUsage") -> str:
         return self.name
 
-    def __hash__(self):
+    def __hash__(self: "HidUsage") -> int:
         return hash(self.name)
 
-    def __str__(self):
+    def __str__(self: "HidUsage") -> str:
         return self.name
 
-    def __eq__(self, other):
+    def __eq__(self: "HidUsage", other: object) -> bool:
+        if isinstance(other, HidUsage):
+            return self.name == other.name
+        elif not isinstance(other, str):
+            return NotImplemented
         return self.name == other
 
-    def __lt__(self, other):
+    def __lt__(self: "HidUsage", other: object) -> bool:
+        if isinstance(other, HidUsage):
+            return self.name < other.name
+        elif not isinstance(other, str):
+            return NotImplemented
         return self.name < other
 
 
@@ -120,13 +157,13 @@ class HidUsagePage(object):
         The assigned name for this usage Page, e.g. "Generic Desktop"
     """
 
-    def __init__(self):
-        self._usages = {}
+    def __init__(self: "HidUsagePage") -> None:
+        self._usages: Dict[U16, HidUsage] = {}
 
-    def __setitem__(self, key, value):
+    def __setitem__(self: "HidUsagePage", key: U16, value: HidUsage) -> None:
         self._usages[key] = value
 
-    def __getitem__(self, key):
+    def __getitem__(self: "HidUsagePage", key: str | U16 | U32) -> HidUsage:
         if isinstance(key, str):
             return self.from_name[key]
 
@@ -136,51 +173,51 @@ class HidUsagePage(object):
             key &= 0xFFFF
         return self._usages[key]
 
-    def __delitem__(self, key):
+    def __delitem__(self: "HidUsagePage", key: U16) -> None:
         del self._usages[key]
 
-    def __iter__(self):
+    def __iter__(self: "HidUsagePage") -> Iterator[U16]:
         return iter(self._usages)
 
-    def __len__(self):
+    def __len__(self: "HidUsagePage") -> int:
         return len(self._usages)
 
-    def __str__(self):
+    def __str__(self: "HidUsagePage") -> str:
         return self.page_name
 
-    def __repr__(self):
+    def __repr__(self: "HidUsagePage") -> str:
         return self.page_name
 
-    def items(self):
+    def items(self: "HidUsagePage") -> dict_items_usage:
         """
         Iterate over all elements, see :meth:`dict.items`
         """
         return self._usages.items()
 
     @property
-    def page_id(self):
+    def page_id(self: "HidUsagePage") -> U16:
         """
         The numerical page ID for this usage page
         """
         return self._page_id
 
     @page_id.setter
-    def page_id(self, page_id):
+    def page_id(self: "HidUsagePage", page_id: U16) -> None:
         self._page_id = page_id
 
     @property
-    def page_name(self):
+    def page_name(self: "HidUsagePage") -> str:
         """
         The assigned name for this Usage Page
         """
         return self._name
 
     @page_name.setter
-    def page_name(self, name):
+    def page_name(self: "HidUsagePage", name: str) -> None:
         self._name = name
 
     @property
-    def from_name(self):
+    def from_name(self: "HidUsagePage") -> Dict[str, HidUsage]:
         """
         A dictionary using ``{ name: usage }`` mapping, to look up the
         :class:`HidUsage` based on a name.
@@ -188,18 +225,18 @@ class HidUsagePage(object):
         try:
             return self._inverted
         except AttributeError:
-            self._inverted = {}
-            for k, v in self.items():
-                self._inverted[v] = v
+            self._inverted: Dict[str, HidUsage] = {}
+            for _, v in self.items():
+                self._inverted[v.name] = v
             return self._inverted
 
     @property
-    def from_usage(self):
+    def from_usage(self: "HidUsagePage") -> Dict[U16, HidUsage]:
         """
         A dictionary using ``{ usage: name }`` mapping, to look up the name
         based on a page ID . This is the same as using the object itself.
         """
-        return self
+        return cast(Dict[U16, HidUsage], self)
 
 
 class HidUsageTable(object):
@@ -229,13 +266,13 @@ class HidUsageTable(object):
         Generic Desktop
     """
 
-    def __init__(self):
-        self._pages = {}
+    def __init__(self: "HidUsageTable") -> None:
+        self._pages: Dict[U16, HidUsagePage] = {}
 
-    def __setitem__(self, key, value):
+    def __setitem__(self: "HidUsageTable", key: U16, value: HidUsagePage) -> None:
         self._pages[key] = value
 
-    def __getitem__(self, key):
+    def __getitem__(self: "HidUsageTable", key: str | U16) -> HidUsagePage:
         if isinstance(key, str):
             return self.usage_page_names[key]
 
@@ -244,23 +281,23 @@ class HidUsageTable(object):
             key >>= 16
         return self._pages[key]
 
-    def __delitem__(self, key):
+    def __delitem__(self: "HidUsageTable", key) -> None:
         del self._pages[key]
 
-    def __iter__(self):
+    def __iter__(self: "HidUsageTable") -> Iterator[HidUsagePage]:
         return iter(self._pages)
 
-    def __len__(self):
+    def __len__(self: "HidUsageTable") -> int:
         return len(self._pages)
 
-    def items(self):
+    def items(self: "HidUsageTable") -> dict_items_usagePage:
         """
         Iterate over all elements, see :meth:`dict.items`
         """
         return self._pages.items()
 
     @property
-    def usage_pages(self):
+    def usage_pages(self: "HidUsageTable") -> Dict[U16, HidUsagePage]:
         """
         A dictionary mapping ``{page_id : object}``. These two are
         equivalent calls: ::
@@ -272,7 +309,7 @@ class HidUsageTable(object):
         return self._pages
 
     @property
-    def usage_page_names(self):
+    def usage_page_names(self: "HidUsageTable") -> Dict[str, HidUsagePage]:
         """
         A dictionary mapping ``{page_name : object}``. These two are
         equivalent calls: ::
@@ -281,9 +318,11 @@ class HidUsageTable(object):
             HUT.usage_page_names['Generic Desktop']
 
         """
-        return {v.page_name: v for k, v in self.items()}
+        return {v.page_name: v for _, v in self.items()}
 
-    def usage_page_from_name(self, page_name):
+    def usage_page_from_name(
+        self: "HidUsageTable", page_name: str
+    ) -> HidUsagePage | None:
         """
         Look up the usage page based on the page name (e.g. "Generic
         Desktop"). This is identical to ::
@@ -300,7 +339,9 @@ class HidUsageTable(object):
         except KeyError:
             return None
 
-    def usage_page_from_page_id(self, page_id):
+    def usage_page_from_page_id(
+        self: "HidUsageTable", page_id: U16
+    ) -> HidUsagePage | None:
         """
         Look up the usage page based on the page ID. This is identical to ::
 
@@ -316,7 +357,7 @@ class HidUsageTable(object):
             return None
 
     @classmethod
-    def _parse_usages(cls, f):
+    def _parse_usages(cls: Type["HidUsageTable"], f: abc.Iterable[str]) -> HidUsagePage:
         """
         Parse a single HUT file. The file format is a set of lines in three
         formats: ::
@@ -339,21 +380,23 @@ class HidUsageTable(object):
             if not line or line.startswith("#"):
                 continue
 
+            r: Match[str]
+
             # Usage Page, e.g. '(01)	Generic Desktop'
             if line.startswith("("):
                 assert usage_page is None
 
-                r = parse.parse("({idx:x})\t{page_name}", line)
+                r = parse.parse("({idx:x})\t{page_name}", line)  # type: ignore
                 assert r is not None
                 usage_page = HidUsagePage()
-                usage_page.page_id = r["idx"]
+                usage_page.page_id = r["idx"]  # type: ignore
                 usage_page.page_name = r["page_name"]
                 continue
 
             assert usage_page is not None
 
             # Reserved ranges, e.g  '0B-1F	Reserved'
-            r = parse.parse("{:x}-{:x}\t{name}", line)
+            r = parse.parse("{:x}-{:x}\t{name}", line)  # type: ignore
             if r:
                 if "reserved" not in r["name"].lower():
                     print(line)
@@ -363,7 +406,7 @@ class HidUsageTable(object):
             # we can not use {usage:x} or the value '0B' will be converted to 0
             # See https://github.com/r1chardj0n3s/parse/issues/65
             # fixed in parse 1.8.4 (May 2018)
-            r = parse.parse("{usage}\t{name}", line)
+            r = parse.parse("{usage}\t{name}", line)  # type: ignore
             assert r is not None
             if "reserved" in r["name"].lower():
                 continue
@@ -373,10 +416,13 @@ class HidUsageTable(object):
 
             usage_page[u] = usage
 
+        if usage_page is None:
+            raise Exception
+
         return usage_page
 
     @classmethod
-    def _from_hut_data(cls):
+    def _from_hut_data(cls: Type["HidUsageTable"]) -> "HidUsageTable":
         """
         Return the HID Usage Tables, the keys are the numeric Usage Page and
         the values are the respective :class:`hidtools.HidUsagePage` object.
