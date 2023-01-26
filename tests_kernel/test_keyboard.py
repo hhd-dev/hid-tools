@@ -84,6 +84,7 @@ class BaseKeyboard(base.UHIDTestDevice):
 
 
 class PlainKeyboard(BaseKeyboard):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)
         0x09, 0x06,                    # Usage (Keyboard)
@@ -106,6 +107,7 @@ class PlainKeyboard(BaseKeyboard):
         0x81, 0x02,                    # .Input (Data,Var,Abs)
         0xc0,                          # End Collection
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -113,6 +115,7 @@ class PlainKeyboard(BaseKeyboard):
 
 
 class ArrayKeyboard(BaseKeyboard):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)
         0x09, 0x06,                    # Usage (Keyboard)
@@ -135,6 +138,7 @@ class ArrayKeyboard(BaseKeyboard):
         0x81, 0x00,                    # .Input (Data,Arr,Abs)
         0xc0,                          # End Collection
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -167,6 +171,7 @@ class ArrayKeyboard(BaseKeyboard):
 
 
 class LEDKeyboard(ArrayKeyboard):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)
         0x09, 0x06,                    # Usage (Keyboard)
@@ -201,6 +206,7 @@ class LEDKeyboard(ArrayKeyboard):
         0x81, 0x00,                    # .Input (Data,Arr,Abs)
         0xc0,                          # End Collection
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -211,6 +217,7 @@ class LEDKeyboard(ArrayKeyboard):
 # Usages are to be concatenated with Usage Pages upon finding a Main item (see
 # 6.2.2.8). This test covers this case.
 class PrimaxKeyboard(ArrayKeyboard):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)
         0x09, 0x06,                    # Usage (Keyboard)
@@ -245,6 +252,7 @@ class PrimaxKeyboard(ArrayKeyboard):
         0x81, 0x00,                    # .Input (Data,Arr,Abs)
         0xC0,                          # End Collection
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)

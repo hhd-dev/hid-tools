@@ -203,6 +203,7 @@ class JoystickGamepad(BaseGamepad):
 
 
 class SaitekGamepad(JoystickGamepad):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x04,                    # Usage (Joystick)                    2
@@ -505,6 +506,7 @@ class SaitekGamepad(JoystickGamepad):
         0xc0,                          # .End Collection                     623
         0xc0,                          # End Collection                      624
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None):
         super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x06a3, 0xff0d))
@@ -512,6 +514,7 @@ class SaitekGamepad(JoystickGamepad):
 
 
 class AsusGamepad(BaseGamepad):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x05,                    # Usage (Game Pad)                    2
@@ -601,6 +604,7 @@ class AsusGamepad(BaseGamepad):
         0xc0,                          # .End Collection                     191
         0xc0,                          # End Collection                      192
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None):
         super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x18d1, 0x2c40))

@@ -31,6 +31,7 @@ class TestReportDescriptor:
     def test_vendor_specific_collection(self):
         # From https://gitlab.freedesktop.org/libevdev/hid-tools/-/issues/25
         # contains Collection (Vendor_defined) which crashed hidtools
+        # fmt: off
         report_descriptor = [
             0x05, 0x84,                    # Usage Page (Power Device)           0
             0x09, 0x04,                    # Usage (Vendor Usage 0x04)           2
@@ -393,6 +394,7 @@ class TestReportDescriptor:
             0xc0,                          # .End Collection                     767
             0xc0,                          # End Collection                      768
         ]
+        # fmt: on
 
         # we only check for the parsing to not crash
         hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
@@ -408,6 +410,7 @@ class TestReportDescriptor:
         # (since we can't reliably guess that 2 bytes are used here).
         # So the rdesc is manually modified to match the output we'll
         # generated.
+        # fmt: off
         report_descriptor = [
             0x05, 0x84,                    # Usage Page (Power Device)           0
             0x09, 0x04,                    # Usage (Vendor Usage 0x04)           2
@@ -770,6 +773,7 @@ class TestReportDescriptor:
             0xc0,                          # .End Collection                     767
             0xc0,                          # End Collection                      768
         ]
+        # fmt: on
         import io
 
         initial_rdesc = hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
@@ -781,6 +785,7 @@ class TestReportDescriptor:
 
     def test_report_type(self):
         # MS Comfort Sculpt keyboard, has a input, output and feature report
+        # fmt: off
         report_descriptor = [
             0x05, 0x01,                    # Usage Page (Generic Desktop)        0
             0x09, 0x06,                    # Usage (Keyboard)                    2
@@ -818,6 +823,7 @@ class TestReportDescriptor:
             0xc0,                          # .End Collection                     73
             0xc0,                          # End Collection                      74
         ]
+        # fmt: on
         rdesc = hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
         for r in rdesc.input_reports.values():
             assert r.type == hidtools.hid.HidReport.Type.INPUT
@@ -830,6 +836,7 @@ class TestReportDescriptor:
 
     def test_const_feature_report(self):
         # MS Comfort Sculpt keyboard, has a const Feature report (byte 69)
+        # fmt: off
         report_descriptor = [
             0x05, 0x01,                    # Usage Page (Generic Desktop)        0
             0x09, 0x06,                    # Usage (Keyboard)                    2
@@ -867,6 +874,7 @@ class TestReportDescriptor:
             0xc0,                          # .End Collection                     73
             0xc0,                          # End Collection                      74
         ]
+        # fmt: on
         rdesc = hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
         # pretty convoluted to get the first value out of a dict...
         report = next(iter(rdesc.feature_reports.values()))

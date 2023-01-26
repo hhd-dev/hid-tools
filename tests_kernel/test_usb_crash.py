@@ -15,6 +15,7 @@ logger = logging.getLogger('hidtools.test.usb')
 
 
 class USBDev(base.UHIDTestDevice):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,  # .Usage Page (Generic Desktop)        0
         0x09, 0x02,  # .Usage (Mouse)                       2
@@ -46,6 +47,7 @@ class USBDev(base.UHIDTestDevice):
         0xc0,        # ..End Collection                     53
         0xc0,        # .End Collection                      54
     ]
+    # fmt: on
 
     def __init__(self, name=None, input_info=None):
         super().__init__(name, 'Mouse', input_info=input_info, rdesc=USBDev.report_descriptor)

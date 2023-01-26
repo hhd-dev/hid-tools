@@ -312,6 +312,7 @@ class OpaqueTablet(BaseTablet):
     one to function properly. The device uses only standard HID usages,
     not any of Wacom's vendor-defined pages.
     """
+    # fmt: off
     report_descriptor = [
         0x05, 0x0D,                     # . Usage Page (Digitizer),
         0x09, 0x01,                     # . Usage (Digitizer),
@@ -344,6 +345,7 @@ class OpaqueTablet(BaseTablet):
         0xC0,                           # .     End Collection,
         0xC0,                           # . End Collection,
     ]
+    # fmt: on
 
     def __init__(self,
                  rdesc=report_descriptor,
@@ -361,6 +363,7 @@ class OpaqueCTLTablet(BaseTablet):
     an actual device. Position, eraser, pressure, barrel buttons.
     Uses the Wacom vendor-defined usage page.
     """
+    # fmt: off
     report_descriptor = [
         0x06, 0x0D, 0xFF,               # . Usage Page (Vnd Wacom Emr),
         0x09, 0x01,                     # . Usage (Digitizer),
@@ -428,6 +431,7 @@ class OpaqueCTLTablet(BaseTablet):
         0xC0,                           # .     End Collection,
         0xC0                            # . End Collection
     ]
+    # fmt: on
 
     def __init__(self,
                  rdesc=report_descriptor,

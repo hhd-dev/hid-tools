@@ -19,6 +19,7 @@ class KbdData(object):
 
 
 class AppleKeyboard(ArrayKeyboard):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,         # Usage Page (Generic Desktop)
         0x09, 0x06,         # Usage (Keyboard)
@@ -132,6 +133,7 @@ class AppleKeyboard(ArrayKeyboard):
         0xb1, 0x01,         # .Feature (Cnst,Arr,Abs)
         0xc0,               # End Collection
     ]
+    # fmt: on
 
     def __init__(self,
                  rdesc=report_descriptor,

@@ -102,6 +102,7 @@ class BaseMouse(base.UHIDTestDevice):
 
 
 class ButtonMouse(BaseMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,  # .Usage Page (Generic Desktop)        0
         0x09, 0x02,  # .Usage (Mouse)                       2
@@ -133,6 +134,7 @@ class ButtonMouse(BaseMouse):
         0xc0,        # ..End Collection                     53
         0xc0,        # .End Collection                      54
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -160,6 +162,7 @@ class ButtonMouse(BaseMouse):
 
 
 class WheelMouse(ButtonMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,  # Usage Page (Generic Desktop)        0
         0x09, 0x02,  # Usage (Mouse)                       2
@@ -194,6 +197,7 @@ class WheelMouse(ButtonMouse):
         0x81, 0x06,  # .Input (Data,Var,Rel)               59
         0xc0,        # End Collection                      61
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -201,6 +205,7 @@ class WheelMouse(ButtonMouse):
 
 
 class TwoWheelMouse(WheelMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,        # Usage Page (Generic Desktop)        0
         0x09, 0x02,        # Usage (Mouse)                       2
@@ -236,6 +241,7 @@ class TwoWheelMouse(WheelMouse):
         0xc0,              # .End Collection                     65
         0xc0,              # End Collection                      66
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -243,6 +249,7 @@ class TwoWheelMouse(WheelMouse):
 
 
 class MIDongleMIWirelessMouse(TwoWheelMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,         # Usage Page (Generic Desktop)
         0x09, 0x02,         # Usage (Mouse)
@@ -312,6 +319,7 @@ class MIDongleMIWirelessMouse(TwoWheelMouse):
         0x81, 0x06,         # .Input (Data,Var,Rel)
         0xc0,               # End Collection
     ]
+    # fmt: on
     device_input_info = (BusType.USB, 0x2717, 0x003b)
     device_name = "uhid test MI Dongle MI Wireless Mouse"
 
@@ -332,6 +340,7 @@ class MIDongleMIWirelessMouse(TwoWheelMouse):
 
 
 class ResolutionMultiplierMouse(TwoWheelMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,        # Usage Page (Generic Desktop)        83
         0x09, 0x02,        # Usage (Mouse)                       85
@@ -392,6 +401,7 @@ class ResolutionMultiplierMouse(TwoWheelMouse):
         0xc0,              # .End Collection                     194
         0xc0,              # End Collection                      195
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)
@@ -426,6 +436,7 @@ class BadResolutionMultiplierMouse(ResolutionMultiplierMouse):
 
 
 class ResolutionMultiplierHWheelMouse(TwoWheelMouse):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,         # Usage Page (Generic Desktop)        0
         0x09, 0x02,         # Usage (Mouse)                       2
@@ -501,6 +512,7 @@ class ResolutionMultiplierHWheelMouse(TwoWheelMouse):
         0xc0,               # .End Collection                     146
         0xc0,               # End Collection                      147
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=None):
         super().__init__(rdesc, name, input_info)

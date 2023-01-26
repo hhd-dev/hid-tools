@@ -118,6 +118,7 @@ class PS3Controller(JoystickGamepad):
         },
     }
 
+# fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x04,                    # Usage (Joystick)                    2
@@ -195,6 +196,7 @@ class PS3Controller(JoystickGamepad):
         0xc0,                          # .End Collection                     146
         0xc0,                          # End Collection                      147
     ]
+# fmt: on
 
     def __init__(self, rdesc=report_descriptor, name='Sony PLAYSTATION(R)3 Controller'):
         super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x054c, 0x0268))
@@ -219,7 +221,9 @@ class PS3Controller(JoystickGamepad):
             # undocumented report in the HID report descriptor:
             # the MAC address of the device is stored in the bytes 4-9
             # rest has been dumped on a Sixaxis controller
+            # fmt: off
             r = [0xf2, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x40, 0x80, 0x18, 0x01, 0x8a]
+            # fmt: on
 
             # store the uniq value in the report
             for id, v in enumerate(self.uniq.split(':')):
@@ -636,6 +640,7 @@ class PS4Controller(BaseGamepad):
 
 
 class PS4ControllerBluetooth(PS4Controller):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x05,                    # Usage (Game Pad)                    2
@@ -814,6 +819,7 @@ class PS4ControllerBluetooth(PS4Controller):
         0xb1, 0x02,                    # .Feature (Data,Var,Abs)             361
         0xc0,                          # End Collection                      363
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name='Wireless Controller'):
         super().__init__(rdesc, name, (BusType.BLUETOOTH, 0x054c, 0x05c4))
@@ -828,17 +834,21 @@ class PS4ControllerBluetooth(PS4Controller):
 
         if rnum == 0x05:
             # Report to retrieve motion sensor calibration data.
+            # fmt: off
             r = [0x05, 0x1e, 0x00, 0x05, 0x00, 0xe2, 0xff, 0xf2, 0x22, 0xbe, 0x22, 0x8d, 0x22, 0x4f,
                  0xdd, 0x4d, 0xdd, 0x39, 0xdd, 0x1c, 0x02, 0x1c, 0x02, 0xe3, 0x1f, 0x8b, 0xdf, 0x8c, 0x1e,
                  0xb4, 0xde, 0x30, 0x20, 0x71, 0xe0, 0x10, 0x00, 0xca, 0xfc, 0x64, 0x4d]
+            # fmt: on
             return (0, r)
 
         elif rnum == 0xa3:
             # Report to retrieve hardware and firmware version.
+            # fmt: off
             r = [0xa3, 0x41, 0x70, 0x72, 0x20, 0x20, 0x38, 0x20, 0x32, 0x30, 0x31, 0x34, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x30, 0x39, 0x3a, 0x34, 0x36, 0x3a, 0x30, 0x36, 0x00, 0x00, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x43, 0x03, 0x00, 0x00, 0x00, 0x51, 0x00, 0x05,
                  0x00, 0x00, 0x80, 0x03, 0x00]
+            # fmt: on
             return (0, r)
 
         if rdesc is None:
@@ -915,6 +925,7 @@ class PS4ControllerBluetooth(PS4Controller):
 
 
 class PS4ControllerUSB(PS4Controller):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x05,                    # Usage (Game Pad)                    2
@@ -1167,6 +1178,7 @@ class PS4ControllerUSB(PS4Controller):
         0xb1, 0x02,                    # .Feature (Data,Var,Abs)             504
         0xc0,                          # End Collection                      506
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
         super().__init__(rdesc, 'Sony Computer Entertainment Wireless Controller', (BusType.USB, 0x054c, 0x05c4))
@@ -1181,16 +1193,20 @@ class PS4ControllerUSB(PS4Controller):
 
         if rnum == 0x02:
             # Report to retrieve motion sensor calibration data.
+            # fmt: off
             r = [0x02, 0x1e, 0x00, 0x05, 0x00, 0xe2, 0xff, 0xf2, 0x22, 0x4f, 0xdd, 0xbe, 0x22, 0x4d,
                  0xdd, 0x8d, 0x22, 0x39, 0xdd, 0x1c, 0x02, 0x1c, 0x02, 0xe3, 0x1f, 0x8b, 0xdf, 0x8c,
                  0x1e, 0xb4, 0xde, 0x30, 0x20, 0x71, 0xe0, 0x10, 0x00]
+            # fmt: on
             return (0, r)
 
         elif rnum == 0x12:
             # Recommended report to retrieve MAC address of DS4.
             # Clone devices tend to support this one as well.
             # MAC address is stored in byte 1-7
+            # fmt: off
             r = [0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            # fmt: on
 
             # store the uniq value in the report
             for id, v in enumerate(self.uniq.split(':')):
@@ -1213,10 +1229,12 @@ class PS4ControllerUSB(PS4Controller):
 
         elif rnum == 0xa3:
             # Report to retrieve hardware and firmware version.
+            # fmt: off
             r = [0xa3, 0x41, 0x70, 0x72, 0x20, 0x20, 0x38, 0x20, 0x32, 0x30, 0x31, 0x34, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x30, 0x39, 0x3a, 0x34, 0x36, 0x3a, 0x30, 0x36, 0x00, 0x00, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x43, 0x03, 0x00, 0x00, 0x00, 0x51, 0x00, 0x05,
                  0x00, 0x00, 0x80, 0x03, 0x00]
+            # fmt: on
             return (0, r)
 
         if rdesc is None:
@@ -1464,17 +1482,21 @@ class PS5Controller(BaseGamepad):
         logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
 
         if rnum == 0x05:  # Calibration info
+            # fmt: off
             r = [0x05, 0xff, 0xff, 0xf2, 0xff, 0x04, 0x00, 0x9d, 0x22, 0x5e, 0xdd, 0x92,
                  0x22, 0x52, 0xdd, 0xba, 0x22, 0x51, 0xdd, 0x1c, 0x02, 0x1c, 0x02, 0xfb,
                  0x1f, 0x05, 0xe0, 0x83, 0x1f, 0x99, 0xdf, 0x07, 0x20, 0xfc, 0xdf, 0x05,
                  0x00, 0x00, 0x00, 0x00, 0x00]
+            # fmt: on
             return (0, r)
 
         elif rnum == 0x09:  # Pairing info
             # Report to retrieve MAC address of DualSense.
             # MAC address is stored in byte 1-7
+            # fmt: off
             r = [0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            # fmt: on
 
             # store the uniq value in the report
             for id, v in enumerate(self.uniq.split(':')):
@@ -1484,12 +1506,14 @@ class PS5Controller(BaseGamepad):
             return (0, r)
 
         elif rnum == 0x20:  # Firmware info
+            # fmt: off
             r = [0x20, 0x41, 0x75, 0x67, 0x20, 0x31, 0x38, 0x20, 0x32, 0x30, 0x32, 0x30,
                  0x30, 0x36, 0x3a, 0x32, 0x30, 0x3a, 0x32, 0x39, 0x03, 0x00, 0x04, 0x00,
                  0x13, 0x03, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x01, 0x41, 0x0a, 0x00, 0x00,
                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x02, 0x00, 0x00,
                  0x2a, 0x00, 0x01, 0x00, 0x06, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00,
                  0x98, 0xd8, 0xb3, 0xb7]
+            # fmt: on
             return (0, r)
 
         if rdesc is None:
@@ -1519,6 +1543,7 @@ class PS5Controller(BaseGamepad):
 
 
 class PS5ControllerBluetooth(PS5Controller):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x05,                    # Usage (Game Pad)                    2
@@ -1655,6 +1680,7 @@ class PS5ControllerBluetooth(PS5Controller):
         0xb1, 0x02,                    # .Feature (Data,Var,Abs)             276
         0xc0,                          # End Collection                      278
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
         super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.BLUETOOTH, 0x054c, 0x0ce6))
@@ -1742,6 +1768,7 @@ class PS5ControllerBluetooth(PS5Controller):
 
 
 class PS5ControllerUSB(PS5Controller):
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x05,                    # Usage (Game Pad)                    2
@@ -1870,6 +1897,7 @@ class PS5ControllerUSB(PS5Controller):
         0xb1, 0x02,                    # .Feature (Data,Var,Abs)             254
         0xc0,                          # End Collection                      256
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
         super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.USB, 0x054c, 0x0ce6))

@@ -23,6 +23,7 @@ class KbdData(object):
 # event on the key release.
 # This test covers this case.
 class ITEKeyboard(ArrayKeyboard):
+    # fmt: off
     report_descriptor = [
         0x06, 0x85, 0xff,              # Usage Page (Vendor Usage Page 0xff85)
         0x09, 0x95,                    # Usage (Vendor Usage 0x95)           3
@@ -118,6 +119,7 @@ class ITEKeyboard(ArrayKeyboard):
         0x81, 0x02,                    # .Input (Data,Var,Abs)               185
         0xc0,                          # End Collection                      187
     ]
+    # fmt: on
 
     def __init__(self, rdesc=report_descriptor, name=None, input_info=(BusType.USB, 0x06cb, 0x2968)):
         super().__init__(rdesc, name, input_info)

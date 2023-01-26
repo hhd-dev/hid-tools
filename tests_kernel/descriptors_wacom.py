@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 
+# fmt: off
 wacom_pth660_v145 = [
     0x05, 0x01,                     # . Usage Page (Desktop),
     0x09, 0x02,                     # . Usage (Mouse),
@@ -434,11 +435,13 @@ wacom_pth660_v145 = [
     0xB1, 0x02,                     # .     Feature (Variable),
     0xC0                            # . End Collection
 ]
+# fmt: on
 
 # Report ID (20), Usage (1014h), Report Count (13) -> 15
 wacom_pth660_v150 = wacom_pth660_v145.copy()
 wacom_pth660_v150[0x2cb] = 0x0f
 
+# fmt: off
 wacom_pth860_v145 = [
     0x05, 0x01,                     # . Usage Page (Desktop),
     0x09, 0x02,                     # . Usage (Mouse),
@@ -872,11 +875,13 @@ wacom_pth860_v145 = [
     0xB1, 0x02,                     # .     Feature (Variable),
     0xC0                            # . End Collection
 ]
+# fmt: on
 
 # Report ID (20), Usage (1014h), Report Count (13) -> 15
 wacom_pth860_v150 = wacom_pth860_v145.copy()
 wacom_pth860_v150[0x2ca] = 0x0f
 
+# fmt: off
 wacom_pth460_v105 = [
     0x06, 0x0D, 0xFF,               # . Usage Page (FF0Dh),
     0x09, 0x01,                     # . Usage (01h),
@@ -1352,3 +1357,4 @@ wacom_pth460_v105 = [
     0xB1, 0x02,                     # .     Feature (Variable),
     0xC0                            # . End Collection
 ]
+# fmt: on

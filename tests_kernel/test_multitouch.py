@@ -1051,6 +1051,7 @@ class TestActionStar_2101_1011(BaseTest.TestMultitouch):
         uhdev = self.uhdev
         evdev = uhdev.get_evdev()
 
+        # fmt: off
         sequence = [
             # t0 = Touch(1, 6999, 2441) | t1 = Touch(2, 15227, 2026)
             '01 ff 01 57 1b 89 09 ff 02 7b 3b ea 07 02',
@@ -1061,6 +1062,7 @@ class TestActionStar_2101_1011(BaseTest.TestMultitouch):
             # t1                        | t0.inrange = False
             '01 ff 02 81 3b f8 07 fc 01 54 1b 92 09 02',
         ]
+        # fmt: on
 
         for num, r_str in enumerate(sequence):
             r = [int(i, 16) for i in r_str.split()]
