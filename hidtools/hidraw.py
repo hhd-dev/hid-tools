@@ -27,28 +27,30 @@ import sys
 from hidtools.hid import ReportDescriptor
 from hidtools.util import BusType
 
+from typing import Final
+
 
 def _ioctl(fd, EVIOC, code, return_type, buf=None):
     size = struct.calcsize(return_type)
     if buf is None:
         buf = size * "\x00"
-    abs = fcntl.ioctl(fd, EVIOC(code, size), buf)
+    abs = fcntl.ioctl(fd, EVIOC(code, size), buf)  # type: ignore
     return struct.unpack(return_type, abs)
 
 
 # extracted from <asm-generic/ioctl.h>
-_IOC_WRITE = 1
-_IOC_READ = 2
+_IOC_WRITE: Final = 1
+_IOC_READ: Final = 2
 
-_IOC_NRBITS = 8
-_IOC_TYPEBITS = 8
-_IOC_SIZEBITS = 14
-_IOC_DIRBITS = 2
+_IOC_NRBITS: Final = 8
+_IOC_TYPEBITS: Final = 8
+_IOC_SIZEBITS: Final = 14
+_IOC_DIRBITS: Final = 2
 
-_IOC_NRSHIFT = 0
-_IOC_TYPESHIFT = _IOC_NRSHIFT + _IOC_NRBITS
-_IOC_SIZESHIFT = _IOC_TYPESHIFT + _IOC_TYPEBITS
-_IOC_DIRSHIFT = _IOC_SIZESHIFT + _IOC_SIZEBITS
+_IOC_NRSHIFT: Final = 0
+_IOC_TYPESHIFT: Final = _IOC_NRSHIFT + _IOC_NRBITS
+_IOC_SIZESHIFT: Final = _IOC_TYPESHIFT + _IOC_TYPEBITS
+_IOC_DIRSHIFT: Final = _IOC_SIZESHIFT + _IOC_SIZEBITS
 
 
 # define _IOC(dir,type,nr,size) \
