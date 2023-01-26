@@ -128,6 +128,7 @@ class BaseDevice(UHIDDevice):
         self.led_classes = {}
         self.power_supply_class = None
         if rdesc is None:
+            assert rdesc_str is not None
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
         else:
             self.rdesc = rdesc
@@ -173,6 +174,8 @@ class BaseDevice(UHIDDevice):
         event_node = open(devname, "rb")
         self._opened_files.append(event_node)
         evdev = libevdev.Device(event_node)
+
+        assert evdev.fd is not None
 
         fd = evdev.fd.fileno()
         flag = fcntl.fcntl(fd, fcntl.F_GETFD)
@@ -254,7 +257,9 @@ class BaseDevice(UHIDDevice):
 
     def next_sync_events(self, application=None):
         evdev = self.get_evdev(application)
-        return list(evdev.events())
+        if evdev is not None:
+            return list(evdev.events())
+        return []
 
     def get_evdev(self, application=None):
         if application is None:

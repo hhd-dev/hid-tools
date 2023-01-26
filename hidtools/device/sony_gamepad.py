@@ -230,6 +230,7 @@ class PS3Controller(JoystickGamepad):
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
+        assert self.parsed_rdesc is not None
         for v in self.parsed_rdesc.feature_reports.values():
             if v.report_ID == rnum:
                 rdesc = v
@@ -262,6 +263,7 @@ class PS3Controller(JoystickGamepad):
 
     def set_report(self, req, rnum, rtype, data):
         rdesc = None
+        assert self.parsed_rdesc is not None
         for v in self.parsed_rdesc.feature_reports.values():
             if v.report_ID == rnum:
                 rdesc = v
@@ -898,6 +900,7 @@ class PS4ControllerBluetooth(PS4Controller):
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
+        assert self.parsed_rdesc is not None
         for v in self.parsed_rdesc.feature_reports.values():
             if v.report_ID == rnum:
                 rdesc = v
@@ -1279,6 +1282,7 @@ class PS4ControllerUSB(PS4Controller):
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
+        assert self.parsed_rdesc is not None
         for v in self.parsed_rdesc.feature_reports.values():
             if v.report_ID == rnum:
                 rdesc = v
@@ -1591,6 +1595,7 @@ class PS5Controller(BaseGamepad):
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
+        assert self.parsed_rdesc is not None
         for v in self.parsed_rdesc.feature_reports.values():
             if v.report_ID == rnum:
                 rdesc = v

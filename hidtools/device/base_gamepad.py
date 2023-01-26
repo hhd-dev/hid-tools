@@ -63,6 +63,7 @@ class BaseGamepad(BaseDevice):
         self.left = (127, 127)
         self.right = (127, 127)
         self.hat_switch = 15
+        assert self.parsed_rdesc is not None
 
         self.fields = []
         for r in self.parsed_rdesc.input_reports.values():
@@ -139,7 +140,7 @@ class BaseGamepad(BaseDevice):
 
         self.store_axes("left_stick", gamepad, left)
         self.store_axes("right_stick", gamepad, right)
-        gamepad.hatswitch = hat_switch
+        gamepad.hatswitch = hat_switch  # type: ignore  ### gamepad is by default empty
         return super().create_report(
             gamepad, reportID=reportID, application=application
         )
