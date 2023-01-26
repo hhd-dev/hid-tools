@@ -1708,6 +1708,8 @@ class HidReport(object):
             # get the value and consumes bits
             values = report_item.get_values(data)
 
+            usage: Optional[str]
+
             if not report_item.is_array:
                 value_format = "{:d}"
                 if report_item.size > 1:
@@ -1757,17 +1759,22 @@ class HidReport(object):
                     logical_name = "Array"
                 usages = []
                 for v in values:
-                    if v < report_item.logical_min or v > report_item.logical_max:
+                    if isinstance(v, str):  # special marker "<.>"
+                        usages.append("")
+                    elif v < report_item.logical_min or v > report_item.logical_max:
                         usages.append("")
                     else:
                         usage = ""
-                        if isinstance(values[0], str):
+                        if isinstance(v, str):
                             usage = v
                         else:
                             usage = f"{v:02x}"
                         index = (
                             v - report_item.logical_min
                         )  # guaranteed to be > 0 with test above
+                        assert (
+                            report_item.usages is not None
+                        )  # guaranteed to be set because of the parsing
                         if "vendor" not in logical_name.lower() and index < len(
                             report_item.usages
                         ):
