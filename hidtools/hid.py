@@ -1234,7 +1234,7 @@ class HidField(object):
             report[byte_idx] &= ~(bit_mask << bit_shift)
             report[byte_idx] |= value << bit_shift
 
-    def fill_values_array(self: "HidField", report: List[U8], data: List[str]) -> None:
+    def fill_values_array(self: "HidField", report: List[U8], data: List[Any]) -> None:
         """
         Assuming ``data`` is the value for this HID field array and ``report``
         is a HID report's bytes, this method sets those bits in ``report`` that
@@ -1614,9 +1614,7 @@ class HidReport(object):
                 data.pop(0)
             self.prev_seen_usages.clear()
 
-        value = 0
-        if hidInputItem.is_array:
-            value = [0]
+        value = [0]
 
         # Match the HID usage with our attributes, so
         # Contact Count -> contactcount, etc.
@@ -1635,9 +1633,7 @@ class HidReport(object):
 
         # non arrays
         else:
-            try:
-                value[0]
-            except TypeError:
+            if not isinstance(value, list):
                 value = [value]
 
             hidInputItem.fill_values(r_out, value)
