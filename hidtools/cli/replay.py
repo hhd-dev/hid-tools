@@ -28,16 +28,14 @@ from parse import parse, findall
 from hidtools.device.sony_gamepad import PS3Controller
 
 import logging
-logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
-                    level=logging.INFO)
-base_logger = logging.getLogger('hidtools')
-logger = logging.getLogger('hidtools.replay')
+
+logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s", level=logging.INFO)
+base_logger = logging.getLogger("hidtools")
+logger = logging.getLogger("hidtools.replay")
 
 
 class HIDReplay(object):
-    _known_devices = {
-        (0x054c, 0x0268): PS3Controller()
-    }
+    _known_devices = {(0x054C, 0x0268): PS3Controller()}
 
     def __init__(self, filename):
         self._devices = {}
@@ -52,47 +50,45 @@ class HIDReplay(object):
                 def __init__(self):
                     self.name = None
                     self.info = None
-                    self.phys = ''
+                    self.phys = ""
                     self.rdesc = None
                     self.rdesc_length = None
 
             idx = 0
             for line in f:
                 line = line.strip()
-                if line.startswith('D:'):
-                    r = parse('D: {idx:d}', line)
+                if line.startswith("D:"):
+                    r = parse("D: {idx:d}", line)
                     assert r is not None
-                    idx = r['idx']
+                    idx = r["idx"]
                     continue
                 if idx not in devices:
                     devices[idx] = DeviceInfo()
                 dev = devices[idx]
-                if line.startswith('N:'):
-                    r = parse('N: {name}', line)
+                if line.startswith("N:"):
+                    r = parse("N: {name}", line)
                     assert r is not None
-                    dev.name = r['name']
-                elif line.startswith('I:'):
-                    r = parse('I: {bus:x} {vid:x} {pid:x}', line)
+                    dev.name = r["name"]
+                elif line.startswith("I:"):
+                    r = parse("I: {bus:x} {vid:x} {pid:x}", line)
                     assert r is not None
                     dev.info = r
-                elif line.startswith('P:'):
-                    r = parse('P: {phys}', line)
+                elif line.startswith("P:"):
+                    r = parse("P: {phys}", line)
                     if r is not None:
-                        dev.phys = r['phys']
-                elif line.startswith('R:'):
-                    r = parse('R: {length:d} {desc}', line)
+                        dev.phys = r["phys"]
+                elif line.startswith("R:"):
+                    r = parse("R: {length:d} {desc}", line)
                     assert r is not None
                     dev.rdesc = r
 
         for idx, dev in devices.items():
             uhid_dev = self.determine_device_by_info(dev.info)
             uhid_dev.name = dev.name
-            uhid_dev.info = [dev.info['bus'],
-                             dev.info['vid'],
-                             dev.info['pid']]
+            uhid_dev.info = [dev.info["bus"], dev.info["vid"], dev.info["pid"]]
             uhid_dev.phys = dev.phys
-            uhid_dev.rdesc = dev.rdesc['desc']
-            assert len(uhid_dev.rdesc) == dev.rdesc['length']
+            uhid_dev.rdesc = dev.rdesc["desc"]
+            assert len(uhid_dev.rdesc) == dev.rdesc["length"]
 
             self._devices[idx] = uhid_dev
 
@@ -102,7 +98,7 @@ class HIDReplay(object):
             hidtools.uhid.UHIDDevice.dispatch(1000)
 
     def determine_device_by_info(self, info):
-        device_id = (info['vid'], info['pid'])
+        device_id = (info["vid"], info["pid"])
         if device_id in self._known_devices:
             return self._known_devices[device_id]
         return hidtools.uhid.UHIDDevice()
@@ -130,16 +126,16 @@ class HIDReplay(object):
             if idx in self._devices:
                 dev = self._devices[idx]
             for l in f:
-                if l.startswith('D:'):
-                    r = parse('D: {idx:d}', l)
+                if l.startswith("D:"):
+                    r = parse("D: {idx:d}", l)
                     assert r is not None
-                    dev = self._devices[r['idx']]
-                elif l.startswith('E:'):
-                    r = parse('E: {sec:d}.{usec:d} {len:2d}{data}', l)
+                    dev = self._devices[r["idx"]]
+                elif l.startswith("E:"):
+                    r = parse("E: {sec:d}.{usec:d} {len:2d}{data}", l)
                     assert r is not None
-                    length = r['len']
-                    timestamp = r['sec'] + r['usec'] / 1000000
-                    r_ = findall(' {:S}', r['data'])
+                    length = r["len"]
+                    timestamp = r["sec"] + r["usec"] / 1000000
+                    r_ = findall(" {:S}", r["data"])
                     data = [int(x[0], 16) for x in r_]
                     assert len(data) == int(length)
                     now = datetime.today()
@@ -164,8 +160,8 @@ class HIDReplay(object):
 
     def replay_one_sequence(self):
         count = self.replayed_count
-        re = '' if count == 0 else 're'
-        print(f'Hit enter to {re}start replaying the events', end='', flush=True)
+        re = "" if count == 0 else "re"
+        print(f"Hit enter to {re}start replaying the events", end="", flush=True)
         sys.stdin.readline()
         self.inject_events()
 
@@ -174,10 +170,12 @@ class HIDReplay(object):
 
 
 @click.command()
-@click.option('--verbose', default=False, is_flag=True, help='Show debugging information')
-@click.argument('recording', metavar='recording.hid', type=str)
+@click.option(
+    "--verbose", default=False, is_flag=True, help="Show debugging information"
+)
+@click.argument("recording", metavar="recording.hid", type=str)
 def main(verbose, recording):
-    '''Replay a HID recording'''
+    """Replay a HID recording"""
     if verbose:
         base_logger.setLevel(logging.DEBUG)
 
@@ -186,13 +184,13 @@ def main(verbose, recording):
             while True:
                 replay.replay_one_sequence()
     except PermissionError:
-        print('Insufficient permissions, please run me as root.', file=sys.stderr)
+        print("Insufficient permissions, please run me as root.", file=sys.stderr)
     except KeyboardInterrupt:
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if sys.version_info < (3, 6):
-        sys.exit('Python 3.6 or later required')
+        sys.exit("Python 3.6 or later required")
 
     main()

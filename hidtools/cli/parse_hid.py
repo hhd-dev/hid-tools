@@ -29,20 +29,20 @@ def get_report(time, report, rdesc):
     Translate the given report to a human readable format.
     """
 
-    output = f'{time:>10s} '
+    output = f"{time:>10s} "
     indent_2nd_line = len(output)
 
     output += rdesc.format_report(report)
 
     # align the lines with the first '/'
     try:
-        first_row = output.split('\n')[0]
+        first_row = output.split("\n")[0]
     except IndexError:
         pass
     else:
         # we have a multi-line output, find where the fields are split
         try:
-            slash = first_row.index('/')
+            slash = first_row.index("/")
         except ValueError:
             indent_2nd_line = 2
         else:
@@ -51,12 +51,12 @@ def get_report(time, report, rdesc):
 
     indent = f'\n{" " * indent_2nd_line}'
 
-    return indent.join(output.split('\n'))
+    return indent.join(output.split("\n"))
 
 
 def parse_event(line, rdesc_object):
-    e, time, size, report = line.split(' ', 3)
-    report = [int(item, 16) for item in report.split(' ')]
+    e, time, size, report = line.split(" ", 3)
+    report = [int(item, 16) for item in report.split(" ")]
     assert int(size) == len(report)
     rdesc = rdesc_object.get(report[0], len(report))
     if rdesc is None:
@@ -90,28 +90,36 @@ def parse_hid(f_in, f_out, print_events=True):
             if win8:
                 f_out.write("**** win 8 certified ****\n")
         elif line.startswith("D:"):
-            r = _parse('D:{d:d}', line)
+            r = _parse("D:{d:d}", line)
             assert r is not None
-            device_index = r['d']
+            device_index = r["d"]
         elif line.startswith("E:"):
             if print_events:
                 dump_report(line, rdesc_dict[device_index], f_out)
-        elif line == '':
+        elif line == "":
             # End of file
             break
-        elif line.startswith("N:") or \
-                line.startswith("P:") or \
-                line.startswith("I:"):
+        elif line.startswith("N:") or line.startswith("P:") or line.startswith("I:"):
             continue
         else:
             f_out.write(line)
 
 
 @click.command()
-@click.option('--report-descriptor-only', default=False, is_flag=True, help='Only print the Report Descriptor')
-@click.argument('recording', metavar='<Path to device recording (stdin if missing)>', default=sys.stdin, type=click.File('r'))
+@click.option(
+    "--report-descriptor-only",
+    default=False,
+    is_flag=True,
+    help="Only print the Report Descriptor",
+)
+@click.argument(
+    "recording",
+    metavar="<Path to device recording (stdin if missing)>",
+    default=sys.stdin,
+    type=click.File("r"),
+)
 def main(recording, report_descriptor_only):
-    '''Parse a HID recording and display it in human-readable format'''
+    """Parse a HID recording and display it in human-readable format"""
     with recording as f:
         try:
             parse_hid(f, sys.stdout, not report_descriptor_only)

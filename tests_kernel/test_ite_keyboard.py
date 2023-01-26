@@ -11,7 +11,8 @@ from hidtools.util import BusType
 
 import libevdev
 import logging
-logger = logging.getLogger('hidtools.test.ite-keyboard')
+
+logger = logging.getLogger("hidtools.test.ite-keyboard")
 
 
 class KbdData(object):
@@ -121,11 +122,16 @@ class ITEKeyboard(ArrayKeyboard):
     ]
     # fmt: on
 
-    def __init__(self, rdesc=report_descriptor, name=None, input_info=(BusType.USB, 0x06cb, 0x2968)):
+    def __init__(
+        self,
+        rdesc=report_descriptor,
+        name=None,
+        input_info=(BusType.USB, 0x06CB, 0x2968),
+    ):
         super().__init__(rdesc, name, input_info)
 
     def event(self, keys, reportID=None, application=None):
-        application = application or 'Keyboard'
+        application = application or "Keyboard"
         return super().event(keys, reportID, application)
 
 

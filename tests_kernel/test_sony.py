@@ -7,13 +7,21 @@
 #
 
 from .test_gamepad import BaseTest
-from hidtools.device.sony_gamepad import PS3Controller, PS4ControllerBluetooth, PS4ControllerUSB, PS5ControllerBluetooth, PS5ControllerUSB, PSTouchPoint
+from hidtools.device.sony_gamepad import (
+    PS3Controller,
+    PS4ControllerBluetooth,
+    PS4ControllerUSB,
+    PS5ControllerBluetooth,
+    PS5ControllerUSB,
+    PSTouchPoint,
+)
 from hidtools.util import BusType
 
 import libevdev
 import logging
 import pytest
-logger = logging.getLogger('hidtools.test.sony')
+
+logger = logging.getLogger("hidtools.test.sony")
 
 
 class SonyBaseTest:
@@ -170,8 +178,12 @@ class SonyBaseTest:
             self.debug_reports(r, uhdev, events)
             assert libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH) not in events
             assert evdev.value[libevdev.EV_KEY.BTN_TOUCH] == 1
-            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_POSITION_X, 5) not in events
-            assert libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_POSITION_Y, 10) not in events
+            assert (
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_POSITION_X, 5) not in events
+            )
+            assert (
+                libevdev.InputEvent(libevdev.EV_ABS.ABS_MT_POSITION_Y, 10) not in events
+            )
             assert evdev.slots[0][libevdev.EV_ABS.ABS_MT_TRACKING_ID] == 0
             assert evdev.slots[0][libevdev.EV_ABS.ABS_MT_POSITION_X] == 50
             assert evdev.slots[0][libevdev.EV_ABS.ABS_MT_POSITION_Y] == 100
@@ -213,7 +225,7 @@ class TestPS3Controller(SonyBaseTest.SonyTest):
         def test_led(self):
             for k, v in self.uhdev.led_classes.items():
                 # the kernel might have set a LED for us
-                logger.info(f'{k}: {v.brightness}')
+                logger.info(f"{k}: {v.brightness}")
 
                 idx = int(k[-1]) - 1
                 assert self.uhdev.hw_leds.get_led(idx)[0] == bool(v.brightness)

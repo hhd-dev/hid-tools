@@ -26,6 +26,7 @@ class BusType(enum.IntEnum):
     The numerical bus type (``0x3`` for USB, ``0x5`` for Bluetooth, see
         ``linux/input.h``)
     """
+
     USB = 0x3
     BLUETOOTH = 0x5
     VIRTUAL = 0x6

@@ -11,7 +11,7 @@ import hidtools.hid
 import libevdev
 import logging
 
-logger = logging.getLogger('hidtools.test.keyboard')
+logger = logging.getLogger("hidtools.test.keyboard")
 
 
 class InvalidHIDCommunication(Exception):
@@ -25,7 +25,7 @@ class KeyboardData(object):
 class BaseKeyboard(base.UHIDTestDevice):
     def __init__(self, rdesc, name=None, input_info=None):
         assert rdesc is not None
-        super().__init__(name, 'Key', input_info=input_info, rdesc=rdesc)
+        super().__init__(name, "Key", input_info=input_info, rdesc=rdesc)
         self.keystates = {}
 
     def _update_key_state(self, keys):
@@ -51,7 +51,7 @@ class BaseKeyboard(base.UHIDTestDevice):
     def _create_report_data(self):
         keyboard = KeyboardData()
         for key, value in self.keystates.items():
-            key = key.replace(' ', '').lower()
+            key = key.replace(" ", "").lower()
             setattr(keyboard, key, value)
         return keyboard
 
@@ -164,7 +164,7 @@ class ArrayKeyboard(BaseKeyboard):
 
         # if array length is bigger than 6, report ErrorRollOver
         if len(array) > 6:
-            array = ['ErrorRollOver'] * 6
+            array = ["ErrorRollOver"] * 6
 
         data.keyboard = array
         return data
@@ -266,7 +266,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
             syn_event = self.syn_event
 
-            r = uhdev.event(['a and A'])
+            r = uhdev.event(["a and A"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_A, 1))
             events = uhdev.next_sync_events()
@@ -287,7 +287,7 @@ class BaseTest:
             evdev = uhdev.get_evdev()
             syn_event = self.syn_event
 
-            r = uhdev.event(['a and A', 'q and Q'])
+            r = uhdev.event(["a and A", "q and Q"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_A, 1))
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_Q, 1))
@@ -306,7 +306,7 @@ class BaseTest:
             assert evdev.value[libevdev.EV_KEY.KEY_A] == 0
             assert evdev.value[libevdev.EV_KEY.KEY_Q] == 0
 
-            r = uhdev.event(['c and C'])
+            r = uhdev.event(["c and C"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_C, 1))
             events = uhdev.next_sync_events()
@@ -314,7 +314,7 @@ class BaseTest:
             self.assertInputEventsIn(expected, events)
             assert evdev.value[libevdev.EV_KEY.KEY_C] == 1
 
-            r = uhdev.event(['c and C', 'Spacebar'])
+            r = uhdev.event(["c and C", "Spacebar"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_SPACE, 1))
             events = uhdev.next_sync_events()
@@ -324,7 +324,7 @@ class BaseTest:
             assert evdev.value[libevdev.EV_KEY.KEY_C] == 1
             assert evdev.value[libevdev.EV_KEY.KEY_SPACE] == 1
 
-            r = uhdev.event(['Spacebar'])
+            r = uhdev.event(["Spacebar"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_C, 0))
             events = uhdev.next_sync_events()
@@ -347,7 +347,7 @@ class BaseTest:
             uhdev = self.uhdev
             syn_event = self.syn_event
 
-            r = uhdev.event(['LeftControl', 'LeftShift', '= and +'])
+            r = uhdev.event(["LeftControl", "LeftShift", "= and +"])
             expected = [syn_event]
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_LEFTCTRL, 1))
             expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_LEFTSHIFT, 1))
@@ -365,18 +365,20 @@ class TestPlainKeyboard(BaseTest.TestKeyboard):
         uhdev = self.uhdev
         syn_event = self.syn_event
 
-        r = uhdev.event([
-            '1 and !',
-            '2 and @',
-            '3 and #',
-            '4 and $',
-            '5 and %',
-            '6 and ^',
-            '7 and &',
-            '8 and *',
-            '9 and (',
-            '0 and )',
-        ])
+        r = uhdev.event(
+            [
+                "1 and !",
+                "2 and @",
+                "3 and #",
+                "4 and $",
+                "5 and %",
+                "6 and ^",
+                "7 and &",
+                "8 and *",
+                "9 and (",
+                "0 and )",
+            ]
+        )
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_0, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_1, 1))
@@ -417,14 +419,16 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
         uhdev = self.uhdev
         syn_event = self.syn_event
 
-        r = uhdev.event([
-            '1 and !',
-            '2 and @',
-            '3 and #',
-            '4 and $',
-            '5 and %',
-            '6 and ^',
-        ])
+        r = uhdev.event(
+            [
+                "1 and !",
+                "2 and @",
+                "3 and #",
+                "4 and $",
+                "5 and %",
+                "6 and ^",
+            ]
+        )
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_1, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_2, 1))
@@ -438,18 +442,20 @@ class TestArrayKeyboard(BaseTest.TestKeyboard):
         self.assertInputEventsIn(expected, events)
 
         # ErrRollOver
-        r = uhdev.event([
-            '1 and !',
-            '2 and @',
-            '3 and #',
-            '4 and $',
-            '5 and %',
-            '6 and ^',
-            '7 and &',
-            '8 and *',
-            '9 and (',
-            '0 and )',
-        ])
+        r = uhdev.event(
+            [
+                "1 and !",
+                "2 and @",
+                "3 and #",
+                "4 and $",
+                "5 and %",
+                "6 and ^",
+                "7 and &",
+                "8 and *",
+                "9 and (",
+                "0 and )",
+            ]
+        )
         events = uhdev.next_sync_events()
 
         self.debug_reports(r, uhdev, events)

@@ -24,7 +24,8 @@ import hidtools
 from hidtools.hid import HidUnit, Unit
 import pytest
 import logging
-logger = logging.getLogger('hidtools.test.hid')
+
+logger = logging.getLogger("hidtools.test.hid")
 
 
 class TestReportDescriptor:
@@ -400,7 +401,6 @@ class TestReportDescriptor:
         hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
 
     def test_human_decode(self):
-
         # Same report descriptor as above, but a bunch of
         # 0x26, 0xff, 0x00,              # ..Logical Maximum (255)
         # are replaced with the single byte form
@@ -778,7 +778,7 @@ class TestReportDescriptor:
 
         initial_rdesc = hidtools.hid.ReportDescriptor.from_bytes(report_descriptor)
         string = io.StringIO()
-        initial_rdesc.dump(dump_file=string, output_type='human')
+        initial_rdesc.dump(dump_file=string, output_type="human")
         parsed_rdesc = hidtools.hid.ReportDescriptor.from_human_descr(string.getvalue())
 
         assert initial_rdesc.bytes == parsed_rdesc.bytes
@@ -882,9 +882,9 @@ class TestReportDescriptor:
         # in the report, and that they're represented in the string format
         feature_usages = (f.usage for f in report.fields)
         printout = report.format_report([0] * report.size)
-        for usage in range(0xc02c1, 0xc02c6 + 1):  # see bytes 63/66
-            assert usage in feature_usages, f'Usage {usage:#x} missing in report'
-            string = hidtools.hut.HUT[0xc][usage].name
+        for usage in range(0xC02C1, 0xC02C6 + 1):  # see bytes 63/66
+            assert usage in feature_usages, f"Usage {usage:#x} missing in report"
+            string = hidtools.hut.HUT[0xC][usage].name
             assert string in printout
 
 
@@ -894,14 +894,14 @@ class TestHidUnit:
             assert HidUnit.from_bytes(bytes(x)) is None
         assert HidUnit.from_value(0) is None
 
-    @pytest.mark.parametrize('exp', range(0x1, 0x10))
+    @pytest.mark.parametrize("exp", range(0x1, 0x10))
     def test_exponent(self, exp):
         value = 0x1 | (exp << 4)
         unit = HidUnit.from_value(value)
         expected_exponent = exp if exp < 0x8 else (exp - 16)
         assert unit.units == {Unit.CENTIMETER: expected_exponent}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_length(self, system):
         value = system.value | 0x70  # exp of 7
         unit = HidUnit.from_value(value)
@@ -917,7 +917,7 @@ class TestHidUnit:
         else:
             assert unit.units == {expected_unit: 7}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_mass(self, system):
         value = system.value | 0x700  # exp of 7
         unit = HidUnit.from_value(value)
@@ -933,7 +933,7 @@ class TestHidUnit:
         else:
             assert unit.units == {expected_unit: 7}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_time(self, system):
         value = system.value | 0x7000  # exp of 7
         unit = HidUnit.from_value(value)
@@ -942,7 +942,7 @@ class TestHidUnit:
         else:
             assert unit.units == {Unit.SECONDS: 7}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_temperature(self, system):
         value = system.value | 0x70000  # exp of 7
         unit = HidUnit.from_value(value)
@@ -958,7 +958,7 @@ class TestHidUnit:
         else:
             assert unit.units == {expected_unit: 7}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_current(self, system):
         value = system.value | 0x700000  # exp of 7
         unit = HidUnit.from_value(value)
@@ -967,7 +967,7 @@ class TestHidUnit:
         else:
             assert unit.units == {Unit.AMPERE: 7}
 
-    @pytest.mark.parametrize('system', HidUnit.System)
+    @pytest.mark.parametrize("system", HidUnit.System)
     def test_unit_lum_intensity(self, system):
         value = system.value | 0x7000000  # exp of 7
         unit = HidUnit.from_value(value)
@@ -979,13 +979,13 @@ class TestHidUnit:
     # Examples from HID Spec (page 39)
     def test_hid_examples(self):
         # Velocity (cm/s)
-        unit = HidUnit.from_value(0xf011)
+        unit = HidUnit.from_value(0xF011)
         assert unit.units == {
             Unit.CENTIMETER: 1,
             Unit.SECONDS: -1,
         }
         # Momentum
-        unit = HidUnit.from_value(0xf111)
+        unit = HidUnit.from_value(0xF111)
         assert unit.units == {
             Unit.CENTIMETER: 1,
             Unit.GRAM: 1,
@@ -1027,22 +1027,26 @@ class TestHidUnit:
         }
 
     # The example values from above
-    @pytest.mark.parametrize('value', [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121])
+    @pytest.mark.parametrize(
+        "value", [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121]
+    )
     def test_value(self, value):
         assert HidUnit.from_value(value).value == value
 
     # The example values from above
-    @pytest.mark.parametrize('value', [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121])
+    @pytest.mark.parametrize(
+        "value", [0xF111, 0xE011, 0xE111, 0xE121, 0xE012, 0x00F0D121]
+    )
     def test_from_string(self, value):
-        before = HidUnit.from_value(0xf011)
+        before = HidUnit.from_value(0xF011)
         after = HidUnit.from_string(str(before))
         assert before == after
 
     # All possible permutations of allowed values
     # We don't test None/Reserved here
-    @pytest.mark.parametrize('system', range(0x1, 0x5))
-    @pytest.mark.parametrize('exp', range(0x1, 0x10))
-    @pytest.mark.parametrize('nibble', range(0x1, 0x7))
+    @pytest.mark.parametrize("system", range(0x1, 0x5))
+    @pytest.mark.parametrize("exp", range(0x1, 0x10))
+    @pytest.mark.parametrize("nibble", range(0x1, 0x7))
     def test_from_string_all(self, system, exp, nibble):
         value = system | (exp << (nibble * 4))
         before = HidUnit.from_value(value)

@@ -25,11 +25,11 @@ from hidtools.hidraw import HidrawDevice
 
 
 def make_id(ridx, idx):
-    return (ridx & 0xff) << 16 | idx & 0xffff
+    return (ridx & 0xFF) << 16 | idx & 0xFFFF
 
 
 def feature_report_fields(device, report_id=None):
-    '''Return a flat list of Feature Report fields for this device'''
+    """Return a flat list of Feature Report fields for this device"""
     rdesc = device.report_descriptor
     fields = []
     for report in rdesc.feature_reports.values():
@@ -49,29 +49,41 @@ def hid_feature():
 
 @hid_feature.command()
 def list_devices():
-    '''List available HID devices'''
+    """List available HID devices"""
 
-    print('Available devices:')
-    for hidraw in sorted(Path('/dev/').glob('hidraw*')):
+    print("Available devices:")
+    for hidraw in sorted(Path("/dev/").glob("hidraw*")):
         with open(hidraw) as fd:
             d = HidrawDevice(fd)
-            print(f'{hidraw}: {d.name}')
+            print(f"{hidraw}: {d.name}")
 
 
 @hid_feature.command()
-@click.argument('device', metavar='<Path to the hidraw device node>', type=click.File('r'))
-@click.option('--fetch-values', is_flag=True, default=False, help="Fetch the current value from the device")
-@click.option('--report-id', type=click.IntRange(-1, 255), default=None, required=False,
-              help='Only list the given Feature Reports')
+@click.argument(
+    "device", metavar="<Path to the hidraw device node>", type=click.File("r")
+)
+@click.option(
+    "--fetch-values",
+    is_flag=True,
+    default=False,
+    help="Fetch the current value from the device",
+)
+@click.option(
+    "--report-id",
+    type=click.IntRange(-1, 255),
+    default=None,
+    required=False,
+    help="Only list the given Feature Reports",
+)
 def list(device, fetch_values, report_id):
-    '''
+    """
     List the available Feature Reports of a device and their respective items
     with details about each item.
 
     If --fetch-values is given, the current value of each item is shown as
     well. Note that the value depends on the device, no consistent formatting
     should be expected.
-    '''
+    """
 
     d = HidrawDevice(device)
 
@@ -84,8 +96,8 @@ def list(device, fetch_values, report_id):
     def print_header():
         header = f'Feature | Report | {"Usage Page":25s} | {"Usage":42s} | {"Range":9s} | Count | Bits '
         if fetch_values:
-            header += '| Value(s)'
-        divisor = ''.join(['-' if x != '|' else '|' for x in header])
+            header += "| Value(s)"
+        divisor = "".join(["-" if x != "|" else "|" for x in header])
         print(header)
         print(divisor)
 
@@ -97,37 +109,50 @@ def list(device, fetch_values, report_id):
                 try:
                     reports[f.report_ID] = d.get_feature_report(f.report_ID)
                 except OSError as e:
-                    print(f'Failed to get Feature Report ID {f.report_ID} from device: {e}')
-                    print('Cannot run with --fetch-values')
+                    print(
+                        f"Failed to get Feature Report ID {f.report_ID} from device: {e}"
+                    )
+                    print("Cannot run with --fetch-values")
                     sys.exit(1)
 
             values = f.get_values(reports[f.report_ID])
             if len(values) == 1:
-                vstring = f' | {values[0]}'
+                vstring = f" | {values[0]}"
             else:
                 vstring = f' | {", ".join([str(x) for x in values])}'
         else:
-            vstring = ''
+            vstring = ""
 
         if not header_printed:
             header_printed = True
             print_header()
 
-        print(f'{f._unique_id:7x} | {f.report_ID:6d} | {f.usage_page_name:25s} | {str(f.usage_name):42s} | [{f.logical_min:2d}, {f.logical_max:3d}] | {f.count:5d} | {f.size:3d} {vstring}')
+        print(
+            f"{f._unique_id:7x} | {f.report_ID:6d} | {f.usage_page_name:25s} | {str(f.usage_name):42s} | [{f.logical_min:2d}, {f.logical_max:3d}] | {f.count:5d} | {f.size:3d} {vstring}"
+        )
 
 
 @hid_feature.command()
-@click.argument('device', metavar='<Path to the hidraw device node>', type=click.File('r'))
-@click.option('--feature', '-f', 'feature_ids', type=(str, int), required=True,
-              multiple=True, help='Set the given feature(s)')
+@click.argument(
+    "device", metavar="<Path to the hidraw device node>", type=click.File("r")
+)
+@click.option(
+    "--feature",
+    "-f",
+    "feature_ids",
+    type=(str, int),
+    required=True,
+    multiple=True,
+    help="Set the given feature(s)",
+)
 def set(device, feature_ids):
-    '''
+    """
     Set the given features of a Feature Report. The feature must be
     specified as a tuple of index and value, where the index is the one
     listed by hid-feature list-report
 
     Only features of the same Report ID can be changed in one go.
-    '''
+    """
 
     d = HidrawDevice(device)
     all_fields = feature_report_fields(d)
@@ -135,13 +160,13 @@ def set(device, feature_ids):
         # arg has to be string because we expect non-prefixed hex
         fids = [int(x[0], 16) for x in feature_ids]
     except ValueError:
-        print('Invalid Feature ID format(s)', file=sys.stderr)
+        print("Invalid Feature ID format(s)", file=sys.stderr)
         sys.exit(1)
 
     allowed_ids = [f._unique_id for f in all_fields]
     for fid in fids:
         if fid not in allowed_ids:
-            print(f'Invalid feature index: {fid}', file=sys.stderr)
+            print(f"Invalid feature index: {fid}", file=sys.stderr)
             sys.exit(1)
 
     fields = []
@@ -153,7 +178,7 @@ def set(device, feature_ids):
         if report_id is None:
             report_id = f.report_ID
         elif report_id != f.report_ID:
-            print('All features must belong to the same Report ID', file=sys.stderr)
+            print("All features must belong to the same Report ID", file=sys.stderr)
             sys.exit(1)
 
         fields.append(f)
@@ -165,7 +190,7 @@ def set(device, feature_ids):
     try:
         data = d.get_feature_report(report_id)
     except OSError as e:
-        print(f'Failed to get feature report ID {report_id}: {e}')
+        print(f"Failed to get feature report ID {report_id}: {e}")
         sys.exit(1)
 
     # Now update the report with the data for each field
@@ -177,7 +202,7 @@ def set(device, feature_ids):
     try:
         d.set_feature_report(report_id, data)
     except OSError as e:
-        print(f'Failed to set feature report ID {report_id}: {e}')
+        print(f"Failed to set feature report ID {report_id}: {e}")
         sys.exit(1)
 
 

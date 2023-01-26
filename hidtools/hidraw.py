@@ -31,7 +31,7 @@ from hidtools.util import BusType
 def _ioctl(fd, EVIOC, code, return_type, buf=None):
     size = struct.calcsize(return_type)
     if buf is None:
-        buf = size * '\x00'
+        buf = size * "\x00"
     abs = fcntl.ioctl(fd, EVIOC(code, size), buf)
     return struct.unpack(return_type, abs)
 
@@ -57,10 +57,12 @@ _IOC_DIRSHIFT = _IOC_SIZESHIFT + _IOC_SIZEBITS
 # 	 ((nr)   << _IOC_NRSHIFT) | \
 # 	 ((size) << _IOC_SIZESHIFT))
 def _IOC(dir, type, nr, size):
-    return ((dir << _IOC_DIRSHIFT) |
-            (ord(type) << _IOC_TYPESHIFT) |
-            (nr << _IOC_NRSHIFT) |
-            (size << _IOC_SIZESHIFT))
+    return (
+        (dir << _IOC_DIRSHIFT)
+        | (ord(type) << _IOC_TYPESHIFT)
+        | (nr << _IOC_NRSHIFT)
+        | (size << _IOC_SIZESHIFT)
+    )
 
 
 # define _IOR(type,nr,size)	_IOC(_IOC_READ,(type),(nr),(_IOC_TYPECHECK(size)))
@@ -75,77 +77,77 @@ def _IOW(type, nr, size):
 
 # define HIDIOCGRDESCSIZE	_IOR('H', 0x01, int)
 def _IOC_HIDIOCGRDESCSIZE(none, len):
-    return _IOR('H', 0x01, len)
+    return _IOR("H", 0x01, len)
 
 
 def _HIDIOCGRDESCSIZE(fd):
-    """ get report descriptors size """
-    type = 'i'
+    """get report descriptors size"""
+    type = "i"
     return int(*_ioctl(fd, _IOC_HIDIOCGRDESCSIZE, None, type))
 
 
 # define HIDIOCGRDESC		_IOR('H', 0x02, struct hidraw_report_descriptor)
 def _IOC_HIDIOCGRDESC(none, len):
-    return _IOR('H', 0x02, len)
+    return _IOR("H", 0x02, len)
 
 
 def _HIDIOCGRDESC(fd, size):
-    """ get report descriptors """
+    """get report descriptors"""
     format = "I4096c"
     tmp = struct.pack("i", size) + bytes(4096)
-    _buffer = array.array('B', tmp)
+    _buffer = array.array("B", tmp)
     fcntl.ioctl(fd, _IOC_HIDIOCGRDESC(None, struct.calcsize(format)), _buffer)
-    size, = struct.unpack("i", _buffer[:4])
-    value = _buffer[4:size + 4]
+    (size,) = struct.unpack("i", _buffer[:4])
+    value = _buffer[4 : size + 4]
     return size, value
 
 
 # define HIDIOCGRAWINFO		_IOR('H', 0x03, struct hidraw_devinfo)
 def _IOC_HIDIOCGRAWINFO(none, len):
-    return _IOR('H', 0x03, len)
+    return _IOR("H", 0x03, len)
 
 
 def _HIDIOCGRAWINFO(fd):
-    """ get hidraw device infos """
-    type = 'ihh'
+    """get hidraw device infos"""
+    type = "ihh"
     return _ioctl(fd, _IOC_HIDIOCGRAWINFO, None, type)
 
 
 # define HIDIOCGRAWNAME(len)     _IOC(_IOC_READ, 'H', 0x04, len)
 def _IOC_HIDIOCGRAWNAME(none, len):
-    return _IOC(_IOC_READ, 'H', 0x04, len)
+    return _IOC(_IOC_READ, "H", 0x04, len)
 
 
 def _HIDIOCGRAWNAME(fd):
-    """ get device name """
-    type = 1024 * 'c'
+    """get device name"""
+    type = 1024 * "c"
     cstring = _ioctl(fd, _IOC_HIDIOCGRAWNAME, None, type)
-    string = b''.join(cstring).decode('utf-8')
-    return "".join(string).rstrip('\x00')
+    string = b"".join(cstring).decode("utf-8")
+    return "".join(string).rstrip("\x00")
 
 
 # define HIDIOCGFEATURE(len) _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x07, len)
 def _IOC_HIDIOCGFEATURE(none, len):
-    return _IOC(_IOC_WRITE | _IOC_READ, 'H', 0x07, len)
+    return _IOC(_IOC_WRITE | _IOC_READ, "H", 0x07, len)
 
 
 def _HIDIOCGFEATURE(fd, report_id, rsize):
-    """ get feature report """
+    """get feature report"""
     assert report_id <= 255 and report_id > -1
 
     # rsize has the report length in it
-    buf = bytearray([report_id & 0xff]) + bytearray(rsize - 1)
+    buf = bytearray([report_id & 0xFF]) + bytearray(rsize - 1)
     fcntl.ioctl(fd, _IOC_HIDIOCGFEATURE(None, len(buf)), buf)
     return list(buf)  # Note: first byte is report ID
 
 
 # define HIDIOCSFEATURE(len) _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x06, len)
 def _IOC_HIDIOCSFEATURE(none, len):
-    return _IOC(_IOC_WRITE | _IOC_READ, 'H', 0x06, len)
+    return _IOC(_IOC_WRITE | _IOC_READ, "H", 0x06, len)
 
 
 def _HIDIOCSFEATURE(fd, data):
-    """ set feature report """
+    """set feature report"""
 
     buf = bytearray(data)
     sz = fcntl.ioctl(fd, _IOC_HIDIOCSFEATURE(None, len(buf)), buf)
@@ -169,6 +171,7 @@ class HidrawEvent(object):
 
         The data bytes read for this event
     """
+
     def __init__(self, sec, usec, bytes):
         self.sec, self.usec = sec, usec
         self.bytes = bytes
@@ -219,6 +222,7 @@ class HidrawDevice(object):
         simply apply the offset of the first device to receive an event to
         all other devices to get synchronized time stamps for all devices.
     """
+
     def __init__(self, device):
         fd = device.fileno()
         self.device = device
@@ -239,7 +243,7 @@ class HidrawDevice(object):
         self.time_offset = None
 
     def __repr__(self):
-        return f'{self.name} bus: {self.bustype:02x} vendor: {self.vendor_id:04x} product: {self.product_id:04x}'
+        return f"{self.name} bus: {self.bustype:02x} vendor: {self.vendor_id:04x} product: {self.product_id:04x}"
 
     def read_events(self):
         """
@@ -266,7 +270,7 @@ class HidrawDevice(object):
             if self.time_offset is None:
                 self.time_offset = now
             tdelta = now - self.time_offset
-            bytes = struct.unpack('B' * len(data), data)
+            bytes = struct.unpack("B" * len(data), data)
 
             self.events.append(HidrawEvent(tdelta.seconds, tdelta.microseconds, bytes))
 
@@ -282,24 +286,28 @@ class HidrawDevice(object):
             indent_2nd_line = 2
             output = rdesc.format_report(event.bytes)
             try:
-                first_row = output.split('\n')[0]
+                first_row = output.split("\n")[0]
             except IndexError:
                 pass
             else:
                 # we have a multi-line output, find where the fields are split
                 try:
-                    slash = first_row.index('/')
+                    slash = first_row.index("/")
                 except ValueError:
                     pass
                 else:
                     # the `+1` below is to make a better visual effect
                     indent_2nd_line = slash + 1
             indent = f'\n#{" " * indent_2nd_line}'
-            output = indent.join(output.split('\n'))
-            print(f'# {output}', file=file)
+            output = indent.join(output.split("\n"))
+            print(f"# {output}", file=file)
 
-        data = map(lambda x: f'{x:02x}', event.bytes)
-        print(f'E: {event.sec:06d}.{event.usec:06d} {len(event.bytes)} {" ".join(data)}', file=file, flush=True)
+        data = map(lambda x: f"{x:02x}", event.bytes)
+        print(
+            f'E: {event.sec:06d}.{event.usec:06d} {len(event.bytes)} {" ".join(data)}',
+            file=file,
+            flush=True,
+        )
 
     def dump(self, file=sys.stdout, from_the_beginning=False):
         """
@@ -325,21 +333,25 @@ class HidrawDevice(object):
             self._dump_offset = -1
 
         if self._dump_offset == -1:
-            print(f'# {self.name}', file=file)
+            print(f"# {self.name}", file=file)
             output = io.StringIO()
             self.report_descriptor.dump(output)
-            for line in output.getvalue().split('\n'):
-                print(f'# {line}', file=file)
+            for line in output.getvalue().split("\n"):
+                print(f"# {line}", file=file)
             output.close()
 
-            rd = " ".join([f'{b:02x}' for b in self.report_descriptor.bytes])
+            rd = " ".join([f"{b:02x}" for b in self.report_descriptor.bytes])
             sz = len(self.report_descriptor.bytes)
-            print(f'R: {sz} {rd}', file=file)
-            print(f'N: {self.name}', file=file)
-            print(f'I: {self.bustype:x} {self.vendor_id:04x} {self.product_id:04x}', file=file, flush=True)
+            print(f"R: {sz} {rd}", file=file)
+            print(f"N: {self.name}", file=file)
+            print(
+                f"I: {self.bustype:x} {self.vendor_id:04x} {self.product_id:04x}",
+                file=file,
+                flush=True,
+            )
             self._dump_offset = 0
 
-        for e in self.events[self._dump_offset:]:
+        for e in self.events[self._dump_offset :]:
             self._dump_event(e, file)
         self._dump_offset = len(self.events)
 
@@ -369,4 +381,4 @@ class HidrawDevice(object):
         fd = self.device.fileno()
         sz = _HIDIOCSFEATURE(fd, data)
         if sz != len(data):
-            raise OSError('Failed to write data: {data} - bytes written: {sz}')
+            raise OSError("Failed to write data: {data} - bytes written: {sz}")

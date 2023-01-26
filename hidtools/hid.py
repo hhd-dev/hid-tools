@@ -26,49 +26,57 @@ import sys
 from hidtools.hut import HUT
 from hidtools.util import twos_comp, to_twos_comp
 import logging
-logger = logging.getLogger('hidtools.hid')
+
+logger = logging.getLogger("hidtools.hid")
 
 hid_items = {
     "Main": {
-        "Input"             : 0b10000000,  # noqa: E203
-        "Output"            : 0b10010000,  # noqa: E203
-        "Feature"           : 0b10110000,  # noqa: E203
-        "Collection"        : 0b10100000,  # noqa: E203
-        "End Collection"    : 0b11000000,  # noqa: E203
+        "Input": 0b10000000,  # noqa: E203
+        "Output": 0b10010000,  # noqa: E203
+        "Feature": 0b10110000,  # noqa: E203
+        "Collection": 0b10100000,  # noqa: E203
+        "End Collection": 0b11000000,  # noqa: E203
     },
-
     "Global": {
-        "Usage Page"        : 0b00000100,  # noqa: E203
-        "Logical Minimum"   : 0b00010100,  # noqa: E203
-        "Logical Maximum"   : 0b00100100,  # noqa: E203
-        "Physical Minimum"  : 0b00110100,  # noqa: E203
-        "Physical Maximum"  : 0b01000100,  # noqa: E203
-        "Unit Exponent"     : 0b01010100,  # noqa: E203
-        "Unit"              : 0b01100100,  # noqa: E203
-        "Report Size"       : 0b01110100,  # noqa: E203
-        "Report ID"         : 0b10000100,  # noqa: E203
-        "Report Count"      : 0b10010100,  # noqa: E203
-        "Push"              : 0b10100100,  # noqa: E203
-        "Pop"               : 0b10110100,  # noqa: E203
-    },                                     # noqa: E203
-
+        "Usage Page": 0b00000100,  # noqa: E203
+        "Logical Minimum": 0b00010100,  # noqa: E203
+        "Logical Maximum": 0b00100100,  # noqa: E203
+        "Physical Minimum": 0b00110100,  # noqa: E203
+        "Physical Maximum": 0b01000100,  # noqa: E203
+        "Unit Exponent": 0b01010100,  # noqa: E203
+        "Unit": 0b01100100,  # noqa: E203
+        "Report Size": 0b01110100,  # noqa: E203
+        "Report ID": 0b10000100,  # noqa: E203
+        "Report Count": 0b10010100,  # noqa: E203
+        "Push": 0b10100100,  # noqa: E203
+        "Pop": 0b10110100,  # noqa: E203
+    },  # noqa: E203
     "Local": {
-        "Usage"             : 0b00001000,  # noqa: E203
-        "Usage Minimum"     : 0b00011000,  # noqa: E203
-        "Usage Maximum"     : 0b00101000,  # noqa: E203
-        "Designator Index"  : 0b00111000,  # noqa: E203
+        "Usage": 0b00001000,  # noqa: E203
+        "Usage Minimum": 0b00011000,  # noqa: E203
+        "Usage Maximum": 0b00101000,  # noqa: E203
+        "Designator Index": 0b00111000,  # noqa: E203
         "Designator Minimum": 0b01001000,  # noqa: E203
         "Designator Maximum": 0b01011000,  # noqa: E203
-        "String Index"      : 0b01111000,  # noqa: E203
-        "String Minimum"    : 0b10001000,  # noqa: E203
-        "String Maximum"    : 0b10011000,  # noqa: E203
-        "Delimiter"         : 0b10101000,  # noqa: E203
+        "String Index": 0b01111000,  # noqa: E203
+        "String Minimum": 0b10001000,  # noqa: E203
+        "String Maximum": 0b10011000,  # noqa: E203
+        "Delimiter": 0b10101000,  # noqa: E203
     },
 }
 
 superscripts = {
-    '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶',
-    '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
+    "0": "⁰",
+    "1": "¹",
+    "2": "²",
+    "3": "³",
+    "4": "⁴",
+    "5": "⁵",
+    "6": "⁶",
+    "7": "⁷",
+    "8": "⁸",
+    "9": "⁹",
+    "-": "⁻",
 }
 
 
@@ -83,7 +91,7 @@ class HidCollection:
         USAGE_MODIFIER = 6
 
     def __init__(self, value):
-        assert value <= 0xff
+        assert value <= 0xFF
         self.value = value
         self.name = str(self)
         try:
@@ -93,57 +101,61 @@ class HidCollection:
 
     @property
     def is_reserved(self):
-        return 0x07 <= self.value <= 0x7f
+        return 0x07 <= self.value <= 0x7F
 
     @property
     def is_vendor_defined(self):
-        return 0x80 <= self.value <= 0xff
+        return 0x80 <= self.value <= 0xFF
 
     @classmethod
     def from_str(cls, string):
-        '''
+        """
         Return the value of this HidCollection given the human-readable
         string.
-        '''
+        """
         for v in HidCollection.Type:
             if v.name == string.strip().upper():
                 return v.value
-        match = re.match(r'\s*(vendor[ -_]defined)\s+(0x|x)?(?P<value>[0-9a-f]{2,})', string, flags=re.IGNORECASE)
+        match = re.match(
+            r"\s*(vendor[ -_]defined)\s+(0x|x)?(?P<value>[0-9a-f]{2,})",
+            string,
+            flags=re.IGNORECASE,
+        )
         if not match:
-            raise ValueError(f'Invalid HidCollection: {string}')
+            raise ValueError(f"Invalid HidCollection: {string}")
 
-        return int(match['value'], 16)
+        return int(match["value"], 16)
 
     def __str__(self):
         try:
             return HidCollection.Type(self.value).name
         except ValueError:
             if self.is_reserved:
-                c = f'RESERVED {self.value:#x}'
+                c = f"RESERVED {self.value:#x}"
             elif self.is_vendor_defined:
-                c = f'VENDOR_DEFINED {self.value:#x}'
+                c = f"VENDOR_DEFINED {self.value:#x}"
             else:  # not supposed to happen
                 raise
             return c
 
 
 sensor_mods = {
-    0x00: 'Mod None',
-    0x10: 'Mod Change Sensitivity Abs',
-    0x20: 'Mod Max',
-    0x30: 'Mod Min',
-    0x40: 'Mod Accuracy',
-    0x50: 'Mod Resolution',
-    0x60: 'Mod Threshold High',
-    0x70: 'Mod Threshold Low',
-    0x80: 'Mod Calibration Offset',
-    0x90: 'Mod Calibration Multiplier',
-    0xa0: 'Mod Report Interval',
-    0xb0: 'Mod Frequency Max',
-    0xc0: 'Mod Period Max',
-    0xd0: 'Mod Change Sensitivity Range Percent',
-    0xe0: 'Mod Change Sensitivity Rel Percent',
-    0xf0: 'Mod Vendor Reserved',
+    0x00: "Mod None",
+    0x10: "Mod Change Sensitivity Abs",
+    0x20: "Mod Max",
+    0x30: "Mod Min",
+    0x40: "Mod Accuracy",
+    0x50: "Mod Resolution",
+    0x60: "Mod Threshold High",
+    0x70: "Mod Threshold Low",
+    0x80: "Mod Calibration Offset",
+    0x90: "Mod Calibration Multiplier",
+    0xA0: "Mod Report Interval",
+    0xB0: "Mod Frequency Max",
+    0xC0: "Mod Period Max",
+    0xD0: "Mod Change Sensitivity Range Percent",
+    0xE0: "Mod Change Sensitivity Rel Percent",
+    0xF0: "Mod Vendor Reserved",
 }
 
 inv_hid = {}  # e.g 0b10000000 : "Input"
@@ -156,6 +168,7 @@ for type, items in hid_items.items():
 
 class ParseError(Exception):
     """Exception thrown during report descriptor parsing"""
+
     pass
 
 
@@ -174,6 +187,7 @@ class RangeError(Exception):
 
         The :class:`HidField` that triggered this exception
     """
+
     def __init__(self, field, value):
         self.field = field
         self.range = field.logical_min, field.logical_max
@@ -181,7 +195,7 @@ class RangeError(Exception):
 
     def __str__(self):
         min, max = self.range
-        return f'Value {self.value} is outside range {min}, {max} for {self.field.usage_name}'
+        return f"Value {self.value} is outside range {min}, {max} for {self.field.usage_name}"
 
 
 class _HidRDescItem(object):
@@ -241,6 +255,7 @@ class _HidRDescItem(object):
         The payload value as single number
 
     """
+
     def __init__(self, index_in_report, hid, value, raw_values):
         self.index_in_report = index_in_report
         self.raw_value = raw_values
@@ -249,14 +264,15 @@ class _HidRDescItem(object):
         try:
             self.item = inv_hid[self.hid]
         except KeyError:
-            error = f'error while parsing {hid:02x}'
+            error = f"error while parsing {hid:02x}"
             raise KeyError(error)
 
-        if self.item in ("Logical Minimum",
-                         "Physical Minimum",
-                         # "Logical Maximum",
-                         # "Physical Maximum",
-                         ):
+        if self.item in (
+            "Logical Minimum",
+            "Physical Minimum",
+            # "Logical Maximum",
+            # "Physical Maximum",
+        ):
             self._twos_comp()
         if self.item == "Unit Exponent" and self.value > 7:
             self.value -= 16
@@ -285,7 +301,7 @@ class _HidRDescItem(object):
         return [h] + self.raw_value.copy()
 
     def __repr__(self):
-        data = [f'{i:02x}' for i in self.bytes]
+        data = [f"{i:02x}" for i in self.bytes]
         return f'{" ".join(data)}'
 
     def _get_raw_values(self):
@@ -305,46 +321,46 @@ class _HidRDescItem(object):
         value = self.value
         up = self.usage_page
         descr = item
-        if item in ("Report ID",
-                    "Usage Minimum",
-                    "Usage Maximum",
-                    "Logical Minimum",
-                    "Physical Minimum",
-                    "Logical Maximum",
-                    "Physical Maximum",
-                    "Report Size",
-                    "Report Count",
-                    "Unit Exponent"):
-            descr += f' ({str(value)})'
+        if item in (
+            "Report ID",
+            "Usage Minimum",
+            "Usage Maximum",
+            "Logical Minimum",
+            "Physical Minimum",
+            "Logical Maximum",
+            "Physical Maximum",
+            "Report Size",
+            "Report Count",
+            "Unit Exponent",
+        ):
+            descr += f" ({str(value)})"
         elif item == "Collection":
-            descr += f' ({HidCollection(value).name.capitalize()})'
+            descr += f" ({HidCollection(value).name.capitalize()})"
             indent += 1
         elif item == "End Collection":
             indent -= 1
         elif item == "Usage Page":
             try:
-                descr += f' ({HUT[value].page_name})'
+                descr += f" ({HUT[value].page_name})"
             except KeyError:
-                descr += f' (Vendor Usage Page 0x{value:02x})'
+                descr += f" (Vendor Usage Page 0x{value:02x})"
         elif item == "Usage":
             usage = value | up
             try:
-                descr += f' ({HUT[up >> 16][value]})'
+                descr += f" ({HUT[up >> 16][value]})"
             except KeyError:
-                if (up >> 16) == HUT.usage_page_from_name('Sensor').page_id:
+                if (up >> 16) == HUT.usage_page_from_name("Sensor").page_id:
                     mod = (usage & 0xF000) >> 8
                     usage &= ~0xF000
                     mod_descr = sensor_mods[mod]
                     page_id = (usage & 0xFF00) >> 16
                     try:
-                        descr += f' ({HUT[page_id][usage & 0xFF]}  | {mod_descr})'
+                        descr += f" ({HUT[page_id][usage & 0xFF]}  | {mod_descr})"
                     except KeyError:
-                        descr += f' (Unknown Usage 0x{value:02x})'
+                        descr += f" (Unknown Usage 0x{value:02x})"
                 else:
-                    descr += f' (Vendor Usage 0x{value:02x})'
-        elif item == "Input" \
-                or item == "Output" \
-                or item == "Feature":
+                    descr += f" (Vendor Usage 0x{value:02x})"
+        elif item == "Input" or item == "Output" or item == "Feature":
             descr += " ("
             if value & (0x1 << 0):
                 descr += "Cnst,"
@@ -373,7 +389,7 @@ class _HidRDescItem(object):
             descr += ")"
         elif item == "Unit":
             unit = HidUnit.from_value(value)
-            descr += f' ({unit})'
+            descr += f" ({unit})"
         elif item == "Push":
             pass
         elif item == "Pop":
@@ -381,7 +397,7 @@ class _HidRDescItem(object):
         eff_indent = indent
         if item == "Collection":
             eff_indent -= 1
-        return ' ' * eff_indent + descr, indent
+        return " " * eff_indent + descr, indent
 
     @classmethod
     def _one_item_from_bytes(cls, rdesc):
@@ -405,9 +421,9 @@ class _HidRDescItem(object):
         size = header & 0x3
         if size == 3:
             size = 4
-        hid = header & 0xfc
+        hid = header & 0xFC
         if hid == 0:
-            raise ParseError(f'Unexpected HID type 0 in {header:02x}')
+            raise ParseError(f"Unexpected HID type 0 in {header:02x}")
 
         value = 0
         raw_values = []
@@ -479,12 +495,12 @@ class _HidRDescItem(object):
         :returns: a single item representing the current line
         """
         data = None
-        if '(' in line:
-            m = re.match(r'\s*(?P<name>[^(]+)\((?P<data>.+)\)', line)
+        if "(" in line:
+            m = re.match(r"\s*(?P<name>[^(]+)\((?P<data>.+)\)", line)
             assert m is not None
-            name = m.group('name').strip()
-            data = m.group('data')
-            if data.lower().startswith('0x'):
+            name = m.group("name").strip()
+            data = m.group("data")
+            if data.lower().startswith("0x"):
                 try:
                     data = int(data[2:], 16)
                 except ValueError:
@@ -495,8 +511,8 @@ class _HidRDescItem(object):
                 except ValueError:
                     pass
         # Strip any superfluous stuff from an EndCollection line
-        elif 'End Collection' in line:
-            name = 'End Collection'
+        elif "End Collection" in line:
+            name = "End Collection"
         else:
             name = line.strip()
 
@@ -504,14 +520,14 @@ class _HidRDescItem(object):
 
         def hex_value(string, prefix):
             if string.startswith(prefix):
-                return int(data[len(prefix):], 16)
+                return int(data[len(prefix) :], 16)
             return None
 
         if isinstance(data, str):
             if name == "Usage Page":
                 up = HUT.usage_page_from_name(data)
                 if up is None:
-                    prefix = 'Vendor Usage Page '
+                    prefix = "Vendor Usage Page "
                     assert data.startswith(prefix)
                     value = hex_value(data, prefix)
                 else:
@@ -521,29 +537,29 @@ class _HidRDescItem(object):
                 try:
                     value = HUT[usage_page].from_name[data].usage
                 except KeyError:
-                    value = hex_value(data, 'Vendor Usage ')
+                    value = hex_value(data, "Vendor Usage ")
                     if value is None:
                         raise
             elif name == "Collection":
                 value = HidCollection.from_str(data)
-            elif name in 'Input Output Feature':
+            elif name in "Input Output Feature":
                 value = 0
                 possible_types = (
-                    'Cnst',
-                    'Var',
-                    'Rel',
-                    'Wrap',
-                    'NonLin',
-                    'NoPref',
-                    'Null',
-                    'Vol',
-                    'Buff',
+                    "Cnst",
+                    "Var",
+                    "Rel",
+                    "Wrap",
+                    "NonLin",
+                    "NoPref",
+                    "Null",
+                    "Vol",
+                    "Buff",
                 )
                 for i, v in enumerate(possible_types):
                     if v in data:
-                        value |= (0x1 << i)
-            elif name == 'Unit':
-                if data == 'None':
+                        value |= 0x1 << i
+            elif name == "Unit":
+                if data == "None":
                     value = 0
                 else:
                     value = HidUnit.from_string(data).value
@@ -554,9 +570,9 @@ class _HidRDescItem(object):
 
         v_count = 0
         if value is not None:
-            if value <= 0xff:
+            if value <= 0xFF:
                 v_count = 1
-            elif value <= 0xffff:
+            elif value <= 0xFFFF:
                 v_count = 2
             else:
                 v_count = 4
@@ -568,13 +584,13 @@ class _HidRDescItem(object):
             if name == "Unit Exponent":
                 value += 16
                 value = to_twos_comp(value, v_count * 8)
-            elif name in ('Logical Minimum', 'Physical Minimum'):
+            elif name in ("Logical Minimum", "Physical Minimum"):
                 value = to_twos_comp(value, v_count * 8)
 
         v = value
         vs = []
         for i in range(v_count):
-            vs.append(v & 0xff)
+            vs.append(v & 0xFF)
             v >>= 8
 
         item = _HidRDescItem(0, tag, value, vs)
@@ -599,7 +615,7 @@ class _HidRDescItem(object):
 
         descr += "\t" * (int((52 - len(descr)) / 8))
         # dump_file.write(f'{line}/* {descr} {str(offset)} */\n')
-        dump_file.write(f'\t{line}/* {descr}*/\n')
+        dump_file.write(f"\t{line}/* {descr}*/\n")
         return indent
 
     def dump_rdesc_array(self, indent, dump_file):
@@ -619,7 +635,7 @@ class _HidRDescItem(object):
         descr, indent = self.get_human_descr(indent)
 
         descr += " " * (35 - len(descr))
-        dump_file.write(f'{line} // {descr} {str(offset)}\n')
+        dump_file.write(f"{line} // {descr} {str(offset)}\n")
         return indent
 
     def dump_rdesc_human(self, indent, dump_file):
@@ -634,7 +650,7 @@ class _HidRDescItem(object):
         offset = self.index_in_report
         descr, indent = self.get_human_descr(indent)
         descr += " " * (35 - len(descr))
-        dump_file.write(f'{descr} {str(offset)}\n')
+        dump_file.write(f"{descr} {str(offset)}\n")
         return indent
 
     def dump_rdesc_lsusb(self, indent, dump_file):
@@ -648,30 +664,30 @@ class _HidRDescItem(object):
         if item != "End Collection":
             data = " ["
             for v in self.raw_value:
-                data += f' 0x{v & 0xff:02x}'
-            data += f' ] {value}'
-        dump_file.write(f'            Item({hid_type[item]:6s}): {item}, data={data}\n')
+                data += f" 0x{v & 0xff:02x}"
+            data += f" ] {value}"
+        dump_file.write(f"            Item({hid_type[item]:6s}): {item}, data={data}\n")
         if item == "Usage":
             try:
                 page_id = up >> 16
-                dump_file.write(f'                 {HUT[page_id][value]}\n')
+                dump_file.write(f"                 {HUT[page_id][value]}\n")
             except KeyError:
                 pass
 
 
 class Unit(enum.Enum):
-    CENTIMETER = 'cm'
-    RADIANS = 'rad'
-    INCH = 'in'
-    DEGREES = 'deg'
-    GRAM = 'g'
-    SLUG = 'slug'
-    SECONDS = 's'
-    KELVIN = 'K'
-    FAHRENHEIT = 'F'
-    AMPERE = 'A'
-    CANDELA = 'cd'
-    RESERVED = 'reserved'
+    CENTIMETER = "cm"
+    RADIANS = "rad"
+    INCH = "in"
+    DEGREES = "deg"
+    GRAM = "g"
+    SLUG = "slug"
+    SECONDS = "s"
+    KELVIN = "K"
+    FAHRENHEIT = "F"
+    AMPERE = "A"
+    CANDELA = "cd"
+    RESERVED = "reserved"
 
 
 class HidUnit(object):
@@ -701,11 +717,11 @@ class HidUnit(object):
         @classmethod
         def _stringmap(cls):
             return {
-                HidUnit.System.NONE: 'None',
-                HidUnit.System.SI_LINEAR: 'SILinear',
-                HidUnit.System.SI_ROTATION: 'SIRotation',
-                HidUnit.System.ENGLISH_LINEAR: 'EnglishLinear',
-                HidUnit.System.ENGLISH_ROTATION: 'EnglishRotation',
+                HidUnit.System.NONE: "None",
+                HidUnit.System.SI_LINEAR: "SILinear",
+                HidUnit.System.SI_ROTATION: "SIRotation",
+                HidUnit.System.ENGLISH_LINEAR: "EnglishLinear",
+                HidUnit.System.ENGLISH_ROTATION: "EnglishRotation",
             }
 
         def __str__(self):
@@ -816,15 +832,23 @@ class HidUnit(object):
         def nibbles(data):
             for element in data:
                 yield element & 0xF
-                yield (element >> 4) & 0xf
+                yield (element >> 4) & 0xF
 
-        system = ('System', 'Length', 'Mass', 'Time', 'Temperature', 'Current',
-                  'Intensity', 'Reserved')
+        system = (
+            "System",
+            "Length",
+            "Mass",
+            "Time",
+            "Temperature",
+            "Current",
+            "Intensity",
+            "Reserved",
+        )
 
         # Creates a dict with the type of system as key and the value of the
         # nibble (the exponent) as value.
         exponents = dict(itertools.zip_longest(system, nibbles(data)))
-        system = HidUnit.System(exponents['System'])
+        system = HidUnit.System(exponents["System"])
         if system == HidUnit.System.NONE:
             return HidUnit.NONE
 
@@ -835,12 +859,12 @@ class HidUnit(object):
         # {CENTIMETER: 2, SECONDS: -1}.
         units = {
             # system: convert(exponents['System']),
-            system.length: convert(exponents['Length']),
-            system.mass: convert(exponents['Mass']),
-            system.time: convert(exponents['Time']),
-            system.temperature: convert(exponents['Temperature']),
-            system.current: convert(exponents['Current']),
-            system.luminous_intensity: convert(exponents['Intensity']),
+            system.length: convert(exponents["Length"]),
+            system.mass: convert(exponents["Mass"]),
+            system.time: convert(exponents["Time"]),
+            system.temperature: convert(exponents["Temperature"]),
+            system.current: convert(exponents["Current"]),
+            system.luminous_intensity: convert(exponents["Intensity"]),
         }
 
         # Filter out any parts that aren't set
@@ -869,8 +893,8 @@ class HidUnit(object):
 
         Where the HID unit system is None, the returned value is None.
         """
-        assert value <= 0xffffffff
-        return cls.from_bytes(value.to_bytes(byteorder='little', length=4))
+        assert value <= 0xFFFFFFFF
+        return cls.from_bytes(value.to_bytes(byteorder="little", length=4))
 
     def __eq__(self, other):
         return self.system == other.system and self.units == other.units
@@ -879,32 +903,34 @@ class HidUnit(object):
         units = []
         for u, exp in self.units.items():
             if exp == 1:
-                s = ''
+                s = ""
             else:
-                s = ''.join([superscripts[c] for c in str(exp)])
+                s = "".join([superscripts[c] for c in str(exp)])
             units.append((u.value, s))
 
         # python 3.6 seems to not use __str__() for enums, leading to errors
         # in the test suite
-        return f'{str(self.system)}: ' + ' * '.join((f'{unit}{exp}' for unit, exp in units))
+        return f"{str(self.system)}: " + " * ".join(
+            (f"{unit}{exp}" for unit, exp in units)
+        )
 
     @classmethod
     def from_string(self, string):
-        '''
+        """
         The inverse of __str__()
-        '''
-        system_string, unit_string = string.split(': ')
+        """
+        system_string, unit_string = string.split(": ")
         system = HidUnit.System.from_string(system_string)
-        unitstrings = unit_string.split(' * ')
+        unitstrings = unit_string.split(" * ")
         units = {}
         for s in unitstrings:
-            match = re.match(r'(?P<unit>[a-zA-z]+)(?P<exp>[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]{1,})?', s)
-            unitstring, expstring = match['unit'], match['exp']
+            match = re.match(r"(?P<unit>[a-zA-z]+)(?P<exp>[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]{1,})?", s)
+            unitstring, expstring = match["unit"], match["exp"]
 
             unit = Unit(unitstring)
             ssinv = {v: k for k, v in superscripts.items()}
             if expstring:
-                exponent = int(''.join([ssinv[c] for c in expstring]))
+                exponent = int("".join([ssinv[c] for c in expstring]))
             else:
                 exponent = 1
 
@@ -984,23 +1010,26 @@ class HidField(object):
 
         Report Count for this HID field
     """
-    def __init__(self,
-                 report_ID,
-                 logical,
-                 physical,
-                 application,
-                 collection,
-                 value,
-                 usage_page,
-                 usage,
-                 logical_min,
-                 logical_max,
-                 physical_min,
-                 physical_max,
-                 unit,
-                 unit_exp,
-                 item_size,
-                 count):
+
+    def __init__(
+        self,
+        report_ID,
+        logical,
+        physical,
+        application,
+        collection,
+        value,
+        usage_page,
+        usage,
+        logical_min,
+        logical_max,
+        physical_min,
+        physical_max,
+        unit,
+        unit_exp,
+        item_size,
+        count,
+    ):
         self.report_ID = report_ID
         self.logical = logical
         self.physical = physical
@@ -1033,14 +1062,14 @@ class HidField(object):
         value = usage & 0x0000FFFF
         if usage_page in HUT:
             if HUT[usage_page].page_name == "Button":
-                name = f'B{str(value)}'
+                name = f"B{str(value)}"
             else:
                 try:
                     name = HUT[usage_page][value]
                 except KeyError:
-                    name = f'0x{usage:04x}'
+                    name = f"0x{usage:04x}"
         else:
-            name = f'0x{usage:04x}'
+            name = f"0x{usage:04x}"
         return name
 
     @property
@@ -1072,7 +1101,7 @@ class HidField(object):
             phys = HUT[page_id][value]
         except KeyError:
             try:
-                phys = f'0x{phys:04x}'
+                phys = f"0x{phys:04x}"
             except:
                 pass
         return phys
@@ -1088,11 +1117,11 @@ class HidField(object):
 
         try:
             page_id = logical >> 16
-            value = logical & 0xff
+            value = logical & 0xFF
             logical = HUT[page_id][value]
         except KeyError:
             try:
-                logical = f'0x{logical:04x}'
+                logical = f"0x{logical:04x}"
             except:
                 pass
         return logical
@@ -1109,7 +1138,7 @@ class HidField(object):
         value = 0
         start_bit = self.start + self.size * idx
         end_bit = start_bit + self.size * (idx + 1)
-        data = report[int(start_bit / 8): int(end_bit / 8 + 1)]
+        data = report[int(start_bit / 8) : int(end_bit / 8 + 1)]
         if len(data) == 0:
             return ["<.>"]
         for d in range(len(data)):
@@ -1146,15 +1175,17 @@ class HidField(object):
 
         max = (1 << n) - 1
         if value > max:
-            raise Exception(f'_set_value(): value {value} is larger than size {self.size}')
+            raise Exception(
+                f"_set_value(): value {value} is larger than size {self.size}"
+            )
 
         byte_idx = int(start_bit / 8)
         bit_shift = start_bit % 8
         bits_to_set = 8 - bit_shift
 
         while n - bits_to_set >= 0:
-            report[byte_idx] &= ~(0xff << bit_shift)
-            report[byte_idx] |= (value << bit_shift) & 0xff
+            report[byte_idx] &= ~(0xFF << bit_shift)
+            report[byte_idx] |= (value << bit_shift) & 0xFF
             value >>= bits_to_set
             n -= bits_to_set
             bits_to_set = 8
@@ -1248,7 +1279,7 @@ class HidField(object):
                 # FIXME: handle the signed case too
                 if v >= (1 << self.size):
                     raise RangeError(self, v)
-            elif self.usage_name not in ['Contact Id', 'Contact Max', 'Contact Count']:
+            elif self.usage_name not in ["Contact Id", "Contact Max", "Contact Count"]:
                 if v and not (self.logical_min <= v <= self.logical_max):
                     raise RangeError(self, v)
             if self.logical_min < 0:
@@ -1281,7 +1312,7 @@ class HidField(object):
         """
         The Usage Page name for this field, e.g. "Generic Desktop"
         """
-        usage_page_name = ''
+        usage_page_name = ""
         usage_page = self.usage_page >> 16
         try:
             usage_page_name = HUT[usage_page].page_name
@@ -1290,25 +1321,27 @@ class HidField(object):
         return usage_page_name
 
     @classmethod
-    def getHidFields(cls,
-                     report_ID,
-                     logical,
-                     physical,
-                     application,
-                     collection,
-                     value,
-                     usage_page,
-                     usages,
-                     usage_min,
-                     usage_max,
-                     logical_min,
-                     logical_max,
-                     physical_min,
-                     physical_max,
-                     unit,
-                     unit_exp,
-                     item_size,
-                     count):
+    def getHidFields(
+        cls,
+        report_ID,
+        logical,
+        physical,
+        application,
+        collection,
+        value,
+        usage_page,
+        usages,
+        usage_min,
+        usage_max,
+        logical_min,
+        logical_max,
+        physical_min,
+        physical_max,
+        unit,
+        unit_exp,
+        item_size,
+        count,
+    ):
         """
         This is a function to be called by a HID report descriptor parser.
 
@@ -1330,22 +1363,24 @@ class HidField(object):
         if not value & 0x3:
             usage = logical or application
 
-        item = cls(report_ID,
-                   logical,
-                   physical,
-                   application,
-                   collection,
-                   value,
-                   usage_page,
-                   usage,
-                   logical_min,
-                   logical_max,
-                   physical_min,
-                   physical_max,
-                   unit,
-                   unit_exp,
-                   item_size,
-                   1)
+        item = cls(
+            report_ID,
+            logical,
+            physical,
+            application,
+            collection,
+            value,
+            usage_page,
+            usage,
+            logical_min,
+            logical_max,
+            physical_min,
+            physical_max,
+            unit,
+            unit_exp,
+            item_size,
+            1,
+        )
         items = []
 
         if value & 0x3:  # Const or Variable item
@@ -1398,6 +1433,7 @@ class HidReport(object):
 
     class Type(enum.Enum):
         """The type of a :class:`HidReport`"""
+
         INPUT = enum.auto()
         OUTPUT = enum.auto()
         FEATURE = enum.auto()
@@ -1437,14 +1473,14 @@ class HidReport(object):
     @property
     def application_name(self):
         if self.application is None:
-            return 'Vendor'
+            return "Vendor"
 
         try:
             page_id = self.application >> 16
-            value = self.application & 0xff
+            value = self.application & 0xFF
             return HUT[page_id][value]
         except KeyError:
-            return 'Vendor'
+            return "Vendor"
 
     @property
     def type(self):
@@ -1482,14 +1518,16 @@ class HidReport(object):
             return usage
 
         # multitouch devices might have 2 X for CX, TX
-        if usage == 'X' and ('Y' not in self.prev_seen_usages or
-                             'CY' in self.prev_seen_usages):
-            usage = 'CX'
+        if usage == "X" and (
+            "Y" not in self.prev_seen_usages or "CY" in self.prev_seen_usages
+        ):
+            usage = "CX"
 
         # multitouch devices might have 2 Y for CY, TY
-        if usage == 'Y' and ('X' not in self.prev_seen_usages or
-                             'CX' in self.prev_seen_usages):
-            usage = 'CY'
+        if usage == "Y" and (
+            "X" not in self.prev_seen_usages or "CX" in self.prev_seen_usages
+        ):
+            usage = "CY"
 
         return usage
 
@@ -1516,9 +1554,11 @@ class HidReport(object):
 
         usage = self._fix_xy_usage_for_mt_devices(usage)
 
-        if (self.prev_collection is not None and
-           self.prev_collection != hidInputItem.collection and
-           usage in self.prev_seen_usages):
+        if (
+            self.prev_collection is not None
+            and self.prev_collection != hidInputItem.collection
+            and usage in self.prev_seen_usages
+        ):
             if len(data) > 0:
                 data.pop(0)
             self.prev_seen_usages.clear()
@@ -1529,7 +1569,7 @@ class HidReport(object):
 
         # Match the HID usage with our attributes, so
         # Contact Count -> contactcount, etc.
-        field = usage.replace(' ', '').lower()
+        field = usage.replace(" ", "").lower()
 
         if len(data) > 0 and hasattr(data[0], field):
             value = getattr(data[0], field)
@@ -1599,19 +1639,21 @@ class HidReport(object):
             automated processing.
         """
 
-        output = ''
+        output = ""
 
         self.prev_seen_usages = []
         self.prev_collection = None
-        sep = ''
+        sep = ""
         if self.numbered:
             assert self.report_ID == data[0]
-            output += f'ReportID: {self.report_ID} '
-            sep = '/'
+            output += f"ReportID: {self.report_ID} "
+            sep = "/"
         prev = None
         for report_item in self:
-            if report_item.is_const and (self.type != HidReport.Type.FEATURE or report_item.usage == 0):
-                output += f'{sep} # '
+            if report_item.is_const and (
+                self.type != HidReport.Type.FEATURE or report_item.usage == 0
+            ):
+                output += f"{sep} # "
                 continue
 
             # get the value and consumes bits
@@ -1620,38 +1662,44 @@ class HidReport(object):
             if not report_item.is_array:
                 value_format = "{:d}"
                 if report_item.size > 1:
-                    value_format = f'{{:{str(len(str(1 << report_item.size)) + 1)}d}}'
+                    value_format = f"{{:{str(len(str(1 << report_item.size)) + 1)}d}}"
                 if isinstance(values[0], str):
                     value_format = "{}"
-                if report_item.usage_page_name == 'Button':
-                    if report_item.usage_name == 'B1':
-                        usage_name = 'Button'
-                        usage = f' {usage_name}:'
+                if report_item.usage_page_name == "Button":
+                    if report_item.usage_name == "B1":
+                        usage_name = "Button"
+                        usage = f" {usage_name}:"
                     else:
-                        usage_name = ''
-                        sep = ''
-                        usage = ''
+                        usage_name = ""
+                        sep = ""
+                        usage = ""
                 else:
-                    usage_name = self._fix_xy_usage_for_mt_devices(report_item.usage_name)
-                    usage = f' {usage_name}:'
+                    usage_name = self._fix_xy_usage_for_mt_devices(
+                        report_item.usage_name
+                    )
+                    usage = f" {usage_name}:"
 
                 # if we don't get a key error this is a duplicate in
                 # this report descriptor and we need a linebreak
-                if (split_lines and
-                   self.prev_collection is not None and
-                   self.prev_collection != report_item.collection):
+                if (
+                    split_lines
+                    and self.prev_collection is not None
+                    and self.prev_collection != report_item.collection
+                ):
                     self.prev_seen_usages = []
-                    output += '\n'
+                    output += "\n"
                 self.prev_collection = report_item.collection
                 self.prev_seen_usages.append(usage_name)
 
                 # do not reapeat the usage name if several are in a row
-                if (prev and
-                   prev.type == report_item.type and
-                   prev.usage == report_item.usage):
+                if (
+                    prev
+                    and prev.type == report_item.type
+                    and prev.usage == report_item.usage
+                ):
                     sep = ","
                     usage = ""
-                output += f'{sep}{usage} {value_format.format(values[0])} '
+                output += f"{sep}{usage} {value_format.format(values[0])} "
             else:
                 logical_name = report_item.logical_name
                 if not logical_name:
@@ -1660,24 +1708,26 @@ class HidReport(object):
                     logical_name = "Array"
                 usages = []
                 for v in values:
-                    if (v < report_item.logical_min or
-                       v > report_item.logical_max):
-                        usages.append('')
+                    if v < report_item.logical_min or v > report_item.logical_max:
+                        usages.append("")
                     else:
                         usage = ""
                         if isinstance(values[0], str):
                             usage = v
                         else:
-                            usage = f'{v:02x}'
-                        index = v - report_item.logical_min  # guaranteed to be > 0 with test above
-                        if ('vendor' not in logical_name.lower() and
-                           index < len(report_item.usages)):
+                            usage = f"{v:02x}"
+                        index = (
+                            v - report_item.logical_min
+                        )  # guaranteed to be > 0 with test above
+                        if "vendor" not in logical_name.lower() and index < len(
+                            report_item.usages
+                        ):
                             usage = report_item.get_usage_name(index)
                             if "no event indicated" in usage.lower():
-                                usage = ''
-                        usages.append(f'\'{usage}\'')
+                                usage = ""
+                        usages.append(f"'{usage}'")
                 output += f'{sep}{logical_name} [{", ".join(usages)}] '
-            sep = '|'
+            sep = "|"
             prev = report_item
         return output
 
@@ -1709,12 +1759,14 @@ class ReportDescriptor(object):
 
         All :class:`HidReport` of type ``Feature``, addressable by the report ID
     """
+
     class _Globals(object):
         """
         HID report descriptors uses a stack-based model where some values
         are pushed to the global state and apply to all subsequent items
         until changed or reset.
         """
+
         def __init__(self, other=None):
             self.usage_page = 0
             self.logical = None
@@ -1747,6 +1799,7 @@ class ReportDescriptor(object):
         HID report descriptors uses a stack-based model where values
         apply until the next Output/InputReport/FeatureReport item.
         """
+
         def __init__(self):
             self.usages = []
             self.usage_sizes = []
@@ -1814,14 +1867,14 @@ class ReportDescriptor(object):
 
     def _get_current_report(self, type):
         report_lists = {
-            'Input': self.input_reports,
-            'Output': self.output_reports,
-            'Feature': self.feature_reports,
+            "Input": self.input_reports,
+            "Output": self.output_reports,
+            "Feature": self.feature_reports,
         }
         report_type = {
-            'Input': HidReport.Type.INPUT,
-            'Output': HidReport.Type.OUTPUT,
-            'Feature': HidReport.Type.FEATURE,
+            "Input": HidReport.Type.INPUT,
+            "Output": HidReport.Type.OUTPUT,
+            "Feature": HidReport.Type.FEATURE,
         }
 
         assert type in report_lists
@@ -1838,7 +1891,9 @@ class ReportDescriptor(object):
             try:
                 cur = report_lists[type][self.local.report_ID]
             except KeyError:
-                cur = HidReport(self.local.report_ID, self.glob.application, report_type[type])
+                cur = HidReport(
+                    self.local.report_ID, self.glob.application, report_type[type]
+                )
                 report_lists[type][self.local.report_ID] = cur
         return cur
 
@@ -1933,27 +1988,32 @@ class ReportDescriptor(object):
 
             self._concatenate_usages()
 
-            inputItems = HidField.getHidFields(self.local.report_ID,
-                                               self.glob.logical,
-                                               self.glob.physical,
-                                               self.glob.application,
-                                               tuple(self.collection),
-                                               value,
-                                               self.glob.usage_page,
-                                               self.local.usages,
-                                               self.local.usage_min,
-                                               self.local.usage_max,
-                                               self.glob.logical_min,
-                                               self.glob.logical_max,
-                                               self.glob.physical_min,
-                                               self.glob.physical_max,
-                                               self.glob.unit,
-                                               self.glob.unit_exp,
-                                               self.glob.item_size,
-                                               self.glob.count)
+            inputItems = HidField.getHidFields(
+                self.local.report_ID,
+                self.glob.logical,
+                self.glob.physical,
+                self.glob.application,
+                tuple(self.collection),
+                value,
+                self.glob.usage_page,
+                self.local.usages,
+                self.local.usage_min,
+                self.local.usage_max,
+                self.glob.logical_min,
+                self.glob.logical_max,
+                self.glob.physical_min,
+                self.glob.physical_max,
+                self.glob.unit,
+                self.glob.unit_exp,
+                self.glob.item_size,
+                self.glob.count,
+            )
             self.current_input_report.extend(inputItems)
-            if item == "Feature" and len(self.local.usages) > 0 and \
-                    self.local.usages[-1] == 0xff0000c5:
+            if (
+                item == "Feature"
+                and len(self.local.usages) > 0
+                and self.local.usages[-1] == 0xFF0000C5
+            ):
                 self.win8 = True
             self.local.usages = []
             self.local.usage_sizes = []
@@ -1961,7 +2021,7 @@ class ReportDescriptor(object):
             self.local.usage_max = 0
             self.local.usage_max_size = 0
 
-    def dump(self, dump_file=sys.stdout, output_type='default'):
+    def dump(self, dump_file=sys.stdout, output_type="default"):
         """
         Write this ReportDescriptor into the given file
 

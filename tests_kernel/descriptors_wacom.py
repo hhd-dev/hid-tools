@@ -439,7 +439,7 @@ wacom_pth660_v145 = [
 
 # Report ID (20), Usage (1014h), Report Count (13) -> 15
 wacom_pth660_v150 = wacom_pth660_v145.copy()
-wacom_pth660_v150[0x2cb] = 0x0f
+wacom_pth660_v150[0x2CB] = 0x0F
 
 # fmt: off
 wacom_pth860_v145 = [
@@ -879,7 +879,7 @@ wacom_pth860_v145 = [
 
 # Report ID (20), Usage (1014h), Report Count (13) -> 15
 wacom_pth860_v150 = wacom_pth860_v145.copy()
-wacom_pth860_v150[0x2ca] = 0x0f
+wacom_pth860_v150[0x2CA] = 0x0F
 
 # fmt: off
 wacom_pth460_v105 = [

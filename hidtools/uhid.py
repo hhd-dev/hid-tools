@@ -29,10 +29,11 @@ import uuid
 try:
     import pyudev
 except ImportError:
-    raise ImportError('UHID is not supported due to missing pyudev dependency')
+    raise ImportError("UHID is not supported due to missing pyudev dependency")
 
 import logging
-logger = logging.getLogger('hidtools.hid.uhid')
+
+logger = logging.getLogger("hidtools.hid.uhid")
 
 
 class UHIDIncompleteException(Exception):
@@ -40,6 +41,7 @@ class UHIDIncompleteException(Exception):
     An exception raised when a UHIDDevice does not have sufficient
     information to create a kernel device.
     """
+
     pass
 
 
@@ -71,6 +73,7 @@ class UHIDDevice(object):
         and can be used to reliably identify the device.
 
     """
+
     __UHID_LEGACY_CREATE = 0
     _UHID_DESTROY = 1
     _UHID_START = 2
@@ -137,26 +140,30 @@ class UHIDDevice(object):
             cls._pyudev_monitor = pyudev.Monitor.from_netlink(cls._pyudev_context)
             cls._pyudev_monitor.start()
 
-            cls._append_fd_to_poll(cls._pyudev_monitor.fileno(),
-                                   cls._cls_udev_event_callback)
+            cls._append_fd_to_poll(
+                cls._pyudev_monitor.fileno(), cls._cls_udev_event_callback
+            )
 
     @classmethod
     def _cls_udev_event_callback(cls):
         for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
-            logger.debug(f'udev event: {event.action} -> {event}')
+            logger.debug(f"udev event: {event.action} -> {event}")
 
             for d in cls._devices:
-                if d.udev_device is not None and d.udev_device.sys_path in event.sys_path:
+                if (
+                    d.udev_device is not None
+                    and d.udev_device.sys_path in event.sys_path
+                ):
                     d._udev_event(event)
 
     def __init__(self):
         self._name = None
-        self._phys = ''
+        self._phys = ""
         self._rdesc = None
         self.parsed_rdesc = None
         self._info = None
         self._bustype = None
-        self._fd = os.open('/dev/uhid', os.O_RDWR)
+        self._fd = os.open("/dev/uhid", os.O_RDWR)
         self._start = self.start
         self._stop = self.stop
         self._open = self.open
@@ -167,7 +174,7 @@ class UHIDDevice(object):
         self._is_destroyed = False
         self.device_nodes = []
         self.hidraw_nodes = []
-        self.uniq = f'uhid_{str(uuid.uuid4())}'
+        self.uniq = f"uhid_{str(uuid.uuid4())}"
         self._append_fd_to_poll(self._fd, self._process_one_event)
         self._init_pyudev()
         UHIDDevice._devices.append(self)
@@ -191,14 +198,14 @@ class UHIDDevice(object):
         if not self._ready:
             return
 
-        if event.action == 'add':
+        if event.action == "add":
             device = event
 
             try:
-                devname = device.properties['DEVNAME']
-                if devname.startswith('/dev/input/event'):
+                devname = device.properties["DEVNAME"]
+                if devname.startswith("/dev/input/event"):
                     self.device_nodes.append(devname)
-                elif devname.startswith('/dev/hidraw'):
+                elif devname.startswith("/dev/hidraw"):
                     self.hidraw_nodes.append(devname)
             except KeyError:
                 pass
@@ -224,7 +231,7 @@ class UHIDDevice(object):
         parsed_rdesc = rdesc
         if not isinstance(rdesc, hidtools.hid.ReportDescriptor):
             if isinstance(rdesc, str):
-                rdesc = f'XXX {rdesc}'
+                rdesc = f"XXX {rdesc}"
                 parsed_rdesc = hidtools.hid.ReportDescriptor.from_string(rdesc)
             else:
                 parsed_rdesc = hidtools.hid.ReportDescriptor.from_bytes(rdesc)
@@ -288,20 +295,19 @@ class UHIDDevice(object):
         return self._info[2]
 
     def _call_set_report(self, req, err):
-        buf = struct.pack('< L L H',
-                          UHIDDevice._UHID_SET_REPORT_REPLY,
-                          req,
-                          err)
+        buf = struct.pack("< L L H", UHIDDevice._UHID_SET_REPORT_REPLY, req, err)
         os.write(self._fd, buf)
 
     def _call_get_report(self, req, data, err):
         data = bytes(data)
-        buf = struct.pack('< L L H H 4096s',
-                          UHIDDevice._UHID_GET_REPORT_REPLY,
-                          req,
-                          err,
-                          len(data),
-                          data)
+        buf = struct.pack(
+            "< L L H H 4096s",
+            UHIDDevice._UHID_GET_REPORT_REPLY,
+            req,
+            err,
+            len(data),
+            data,
+        )
         os.write(self._fd, buf)
 
     def call_input_event(self, data):
@@ -312,11 +318,8 @@ class UHIDDevice(object):
             report for this input event
         """
         data = bytes(data)
-        buf = struct.pack('< L H 4096s',
-                          UHIDDevice._UHID_INPUT2,
-                          len(data),
-                          data)
-        logger.debug(f'inject {buf[:len(data)]}')
+        buf = struct.pack("< L H 4096s", UHIDDevice._UHID_INPUT2, len(data), data)
+        logger.debug(f"inject {buf[:len(data)]}")
         os.write(self._fd, buf)
 
     @property
@@ -327,9 +330,9 @@ class UHIDDevice(object):
         The device may be None if udev hasn't processed the device yet.
         """
         if self._udev_device is None:
-            for device in self._pyudev_context.list_devices(subsystem='hid'):
+            for device in self._pyudev_context.list_devices(subsystem="hid"):
                 try:
-                    if self.uniq == device.properties['HID_UNIQ']:
+                    if self.uniq == device.properties["HID_UNIQ"]:
                         self._udev_device = device
                         break
                 except KeyError:
@@ -352,25 +355,25 @@ class UHIDDevice(object):
         :raises: :class:`UHIDIncompleteException` if the device does not
             have a name, report descriptor or the info bits set.
         """
-        if (self._name is None or
-           self._rdesc is None or
-           self._info is None):
+        if self._name is None or self._rdesc is None or self._info is None:
             raise UHIDIncompleteException("missing uhid initialization")
 
-        buf = struct.pack('< L 128s 64s 64s H H L L L L 4096s',
-                          UHIDDevice._UHID_CREATE2,
-                          bytes(self._name, 'utf-8'),  # name
-                          bytes(self._phys, 'utf-8'),  # phys
-                          bytes(self.uniq, 'utf-8'),  # uniq
-                          len(self._rdesc),  # rd_size
-                          self.bus,  # bus
-                          self.vid,  # vendor
-                          self.pid,  # product
-                          0,  # version
-                          0,  # country
-                          bytes(self._rdesc))  # rd_data[HID_MAX_DESCRIPTOR_SIZE]
+        buf = struct.pack(
+            "< L 128s 64s 64s H H L L L L 4096s",
+            UHIDDevice._UHID_CREATE2,
+            bytes(self._name, "utf-8"),  # name
+            bytes(self._phys, "utf-8"),  # phys
+            bytes(self.uniq, "utf-8"),  # uniq
+            len(self._rdesc),  # rd_size
+            self.bus,  # bus
+            self.vid,  # vendor
+            self.pid,  # product
+            0,  # version
+            0,  # country
+            bytes(self._rdesc),
+        )  # rd_data[HID_MAX_DESCRIPTOR_SIZE]
 
-        logger.debug('creating kernel device')
+        logger.debug("creating kernel device")
         n = os.write(self._fd, buf)
         assert n == len(buf)
         self._ready = True
@@ -384,7 +387,7 @@ class UHIDDevice(object):
         """
 
         if self._ready:
-            buf = struct.pack('< L', UHIDDevice._UHID_DESTROY)
+            buf = struct.pack("< L", UHIDDevice._UHID_DESTROY)
             os.write(self._fd, buf)
             self._ready = False
             # equivalent to dispatch() but just for our device.
@@ -409,7 +412,7 @@ class UHIDDevice(object):
         This message is sent by the kernel, to receive this message you must
         call :meth:`dispatch`
         """
-        logger.debug('start')
+        logger.debug("start")
 
     def stop(self):
         """
@@ -418,7 +421,7 @@ class UHIDDevice(object):
         This message is sent by the kernel, to receive this message you must
         call :meth:`dispatch`
         """
-        logger.debug('stop')
+        logger.debug("stop")
 
     def open(self):
         """
@@ -427,7 +430,7 @@ class UHIDDevice(object):
         This message is sent by the kernel, to receive this message you must
         call :meth:`dispatch`
         """
-        logger.debug('open {}'.format(self.sys_path))
+        logger.debug("open {}".format(self.sys_path))
 
     def close(self):
         """
@@ -439,7 +442,7 @@ class UHIDDevice(object):
         This message is sent by the kernel, to receive this message you must
         call :meth:`dispatch`
         """
-        logger.debug('close')
+        logger.debug("close")
 
     def set_report(self, req, rnum, rtype, data):
         """
@@ -458,7 +461,11 @@ class UHIDDevice(object):
         return 5  # EIO
 
     def _set_report(self, req, rnum, rtype, size, data):
-        logger.debug('set report {} {} {} {} {} '.format(req, rnum, rtype, size, [f'{d:02x}' for d in data[:size]]))
+        logger.debug(
+            "set report {} {} {} {} {} ".format(
+                req, rnum, rtype, size, [f"{d:02x}" for d in data[:size]]
+            )
+        )
         error = self.set_report(req, rnum, rtype, [int(x) for x in data[:size]])
         if self._ready:
             self._call_set_report(req, error)
@@ -480,7 +487,7 @@ class UHIDDevice(object):
         return (5, [])  # EIO
 
     def _get_report(self, req, rnum, rtype):
-        logger.debug('get report {} {} {}'.format(req, rnum, rtype))
+        logger.debug("get report {} {} {}".format(req, rnum, rtype))
         error, data = self.get_report(req, rnum, rtype)
         if self._ready:
             self._call_get_report(req, data, error)
@@ -493,14 +500,16 @@ class UHIDDevice(object):
         :param size: size of the data
         :param rtype: one of :attr:`UHID_FEATURE_REPORT`, :attr:`UHID_INPUT_REPORT`, or :attr:`UHID_OUTPUT_REPORT`
         """
-        logger.debug('output {} {} {}'.format(rtype, size, [f'{d:02x}' for d in data[:size]]))
+        logger.debug(
+            "output {} {} {}".format(rtype, size, [f"{d:02x}" for d in data[:size]])
+        )
 
     def _process_one_event(self):
         buf = os.read(self._fd, 4380)
         assert len(buf) == 4380
-        evtype = struct.unpack_from('< L', buf)[0]
+        evtype = struct.unpack_from("< L", buf)[0]
         if evtype == UHIDDevice._UHID_START:
-            ev, flags = struct.unpack_from('< L Q', buf)
+            ev, flags = struct.unpack_from("< L Q", buf)
             self.start(flags)
         elif evtype == UHIDDevice._UHID_OPEN:
             self._open()
@@ -509,13 +518,15 @@ class UHIDDevice(object):
         elif evtype == UHIDDevice._UHID_CLOSE:
             self._close()
         elif evtype == UHIDDevice._UHID_SET_REPORT:
-            ev, req, rnum, rtype, size, data = struct.unpack_from('< L L B B H 4096s', buf)
+            ev, req, rnum, rtype, size, data = struct.unpack_from(
+                "< L L B B H 4096s", buf
+            )
             self._set_report(req, rnum, rtype, size, data)
         elif evtype == UHIDDevice._UHID_GET_REPORT:
-            ev, req, rnum, rtype = struct.unpack_from('< L L B B', buf)
+            ev, req, rnum, rtype = struct.unpack_from("< L L B B", buf)
             self._get_report(req, rnum, rtype)
         elif evtype == UHIDDevice._UHID_OUTPUT:
-            ev, data, size, rtype = struct.unpack_from('< L 4096s H B', buf)
+            ev, data, size, rtype = struct.unpack_from("< L 4096s H B", buf)
             self._output_report(data, size, rtype)
 
     def create_report(self, data, global_data=None, reportID=None, application=None):

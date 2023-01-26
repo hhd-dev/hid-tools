@@ -14,16 +14,16 @@ import logging
 
 from hidtools.device.base_device import BaseDevice, SysfsFile
 
-logger = logging.getLogger('hidtools.test.base')
+logger = logging.getLogger("hidtools.test.base")
 
 
 class UHIDTestDevice(BaseDevice):
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
         super().__init__(name, application, rdesc_str, rdesc, input_info)
         if name is None:
-            name = f'uhid test {self.__class__.__name__}'
-        if not name.startswith('uhid test '):
-            name = 'uhid test ' + self.name
+            name = f"uhid test {self.__class__.__name__}"
+        if not name.startswith("uhid test "):
+            name = "uhid test " + self.name
         self.name = name
 
 
@@ -48,31 +48,37 @@ class BaseTestCase:
 
         @classmethod
         def debug_reports(cls, reports, uhdev=None, events=None):
-            data = [' '.join([f'{v:02x}' for v in r]) for r in reports]
+            data = [" ".join([f"{v:02x}" for v in r]) for r in reports]
 
             if uhdev is not None:
-                human_data = [uhdev.parsed_rdesc.format_report(r, split_lines=True) for r in reports]
+                human_data = [
+                    uhdev.parsed_rdesc.format_report(r, split_lines=True)
+                    for r in reports
+                ]
                 try:
-                    human_data = [f'\n\t       {" " * h.index("/")}'.join(h.split('\n')) for h in human_data]
+                    human_data = [
+                        f'\n\t       {" " * h.index("/")}'.join(h.split("\n"))
+                        for h in human_data
+                    ]
                 except ValueError:
                     # '/' not found: not a numbered report
-                    human_data = ['\n\t      '.join(h.split('\n')) for h in human_data]
-                data = [f'{d}\n\t ====> {h}' for d, h in zip(data, human_data)]
+                    human_data = ["\n\t      ".join(h.split("\n")) for h in human_data]
+                data = [f"{d}\n\t ====> {h}" for d, h in zip(data, human_data)]
 
             reports = data
 
             if len(reports) == 1:
-                print('sending 1 report:')
+                print("sending 1 report:")
             else:
-                print(f'sending {len(reports)} reports:')
+                print(f"sending {len(reports)} reports:")
             for report in reports:
-                print('\t', report)
+                print("\t", report)
 
             if events is not None:
-                print('events received:', events)
+                print("events received:", events)
 
         def create_device(self):
-            raise Exception('please reimplement me in subclasses')
+            raise Exception("please reimplement me in subclasses")
 
         @pytest.fixture()
         def new_uhdev(self):
@@ -87,7 +93,7 @@ class BaseTestCase:
             try:
                 with HIDTestUdevRule.instance():
                     with new_uhdev as self.uhdev:
-                        skip_cond = request.node.get_closest_marker('skip_if_uhdev')
+                        skip_cond = request.node.get_closest_marker("skip_if_uhdev")
                         if skip_cond:
                             test, message, *rest = skip_cond.args
 
@@ -99,17 +105,19 @@ class BaseTestCase:
                         while not self.uhdev.is_ready() and time.time() - now < 5:
                             self.uhdev.dispatch(10)
                         if self.uhdev.get_evdev() is None:
-                            logger.warning(f"available list of input nodes: (default application is '{self.uhdev.application}')")
+                            logger.warning(
+                                f"available list of input nodes: (default application is '{self.uhdev.application}')"
+                            )
                             logger.warning(self.uhdev.input_nodes)
                         yield
                         self.uhdev = None
             except PermissionError:
-                pytest.skip('Insufficient permissions, run me as root')
+                pytest.skip("Insufficient permissions, run me as root")
 
         @pytest.fixture(autouse=True)
         def check_taint(self):
             # we are abusing SysfsFile here, it's in /proc, but meh
-            taint_file = SysfsFile('/proc/sys/kernel/tainted')
+            taint_file = SysfsFile("/proc/sys/kernel/tainted")
             taint = taint_file.int_value
 
             yield
@@ -131,7 +139,7 @@ class BaseTestCase:
 
 class HIDTestUdevRule(object):
     _instance = None
-    '''
+    """
     A context-manager compatible class that sets up our udev rules file and
     deletes it on context exit.
 
@@ -141,7 +149,8 @@ class HIDTestUdevRule(object):
     the session once, then once for each test (the first of which will
     trigger the udev rule) and once the last test exited and the session
     exited, we clean up after ourselves.
-    '''
+    """
+
     def __init__(self):
         self.refs = 0
         self.rulesfile = None
@@ -160,19 +169,27 @@ class HIDTestUdevRule(object):
 
     def reload_udev_rules(self):
         import subprocess
+
         subprocess.run("udevadm control --reload-rules".split())
         subprocess.run("systemd-hwdb update".split())
 
     def create_udev_rule(self):
         import tempfile
-        os.makedirs('/run/udev/rules.d', exist_ok=True)
-        with tempfile.NamedTemporaryFile(prefix='91-uhid-test-device-REMOVEME-',
-                                         suffix='.rules',
-                                         mode='w+',
-                                         dir='/run/udev/rules.d',
-                                         delete=False) as f:
-            f.write('KERNELS=="*input*", ATTRS{name}=="*uhid test *", ENV{LIBINPUT_IGNORE_DEVICE}="1"\n')
-            f.write('KERNELS=="*input*", ATTRS{name}=="*uhid test * System Multi Axis", ENV{ID_INPUT_TOUCHSCREEN}="", ENV{ID_INPUT_SYSTEM_MULTIAXIS}="1"\n')
+
+        os.makedirs("/run/udev/rules.d", exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            prefix="91-uhid-test-device-REMOVEME-",
+            suffix=".rules",
+            mode="w+",
+            dir="/run/udev/rules.d",
+            delete=False,
+        ) as f:
+            f.write(
+                'KERNELS=="*input*", ATTRS{name}=="*uhid test *", ENV{LIBINPUT_IGNORE_DEVICE}="1"\n'
+            )
+            f.write(
+                'KERNELS=="*input*", ATTRS{name}=="*uhid test * System Multi Axis", ENV{ID_INPUT_TOUCHSCREEN}="", ENV{ID_INPUT_SYSTEM_MULTIAXIS}="1"\n'
+            )
             self.rulesfile = f
 
     @classmethod

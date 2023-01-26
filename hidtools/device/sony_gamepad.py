@@ -6,10 +6,10 @@ from hidtools.device.base_gamepad import AxisMapping, BaseGamepad, JoystickGamep
 from hidtools.util import BusType
 
 import logging
-logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
-                    level=logging.INFO)
-base_logger = logging.getLogger('hidtools')
-logger = logging.getLogger('hidtools.device.sony_gamepad')
+
+logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s", level=logging.INFO)
+base_logger = logging.getLogger("hidtools")
+logger = logging.getLogger("hidtools.device.sony_gamepad")
 
 
 class InvalidHIDCommunication(Exception):
@@ -21,7 +21,8 @@ class GamepadData(object):
 
 
 class PSBattery(object):
-    """ Represents a battery in a PlayStation controller. """
+    """Represents a battery in a PlayStation controller."""
+
     def __init__(self):
         self.cable_connected = True
         self.capacity = 100  # capacity level %
@@ -48,13 +49,23 @@ class PSBattery(object):
 class PS3Rumble(object):
     def __init__(self):
         self.right_duration = 0  # Right motor duration (0xff means forever)
-        self.right_motor_on = 0  # Right (small) motor on/off, only supports values of 0 or 1 (off/on)
+        self.right_motor_on = (
+            0  # Right (small) motor on/off, only supports values of 0 or 1 (off/on)
+        )
         self.left_duration = 0  # Left motor duration (0xff means forever)
-        self.left_motor_force = 0  # left (large) motor, supports force values from 0 to 255
+        self.left_motor_force = (
+            0  # left (large) motor, supports force values from 0 to 255
+        )
         self.offset = 1
 
     def parse(self, buf):
-        padding, self.right_duration, self.right_motor_on, self.left_duration, self.left_motor_force = struct.unpack_from('< B B B B B', buf, self.offset)
+        (
+            padding,
+            self.right_duration,
+            self.right_motor_on,
+            self.left_duration,
+            self.left_motor_force,
+        ) = struct.unpack_from("< B B B B B", buf, self.offset)
 
 
 class PS3LED(object):
@@ -62,13 +73,21 @@ class PS3LED(object):
         self.idx = idx
         self.offset = 11 + idx * 5
         self.time_enabled = 0  # the total time the led is active (0xff means forever)
-        self.duty_length = 0  # how long a cycle is in deciseconds (0 means "really fast")
+        self.duty_length = (
+            0  # how long a cycle is in deciseconds (0 means "really fast")
+        )
         self.enabled = 0
         self.duty_off = 0  # % of duty_length the led is off (0xff means 100%)
         self.duty_on = 0  # % of duty_length the led is on (0xff mean 100%)
 
     def parse(self, buf):
-        self.time_enabled, self.duty_length, self.enabled, self.duty_off, self.duty_on = struct.unpack_from('< B B B B B', buf, self.offset)
+        (
+            self.time_enabled,
+            self.duty_length,
+            self.enabled,
+            self.duty_off,
+            self.duty_on,
+        ) = struct.unpack_from("< B B B B B", buf, self.offset)
 
 
 class PS3LEDs(object):
@@ -78,7 +97,7 @@ class PS3LEDs(object):
         self.leds = [PS3LED(i) for i in range(4)]
 
     def parse(self, buf):
-        (self.leds_bitmap, ) = struct.unpack_from('< B', buf, self.offset)
+        (self.leds_bitmap,) = struct.unpack_from("< B", buf, self.offset)
         for led in self.leds:
             led.parse(buf)
 
@@ -88,37 +107,37 @@ class PS3LEDs(object):
 
 class PS3Controller(JoystickGamepad):
     buttons_map = {
-        1: 'BTN_SELECT',
-        2: 'BTN_THUMBL',            # L3
-        3: 'BTN_THUMBR',            # R3
-        4: 'BTN_START',
-        5: 'BTN_DPAD_UP',
-        6: 'BTN_DPAD_RIGHT',
-        7: 'BTN_DPAD_DOWN',
-        8: 'BTN_DPAD_LEFT',
-        9: 'BTN_TL2',               # L2
-        10: 'BTN_TR2',              # R2 */
-        11: 'BTN_TL',               # L1 */
-        12: 'BTN_TR',               # R1 */
-        13: 'BTN_NORTH',            # options/triangle */
-        14: 'BTN_EAST',             # back/circle */
-        15: 'BTN_SOUTH',            # cross */
-        16: 'BTN_WEST',             # view/square */
-        17: 'BTN_MODE',             # PS button */
+        1: "BTN_SELECT",
+        2: "BTN_THUMBL",  # L3
+        3: "BTN_THUMBR",  # R3
+        4: "BTN_START",
+        5: "BTN_DPAD_UP",
+        6: "BTN_DPAD_RIGHT",
+        7: "BTN_DPAD_DOWN",
+        8: "BTN_DPAD_LEFT",
+        9: "BTN_TL2",  # L2
+        10: "BTN_TR2",  # R2 */
+        11: "BTN_TL",  # L1 */
+        12: "BTN_TR",  # R1 */
+        13: "BTN_NORTH",  # options/triangle */
+        14: "BTN_EAST",  # back/circle */
+        15: "BTN_SOUTH",  # cross */
+        16: "BTN_WEST",  # view/square */
+        17: "BTN_MODE",  # PS button */
     }
 
     axes_map = {
-        'left_stick': {
-            'x': AxisMapping('x'),
-            'y': AxisMapping('y'),
+        "left_stick": {
+            "x": AxisMapping("x"),
+            "y": AxisMapping("y"),
         },
-        'right_stick': {
-            'x': AxisMapping('z', 'ABS_RX'),
-            'y': AxisMapping('Rz', 'ABS_RY'),
+        "right_stick": {
+            "x": AxisMapping("z", "ABS_RX"),
+            "y": AxisMapping("Rz", "ABS_RY"),
         },
     }
 
-# fmt: off
+    # fmt: off
     report_descriptor = [
         0x05, 0x01,                    # Usage Page (Generic Desktop)        0
         0x09, 0x04,                    # Usage (Joystick)                    2
@@ -196,13 +215,13 @@ class PS3Controller(JoystickGamepad):
         0xc0,                          # .End Collection                     146
         0xc0,                          # End Collection                      147
     ]
-# fmt: on
+    # fmt: on
 
-    def __init__(self, rdesc=report_descriptor, name='Sony PLAYSTATION(R)3 Controller'):
-        super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x054c, 0x0268))
-        self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
+    def __init__(self, rdesc=report_descriptor, name="Sony PLAYSTATION(R)3 Controller"):
+        super().__init__(rdesc, name=name, input_info=(BusType.USB, 0x054C, 0x0268))
+        self.uniq = ":".join([f"{random.randint(0, 0xff):02x}" for i in range(6)])
         self.buttons = tuple(range(1, 18))
-        self.current_mode = 'plugged-in'
+        self.current_mode = "plugged-in"
         self.rumble = PS3Rumble()
         self.hw_leds = PS3LEDs()
 
@@ -215,9 +234,9 @@ class PS3Controller(JoystickGamepad):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
+        logger.debug(f"get_report {rdesc}, {req}, {rnum}, {rtype}")
 
-        if rnum == 0xf2:
+        if rnum == 0xF2:
             # undocumented report in the HID report descriptor:
             # the MAC address of the device is stored in the bytes 4-9
             # rest has been dumped on a Sixaxis controller
@@ -226,15 +245,15 @@ class PS3Controller(JoystickGamepad):
             # fmt: on
 
             # store the uniq value in the report
-            for id, v in enumerate(self.uniq.split(':')):
+            for id, v in enumerate(self.uniq.split(":")):
                 r[4 + id] = int(v, 16)
 
             # change the mode to operational
-            self.current_mode = 'operational'
+            self.current_mode = "operational"
             return (0, r)
 
-        if rnum == 0xf5:
-            return (0, [0x01, 0x00, 0x18, 0x5e, 0x0f, 0x71, 0xa4, 0xbb])
+        if rnum == 0xF5:
+            return (0, [0x01, 0x00, 0x18, 0x5E, 0x0F, 0x71, 0xA4, 0xBB])
 
         if rdesc is None:
             return (1, [])
@@ -247,7 +266,7 @@ class PS3Controller(JoystickGamepad):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.debug(f'set_report {bool(rdesc)}, {req}, {rnum}, {rtype}, {data}')
+        logger.debug(f"set_report {bool(rdesc)}, {req}, {rnum}, {rtype}, {data}")
 
         if rdesc is None:
             return 1
@@ -256,16 +275,24 @@ class PS3Controller(JoystickGamepad):
             return 1
 
         # we have an output report to set the rumbles and LEDs
-        buf = struct.pack(f'< {len(data)}B', *data)
+        buf = struct.pack(f"< {len(data)}B", *data)
         self.rumble.parse(buf)
         self.hw_leds.parse(buf)
 
         return 0
 
     def output_report(self, data, size, rtype):
-        logger.debug(f'output_report {data[:size + 1]}, {size}, {rtype}')
+        logger.debug(f"output_report {data[:size + 1]}, {size}, {rtype}")
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, reportID=None):
+    def create_report(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        reportID=None,
+    ):
         """
         Return an input report for this device.
 
@@ -279,14 +306,24 @@ class PS3Controller(JoystickGamepad):
             where ``None`` is "leave unchanged"
         :param reportID: the numeric report ID for this report, if needed
         """
-        if self.current_mode != 'operational':
-            raise InvalidHIDCommunication(f'controller in incorrect mode: {self.current_mode}')
+        if self.current_mode != "operational":
+            raise InvalidHIDCommunication(
+                f"controller in incorrect mode: {self.current_mode}"
+            )
 
-        return super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Joystick')
+        return super().create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            reportID=reportID,
+            application="Joystick",
+        )
 
 
 class PSSensor(object):
-    """ Represents a PlayStation accelerometer or gyroscope. """
+    """Represents a PlayStation accelerometer or gyroscope."""
+
     def __init__(self, calibration_data):
         self.calibration_data = calibration_data
         self.x = 0
@@ -294,13 +331,16 @@ class PSSensor(object):
         self.z = 0
 
     def uncalibrate(self, value, calibration_data):
-        """ Convert calibrated sensor data to raw 'uncalibrated' data. """
+        """Convert calibrated sensor data to raw 'uncalibrated' data."""
 
         # Perform inverse of calibration logic performed by hid-sony driver.
         # It performs: (raw_value - bias) * numer / denom.
         # Below we use the same variable names e.g. denom, numer and bias, though
         # they are used in reverse, so "denom" is actually now a numerator.
-        return int(value * calibration_data["denom"] / calibration_data["numer"] + calibration_data["bias"])
+        return int(
+            value * calibration_data["denom"] / calibration_data["numer"]
+            + calibration_data["bias"]
+        )
 
     @property
     def raw_x(self):
@@ -321,7 +361,7 @@ class PSSensor(object):
     @x.setter
     def x(self, value):
         self._x = value
-        self._raw_x = self.uncalibrate(value, self.calibration_data['x'])
+        self._raw_x = self.uncalibrate(value, self.calibration_data["x"])
 
     @property
     def y(self):
@@ -330,7 +370,7 @@ class PSSensor(object):
     @y.setter
     def y(self, value):
         self._y = value
-        self._raw_y = self.uncalibrate(value, self.calibration_data['y'])
+        self._raw_y = self.uncalibrate(value, self.calibration_data["y"])
 
     @property
     def z(self):
@@ -339,11 +379,12 @@ class PSSensor(object):
     @z.setter
     def z(self, value):
         self._z = value
-        self._raw_z = self.uncalibrate(value, self.calibration_data['z'])
+        self._raw_z = self.uncalibrate(value, self.calibration_data["z"])
 
 
 class PSTouchPoint(object):
-    """ Represents a touch point on a PlayStation gamepad. """
+    """Represents a touch point on a PlayStation gamepad."""
+
     def __init__(self, id, x, y):
         self.contactid = id
         self.tipswitch = True
@@ -352,15 +393,18 @@ class PSTouchPoint(object):
 
 
 class PSTouchReport(object):
-    """ Represents a single touch report within a PlayStation gamepad input report.
+    """Represents a single touch report within a PlayStation gamepad input report.
     A PSTouchReport consists of a timestamp and upto two touch points.
     """
+
     def __init__(self, points, timestamp=0):
         self.timestamp = timestamp
         self.contact_ids = []
 
         if len(points) > 2:
-            raise ValueError("Invalid number of touch points provided for PSTouchReport.")
+            raise ValueError(
+                "Invalid number of touch points provided for PSTouchReport."
+            )
 
         # convert the list of points to a dict
         self.points = {p.contactid: p for p in points}
@@ -376,7 +420,6 @@ class PSTouchReport(object):
     def _update_contact_ids(self, last_touch_report):
         # ensure we keep the previous order of points
         if last_touch_report is not None:
-
             # first pass, copy the last_touch_report list, and remove all ids
             # that are not valid anymore
             contact_ids = last_touch_report.contact_ids[:]
@@ -393,7 +436,7 @@ class PSTouchReport(object):
             self.contact_ids = contact_ids
 
     def fill_values(self, last_touch_report, report, offset):
-        """ Fill touch report data into main input report. """
+        """Fill touch report data into main input report."""
 
         self._update_contact_ids(last_touch_report)
 
@@ -404,38 +447,40 @@ class PSTouchReport(object):
                 report[offset + 1] = 0x80  # Mark inactive.
             else:
                 p = self.points[i]
-                report[offset + 1] = (p.contactid & 0x7f) | (0x0 if p.tipswitch else 0x80)
-                report[offset + 2] = p.x & 0xff
-                report[offset + 3] = (p.x >> 8) & 0xf | ((p.y & 0xf) << 4)
-                report[offset + 4] = (p.y >> 4) & 0xff
+                report[offset + 1] = (p.contactid & 0x7F) | (
+                    0x0 if p.tipswitch else 0x80
+                )
+                report[offset + 2] = p.x & 0xFF
+                report[offset + 3] = (p.x >> 8) & 0xF | ((p.y & 0xF) << 4)
+                report[offset + 4] = (p.y >> 4) & 0xFF
             offset += 4
 
 
 class PS4Controller(BaseGamepad):
     buttons_map = {
-        1: 'BTN_WEST',              # square
-        2: 'BTN_SOUTH',             # cross
-        3: 'BTN_EAST',              # circle
-        4: 'BTN_NORTH',             # triangle
-        5: 'BTN_TL',                # L1
-        6: 'BTN_TR',                # R1
-        7: 'BTN_TL2',               # L2
-        8: 'BTN_TR2',               # R2
-        9: 'BTN_SELECT',            # share
-        10: 'BTN_START',            # options
-        11: 'BTN_THUMBL',           # L3
-        12: 'BTN_THUMBR',           # R3
-        13: 'BTN_MODE',             # PS button
+        1: "BTN_WEST",  # square
+        2: "BTN_SOUTH",  # cross
+        3: "BTN_EAST",  # circle
+        4: "BTN_NORTH",  # triangle
+        5: "BTN_TL",  # L1
+        6: "BTN_TR",  # R1
+        7: "BTN_TL2",  # L2
+        8: "BTN_TR2",  # R2
+        9: "BTN_SELECT",  # share
+        10: "BTN_START",  # options
+        11: "BTN_THUMBL",  # L3
+        12: "BTN_THUMBR",  # R3
+        13: "BTN_MODE",  # PS button
     }
 
     axes_map = {
-        'left_stick': {
-            'x': AxisMapping('x'),
-            'y': AxisMapping('y'),
+        "left_stick": {
+            "x": AxisMapping("x"),
+            "y": AxisMapping("y"),
         },
-        'right_stick': {
-            'x': AxisMapping('z', 'ABS_RX'),
-            'y': AxisMapping('Rz', 'ABS_RY'),
+        "right_stick": {
+            "x": AxisMapping("z", "ABS_RX"),
+            "y": AxisMapping("Rz", "ABS_RY"),
         },
     }
 
@@ -447,17 +492,17 @@ class PS4Controller(BaseGamepad):
     accelerometer_calibration_data = {
         "x": {"bias": -73, "numer": 16384, "denom": 16472},
         "y": {"bias": -352, "numer": 16384, "denom": 16344},
-        "z": {"bias": 81, "numer": 16384, "denom": 16319}
+        "z": {"bias": 81, "numer": 16384, "denom": 16319},
     }
     gyroscope_calibration_data = {
         "x": {"bias": 30, "numer": 1105920, "denom": 17827},
         "y": {"bias": 5, "numer": 1105920, "denom": 17777},
-        "z": {"bias": -30, "numer": 1105920, "denom": 17748}
+        "z": {"bias": -30, "numer": 1105920, "denom": 17748},
     }
 
     def __init__(self, rdesc, name, input_info):
         super().__init__(rdesc, name=name, input_info=input_info)
-        self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
+        self.uniq = ":".join([f"{random.randint(0, 0xff):02x}" for i in range(6)])
         self.buttons = tuple(range(1, 13))
         self.battery = PSBattery()
 
@@ -472,7 +517,9 @@ class PS4Controller(BaseGamepad):
             self.accelerometer_offset = 19
             self.battery_offset = 30
             self.gyroscope_offset = 13
-            self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
+            self.touchpad_offset = (
+                33  # Touchpad section starts at byte 33 for USB-mode.
+            )
         elif self.bus == BusType.BLUETOOTH:
             self.max_touch_reports = 4
             self.accelerometer_offset = 21
@@ -488,24 +535,26 @@ class PS4Controller(BaseGamepad):
         self.last_touch_report = None
 
     def is_ready(self):
-        return (super().is_ready() and
-                len(self.input_nodes) == 3 and
-                len(self.led_classes) == 4 and
-                self.power_supply_class is not None)
+        return (
+            super().is_ready()
+            and len(self.input_nodes) == 3
+            and len(self.led_classes) == 4
+            and self.power_supply_class is not None
+        )
 
     def fill_accelerometer_values(self, report):
-        """ Fill accelerometer section of main input report with raw accelerometer data. """
+        """Fill accelerometer section of main input report with raw accelerometer data."""
         offset = self.accelerometer_offset
 
-        report[offset] = self.accelerometer.raw_x & 0xff
-        report[offset + 1] = (self.accelerometer.raw_x >> 8) & 0xff
-        report[offset + 2] = self.accelerometer.raw_y & 0xff
-        report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
-        report[offset + 4] = self.accelerometer.raw_z & 0xff
-        report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+        report[offset] = self.accelerometer.raw_x & 0xFF
+        report[offset + 1] = (self.accelerometer.raw_x >> 8) & 0xFF
+        report[offset + 2] = self.accelerometer.raw_y & 0xFF
+        report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xFF
+        report[offset + 4] = self.accelerometer.raw_z & 0xFF
+        report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xFF
 
     def fill_battery_values(self, report):
-        """ Fill battery section of main input report with battery status. """
+        """Fill battery section of main input report with battery status."""
 
         # Battery capacity and charging status is stored in 1 byte.
         # Lower 3-bit of contains battery capacity:
@@ -516,26 +565,28 @@ class PS4Controller(BaseGamepad):
         if self.battery.full:
             battery_capacity = 11
         else:
-            battery_capacity = int(self.battery.capacity / 10) & 0xf
+            battery_capacity = int(self.battery.capacity / 10) & 0xF
 
         # Cable connected
-        cable_connected = 1 if self.battery.cable_connected or self.bus == BusType.USB else 0
+        cable_connected = (
+            1 if self.battery.cable_connected or self.bus == BusType.USB else 0
+        )
 
         report[self.battery_offset] = (cable_connected << 4) | battery_capacity
 
     def fill_gyroscope_values(self, report):
-        """ Fill gyroscope section of main input report with raw gyroscope data. """
+        """Fill gyroscope section of main input report with raw gyroscope data."""
         offset = self.gyroscope_offset
 
-        report[offset] = self.gyroscope.raw_x & 0xff
-        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xff
-        report[offset + 2] = self.gyroscope.raw_y & 0xff
-        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xff
-        report[offset + 4] = self.gyroscope.raw_z & 0xff
-        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xff
+        report[offset] = self.gyroscope.raw_x & 0xFF
+        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xFF
+        report[offset + 2] = self.gyroscope.raw_y & 0xFF
+        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xFF
+        report[offset + 4] = self.gyroscope.raw_z & 0xFF
+        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xFF
 
     def fill_touchpad_values(self, report):
-        """ Fill touchpad "sub-report" section of main input report with touch data. """
+        """Fill touchpad "sub-report" section of main input report with touch data."""
 
         # Layout of PS4Touchpad report:
         # +0 valid report count (max 3 for USB and 4 for BT)
@@ -561,7 +612,9 @@ class PS4Controller(BaseGamepad):
         offset += 1 + 9 * (self.max_touch_reports - 1)  # Move to last touchpad report
         for i in range(self.max_touch_reports - 1, -1, -1):
             if i < len(self.touch_reports):
-                self.touch_reports[i].fill_values(self.last_touch_report, report, offset)
+                self.touch_reports[i].fill_values(
+                    self.last_touch_report, report, offset
+                )
                 self.last_touch_report = self.touch_reports[i]
             else:
                 # Inactive touch reports need to have points marked as inactive.
@@ -602,9 +655,20 @@ class PS4Controller(BaseGamepad):
             # PS4 controller stores history newest to oldest, so do the same.
             self.touch_reports.insert(0, touch_report)
             # Remove oldest reports out of hardware limits.
-            self.touch_reports = self.touch_reports[0:self.max_touch_reports - 1]
+            self.touch_reports = self.touch_reports[0 : self.max_touch_reports - 1]
 
-    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), inject=True):
+    def event(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+        inject=True,
+    ):
         """
         Send an input event on the default report ID.
 
@@ -626,7 +690,15 @@ class PS4Controller(BaseGamepad):
             When set to False this can be used to build up touch history.
         """
 
-        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch, accel=accel, gyro=gyro)
+        r = self.create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            touch=touch,
+            accel=accel,
+            gyro=gyro,
+        )
 
         if inject:
             self.call_input_event(r)
@@ -821,8 +893,8 @@ class PS4ControllerBluetooth(PS4Controller):
     ]
     # fmt: on
 
-    def __init__(self, rdesc=report_descriptor, name='Wireless Controller'):
-        super().__init__(rdesc, name, (BusType.BLUETOOTH, 0x054c, 0x05c4))
+    def __init__(self, rdesc=report_descriptor, name="Wireless Controller"):
+        super().__init__(rdesc, name, (BusType.BLUETOOTH, 0x054C, 0x05C4))
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
@@ -830,7 +902,7 @@ class PS4ControllerBluetooth(PS4Controller):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
+        logger.debug(f"get_report {rdesc}, {req}, {rnum}, {rtype}")
 
         if rnum == 0x05:
             # Report to retrieve motion sensor calibration data.
@@ -841,7 +913,7 @@ class PS4ControllerBluetooth(PS4Controller):
             # fmt: on
             return (0, r)
 
-        elif rnum == 0xa3:
+        elif rnum == 0xA3:
             # Report to retrieve hardware and firmware version.
             # fmt: off
             r = [0xa3, 0x41, 0x70, 0x72, 0x20, 0x20, 0x38, 0x20, 0x32, 0x30, 0x31, 0x34, 0x00, 0x00,
@@ -856,7 +928,18 @@ class PS4ControllerBluetooth(PS4Controller):
 
         return (1, [])
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
+    def create_report(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+        reportID=None,
+    ):
         """
         Return an input report for this device.
 
@@ -894,7 +977,14 @@ class PS4ControllerBluetooth(PS4Controller):
         # The full Bluetooth HID report (17) is vendor specific and the HID parser has
         # no clue on how to interpret the data. However it knows how to parse HID report 1,
         # which is a subset of report 17. Leverage this report as a base to build the full report.
-        base_report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+        base_report = super().create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            reportID=reportID,
+            application="Game Pad",
+        )
         for i in range(len(base_report) - 1):
             # Start of data is 3 bytes shifted relative to Report 1.
             report[3 + i] = base_report[1 + i]
@@ -913,13 +1003,13 @@ class PS4ControllerBluetooth(PS4Controller):
         self.fill_touchpad_values(report)
 
         # CRC is calculated over the first 74 bytes.
-        seed = zlib.crc32(bytes([0xa1]))
+        seed = zlib.crc32(bytes([0xA1]))
         crc = zlib.crc32(bytes(report[0:74]), seed)
 
-        report[74] = crc & 0xff
-        report[75] = (crc >> 8) & 0xff
-        report[76] = (crc >> 16) & 0xff
-        report[77] = (crc >> 24) & 0xff
+        report[74] = crc & 0xFF
+        report[75] = (crc >> 8) & 0xFF
+        report[76] = (crc >> 16) & 0xFF
+        report[77] = (crc >> 24) & 0xFF
 
         return report
 
@@ -1181,7 +1271,11 @@ class PS4ControllerUSB(PS4Controller):
     # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
-        super().__init__(rdesc, 'Sony Computer Entertainment Wireless Controller', (BusType.USB, 0x054c, 0x05c4))
+        super().__init__(
+            rdesc,
+            "Sony Computer Entertainment Wireless Controller",
+            (BusType.USB, 0x054C, 0x05C4),
+        )
 
     def get_report(self, req, rnum, rtype):
         rdesc = None
@@ -1189,7 +1283,7 @@ class PS4ControllerUSB(PS4Controller):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
+        logger.debug(f"get_report {rdesc}, {req}, {rnum}, {rtype}")
 
         if rnum == 0x02:
             # Report to retrieve motion sensor calibration data.
@@ -1209,7 +1303,7 @@ class PS4ControllerUSB(PS4Controller):
             # fmt: on
 
             # store the uniq value in the report
-            for id, v in enumerate(self.uniq.split(':')):
+            for id, v in enumerate(self.uniq.split(":")):
                 # store in little endian
                 r[6 - id] = int(v, 16)
 
@@ -1221,13 +1315,13 @@ class PS4ControllerUSB(PS4Controller):
             r = [0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
             # store the uniq value in the report
-            for id, v in enumerate(self.uniq.split(':')):
+            for id, v in enumerate(self.uniq.split(":")):
                 # store in little endian
                 r[6 - id] = int(v, 16)
 
             return (0, r)
 
-        elif rnum == 0xa3:
+        elif rnum == 0xA3:
             # Report to retrieve hardware and firmware version.
             # fmt: off
             r = [0xa3, 0x41, 0x70, 0x72, 0x20, 0x20, 0x38, 0x20, 0x32, 0x30, 0x31, 0x34, 0x00, 0x00,
@@ -1242,7 +1336,18 @@ class PS4ControllerUSB(PS4Controller):
 
         return (1, [])
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
+    def create_report(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+        reportID=None,
+    ):
         """
         Return an input report for this device.
 
@@ -1263,7 +1368,14 @@ class PS4ControllerUSB(PS4Controller):
         :param reportID: the numeric report ID for this report, if needed
         """
 
-        report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+        report = super().create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            reportID=reportID,
+            application="Game Pad",
+        )
 
         self.store_accelerometer_state(accel)
         self.fill_accelerometer_values(report)
@@ -1289,10 +1401,10 @@ class PS5TouchReport(PSTouchReport):
                 report[offset] = 0x80  # Mark inactive.
             else:
                 p = self.points[i]
-                report[offset] = (p.contactid & 0x7f) | (0x0 if p.tipswitch else 0x80)
-                report[offset + 1] = p.x & 0xff
-                report[offset + 2] = (p.x >> 8) & 0xf | ((p.y & 0xf) << 4)
-                report[offset + 3] = (p.y >> 4) & 0xff
+                report[offset] = (p.contactid & 0x7F) | (0x0 if p.tipswitch else 0x80)
+                report[offset + 1] = p.x & 0xFF
+                report[offset + 2] = (p.x >> 8) & 0xF | ((p.y & 0xF) << 4)
+                report[offset + 3] = (p.y >> 4) & 0xFF
             offset += 4
 
         report[offset + 8] = self.timestamp
@@ -1300,29 +1412,29 @@ class PS5TouchReport(PSTouchReport):
 
 class PS5Controller(BaseGamepad):
     buttons_map = {
-        1: 'BTN_WEST',              # square
-        2: 'BTN_SOUTH',             # cross
-        3: 'BTN_EAST',              # circle
-        4: 'BTN_NORTH',             # triangle
-        5: 'BTN_TL',                # L1
-        6: 'BTN_TR',                # R1
-        7: 'BTN_TL2',               # L2
-        8: 'BTN_TR2',               # R2
-        9: 'BTN_SELECT',            # create
-        10: 'BTN_START',            # options
-        11: 'BTN_THUMBL',           # L3
-        12: 'BTN_THUMBR',           # R3
-        13: 'BTN_MODE',             # PS button
+        1: "BTN_WEST",  # square
+        2: "BTN_SOUTH",  # cross
+        3: "BTN_EAST",  # circle
+        4: "BTN_NORTH",  # triangle
+        5: "BTN_TL",  # L1
+        6: "BTN_TR",  # R1
+        7: "BTN_TL2",  # L2
+        8: "BTN_TR2",  # R2
+        9: "BTN_SELECT",  # create
+        10: "BTN_START",  # options
+        11: "BTN_THUMBL",  # L3
+        12: "BTN_THUMBR",  # R3
+        13: "BTN_MODE",  # PS button
     }
 
     axes_map = {
-        'left_stick': {
-            'x': AxisMapping('x'),
-            'y': AxisMapping('y'),
+        "left_stick": {
+            "x": AxisMapping("x"),
+            "y": AxisMapping("y"),
         },
-        'right_stick': {
-            'x': AxisMapping('z', 'ABS_RX'),
-            'y': AxisMapping('Rz', 'ABS_RY'),
+        "right_stick": {
+            "x": AxisMapping("z", "ABS_RX"),
+            "y": AxisMapping("Rz", "ABS_RY"),
         },
     }
 
@@ -1334,17 +1446,17 @@ class PS5Controller(BaseGamepad):
     accelerometer_calibration_data = {
         "x": {"bias": 0, "numer": 16384, "denom": 16374},
         "y": {"bias": -114, "numer": 16384, "denom": 16362},
-        "z": {"bias": 2, "numer": 16384, "denom": 16395}
+        "z": {"bias": 2, "numer": 16384, "denom": 16395},
     }
     gyroscope_calibration_data = {
         "x": {"bias": -1, "numer": 1105920, "denom": 17727},
         "y": {"bias": -14, "numer": 1105920, "denom": 17728},
-        "z": {"bias": 4, "numer": 1105920, "denom": 17769}
+        "z": {"bias": 4, "numer": 1105920, "denom": 17769},
     }
 
     def __init__(self, rdesc, name, input_info):
         super().__init__(rdesc, name=name, input_info=input_info)
-        self.uniq = ':'.join([f'{random.randint(0, 0xff):02x}' for i in range(6)])
+        self.uniq = ":".join([f"{random.randint(0, 0xff):02x}" for i in range(6)])
         self.buttons = tuple(range(1, 13))
         self.battery = PSBattery()
 
@@ -1352,7 +1464,9 @@ class PS5Controller(BaseGamepad):
             self.accelerometer_offset = 22
             self.battery_offset = 53
             self.gyroscope_offset = 16
-            self.touchpad_offset = 33  # Touchpad section starts at byte 33 for USB-mode.
+            self.touchpad_offset = (
+                33  # Touchpad section starts at byte 33 for USB-mode.
+            )
         elif self.bus == BusType.BLUETOOTH:
             self.accelerometer_offset = 23
             self.battery_offset = 54
@@ -1367,23 +1481,25 @@ class PS5Controller(BaseGamepad):
         self.last_touch_report = None
 
     def is_ready(self):
-        return (super().is_ready() and
-                len(self.input_nodes) == 3 and
-                self.power_supply_class is not None)
+        return (
+            super().is_ready()
+            and len(self.input_nodes) == 3
+            and self.power_supply_class is not None
+        )
 
     def fill_accelerometer_values(self, report):
-        """ Fill accelerometer section of main input report with raw accelerometer data. """
+        """Fill accelerometer section of main input report with raw accelerometer data."""
         offset = self.accelerometer_offset
 
-        report[offset] = self.accelerometer.raw_x & 0xff
-        report[offset + 1] = (self.accelerometer.raw_x >> 8) & 0xff
-        report[offset + 2] = self.accelerometer.raw_y & 0xff
-        report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xff
-        report[offset + 4] = self.accelerometer.raw_z & 0xff
-        report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xff
+        report[offset] = self.accelerometer.raw_x & 0xFF
+        report[offset + 1] = (self.accelerometer.raw_x >> 8) & 0xFF
+        report[offset + 2] = self.accelerometer.raw_y & 0xFF
+        report[offset + 3] = (self.accelerometer.raw_y >> 8) & 0xFF
+        report[offset + 4] = self.accelerometer.raw_z & 0xFF
+        report[offset + 5] = (self.accelerometer.raw_z >> 8) & 0xFF
 
     def fill_battery_values(self, report):
-        """ Fill battery section of main input report with battery status. """
+        """Fill battery section of main input report with battery status."""
 
         # Battery capacity and charging status is stored in 1 byte.
         # Lower 4-bit contains battery capacity:
@@ -1400,7 +1516,7 @@ class PS5Controller(BaseGamepad):
             battery_capacity = 10
             charging_status = 2  # charging complete
         else:
-            battery_capacity = int(self.battery.capacity / 10) & 0xf
+            battery_capacity = int(self.battery.capacity / 10) & 0xF
             if self.battery.cable_connected or self.bus == BusType.USB:
                 charging_status = 1  # charging
             else:
@@ -1409,18 +1525,18 @@ class PS5Controller(BaseGamepad):
         report[self.battery_offset] = (charging_status << 4) | battery_capacity
 
     def fill_gyroscope_values(self, report):
-        """ Fill gyroscope section of main input report with raw gyroscope data. """
+        """Fill gyroscope section of main input report with raw gyroscope data."""
         offset = self.gyroscope_offset
 
-        report[offset] = self.gyroscope.raw_x & 0xff
-        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xff
-        report[offset + 2] = self.gyroscope.raw_y & 0xff
-        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xff
-        report[offset + 4] = self.gyroscope.raw_z & 0xff
-        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xff
+        report[offset] = self.gyroscope.raw_x & 0xFF
+        report[offset + 1] = (self.gyroscope.raw_x >> 8) & 0xFF
+        report[offset + 2] = self.gyroscope.raw_y & 0xFF
+        report[offset + 3] = (self.gyroscope.raw_y >> 8) & 0xFF
+        report[offset + 4] = self.gyroscope.raw_z & 0xFF
+        report[offset + 5] = (self.gyroscope.raw_z >> 8) & 0xFF
 
     def fill_touchpad_values(self, report):
-        """ Fill touchpad "sub-report" section of main input report with touch data. """
+        """Fill touchpad "sub-report" section of main input report with touch data."""
 
         # Layout of PS5Touchpad report:
         # 1x TouchReport
@@ -1479,7 +1595,7 @@ class PS5Controller(BaseGamepad):
             if v.report_ID == rnum:
                 rdesc = v
 
-        logger.debug(f'get_report {rdesc}, {req}, {rnum}, {rtype}')
+        logger.debug(f"get_report {rdesc}, {req}, {rnum}, {rtype}")
 
         if rnum == 0x05:  # Calibration info
             # fmt: off
@@ -1499,7 +1615,7 @@ class PS5Controller(BaseGamepad):
             # fmt: on
 
             # store the uniq value in the report
-            for id, v in enumerate(self.uniq.split(':')):
+            for id, v in enumerate(self.uniq.split(":")):
                 # store in little endian
                 r[6 - id] = int(v, 16)
 
@@ -1521,7 +1637,17 @@ class PS5Controller(BaseGamepad):
 
         return (1, [])
 
-    def event(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None)):
+    def event(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+    ):
         """
         Send an input event on the default report ID.
 
@@ -1537,7 +1663,15 @@ class PS5Controller(BaseGamepad):
             where ``None`` is "leave unchanged and '[]' is release all fingers.
         """
 
-        r = self.create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, touch=touch, accel=accel, gyro=gyro)
+        r = self.create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            touch=touch,
+            accel=accel,
+            gyro=gyro,
+        )
         self.call_input_event(r)
         return [r]
 
@@ -1683,20 +1817,35 @@ class PS5ControllerBluetooth(PS5Controller):
     # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
-        super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.BLUETOOTH, 0x054c, 0x0ce6))
+        super().__init__(
+            rdesc,
+            "Sony Interactive Entertainment Wireless Controller",
+            (BusType.BLUETOOTH, 0x054C, 0x0CE6),
+        )
 
     def _sign_report(self, report, seed, count):
-        """ Helper function to sign DualSense reports with CRC32 at the end of a report. """
+        """Helper function to sign DualSense reports with CRC32 at the end of a report."""
         seed = zlib.crc32(bytes([seed]))
         crc = zlib.crc32(bytes(report[0:count]), seed)
 
         # CRC is stored directly after the payload at the last 4 bytes of a report.
-        report[count] = crc & 0xff
-        report[count + 1] = (crc >> 8) & 0xff
-        report[count + 2] = (crc >> 16) & 0xff
-        report[count + 3] = (crc >> 24) & 0xff
+        report[count] = crc & 0xFF
+        report[count + 1] = (crc >> 8) & 0xFF
+        report[count + 2] = (crc >> 16) & 0xFF
+        report[count + 3] = (crc >> 24) & 0xFF
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
+    def create_report(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+        reportID=None,
+    ):
         """
         Return an input report for this device.
 
@@ -1724,7 +1873,14 @@ class PS5ControllerBluetooth(PS5Controller):
         # no clue on how to interpret the data. However it knows how to parse HID report 1,
         # which contains button, hat and stick data. Leverage this report as a base to build
         # the full report.
-        base_report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+        base_report = super().create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            reportID=reportID,
+            application="Game Pad",
+        )
 
         report[2] = base_report[1]  # X
         report[3] = base_report[2]  # Y
@@ -1751,7 +1907,7 @@ class PS5ControllerBluetooth(PS5Controller):
         self.fill_battery_values(report)
 
         # CRC is calculated over the first 74 bytes.
-        self._sign_report(report, 0xa1, 74)
+        self._sign_report(report, 0xA1, 74)
 
         return report
 
@@ -1760,9 +1916,9 @@ class PS5ControllerBluetooth(PS5Controller):
 
         # DualSense feature reports are signed with a CRC at the end of the report.
         if rnum == 0x05:
-            self._sign_report(report[1], 0xa3, 37)
+            self._sign_report(report[1], 0xA3, 37)
         elif rnum == 0x09:
-            self._sign_report(report[1], 0xa3, 16)
+            self._sign_report(report[1], 0xA3, 16)
 
         return report
 
@@ -1900,9 +2056,24 @@ class PS5ControllerUSB(PS5Controller):
     # fmt: on
 
     def __init__(self, rdesc=report_descriptor):
-        super().__init__(rdesc, "Sony Interactive Entertainment Wireless Controller", (BusType.USB, 0x054c, 0x0ce6))
+        super().__init__(
+            rdesc,
+            "Sony Interactive Entertainment Wireless Controller",
+            (BusType.USB, 0x054C, 0x0CE6),
+        )
 
-    def create_report(self, *, left=(None, None), right=(None, None), hat_switch=None, buttons=None, touch=None, accel=(None, None, None), gyro=(None, None, None), reportID=None):
+    def create_report(
+        self,
+        *,
+        left=(None, None),
+        right=(None, None),
+        hat_switch=None,
+        buttons=None,
+        touch=None,
+        accel=(None, None, None),
+        gyro=(None, None, None),
+        reportID=None,
+    ):
         """
         Return an input report for this device.
 
@@ -1923,7 +2094,14 @@ class PS5ControllerUSB(PS5Controller):
         :param reportID: the numeric report ID for this report, if needed
         """
 
-        report = super().create_report(left=left, right=right, hat_switch=hat_switch, buttons=buttons, reportID=reportID, application='Game Pad')
+        report = super().create_report(
+            left=left,
+            right=right,
+            hat_switch=hat_switch,
+            buttons=buttons,
+            reportID=reportID,
+            application="Game Pad",
+        )
 
         self.store_accelerometer_state(accel)
         self.fill_accelerometer_values(report)

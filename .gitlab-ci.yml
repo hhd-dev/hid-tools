@@ -118,14 +118,11 @@ rebuild kernel:
   needs:
     - test container prep
 
-flake:
+python formatting:
   extends: .default_image
   stage: build
   script:
-    # The proper way is to run:
-    # python3 setup.py flake8
-    # but we want to also check the `tests` folder, so call flake8 directly
-    - flake8
+    - black --check .
 
 install:
   extends: .default_image
@@ -147,7 +144,7 @@ pytest:
     - kvm
   stage: test
   needs:
-    - flake
+    - python formatting
     - rebuild kernel
   script:
     - *b2c-kernel-url

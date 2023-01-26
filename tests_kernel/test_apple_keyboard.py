@@ -11,7 +11,8 @@ from hidtools.util import BusType
 
 import libevdev
 import logging
-logger = logging.getLogger('hidtools.test.apple-keyboard')
+
+logger = logging.getLogger("hidtools.test.apple-keyboard")
 
 
 class KbdData(object):
@@ -135,16 +136,18 @@ class AppleKeyboard(ArrayKeyboard):
     ]
     # fmt: on
 
-    def __init__(self,
-                 rdesc=report_descriptor,
-                 name='Apple Wireless Keyboard',
-                 input_info=(BusType.BLUETOOTH, 0x05ac, 0x0256)):
+    def __init__(
+        self,
+        rdesc=report_descriptor,
+        name="Apple Wireless Keyboard",
+        input_info=(BusType.BLUETOOTH, 0x05AC, 0x0256),
+    ):
         super().__init__(rdesc, name, input_info)
         self.default_reportID = 1
 
     def send_fn_state(self, state):
         data = KbdData()
-        setattr(data, '0xff0003', state)
+        setattr(data, "0xff0003", state)
         r = self.create_report(data, reportID=17)
         self.call_input_event(r)
         return [r]
@@ -160,7 +163,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         evdev = uhdev.get_evdev()
         syn_event = self.syn_event
 
-        r = uhdev.event(['F4'])
+        r = uhdev.event(["F4"])
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_ALL_APPLICATIONS, 1))
         events = uhdev.next_sync_events()
@@ -184,7 +187,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         syn_event = self.syn_event
 
         r = uhdev.send_fn_state(1)
-        r.extend(uhdev.event(['F4']))
+        r.extend(uhdev.event(["F4"]))
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F4, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 1))
@@ -216,7 +219,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         syn_event = self.syn_event
 
         r = uhdev.send_fn_state(1)
-        r.extend(uhdev.event(['F4']))
+        r.extend(uhdev.event(["F4"]))
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F4, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 1))
@@ -246,7 +249,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         evdev = uhdev.get_evdev()
         syn_event = self.syn_event
 
-        r = uhdev.event(['F4'])
+        r = uhdev.event(["F4"])
         r.extend(uhdev.send_fn_state(1))
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_ALL_APPLICATIONS, 1))
@@ -279,8 +282,8 @@ class TestAppleKeyboard(TestArrayKeyboard):
         syn_event = self.syn_event
 
         r = uhdev.send_fn_state(1)
-        r.extend(uhdev.event(['F4']))
-        r.extend(uhdev.event(['F4', 'F6']))
+        r.extend(uhdev.event(["F4"]))
+        r.extend(uhdev.event(["F4", "F6"]))
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F4, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F6, 1))
@@ -292,7 +295,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         assert evdev.value[libevdev.EV_KEY.KEY_F6] == 1
         assert evdev.value[libevdev.EV_KEY.KEY_FN] == 1
 
-        r = uhdev.event(['F6'])
+        r = uhdev.event(["F6"])
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F4, 0))
         events = uhdev.next_sync_events()
@@ -329,7 +332,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         syn_event = self.syn_event
 
         # press F4
-        r = uhdev.event(['F4'])
+        r = uhdev.event(["F4"])
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_ALL_APPLICATIONS, 1))
         events = uhdev.next_sync_events()
@@ -355,7 +358,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         assert evdev.value[libevdev.EV_KEY.KEY_FN] == 1
 
         # keep F4 and press F6
-        r = uhdev.event(['F4', 'F6'])
+        r = uhdev.event(["F4", "F6"])
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_F6, 1))
         events = uhdev.next_sync_events()
@@ -368,7 +371,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         assert evdev.value[libevdev.EV_KEY.KEY_FN] == 1
 
         # keep F4 and F6
-        r = uhdev.event(['F4', 'F6'])
+        r = uhdev.event(["F4", "F6"])
         expected = []
         events = uhdev.next_sync_events()
         self.debug_reports(r, uhdev, events)
@@ -401,7 +404,7 @@ class TestAppleKeyboard(TestArrayKeyboard):
         syn_event = self.syn_event
 
         r = uhdev.send_fn_state(1)
-        r.extend(uhdev.event(['UpArrow']))
+        r.extend(uhdev.event(["UpArrow"]))
         expected = [syn_event]
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_PAGEUP, 1))
         expected.append(libevdev.InputEvent(libevdev.EV_KEY.KEY_FN, 1))

@@ -11,7 +11,8 @@
 from . import base
 import pytest
 import logging
-logger = logging.getLogger('hidtools.test.usb')
+
+logger = logging.getLogger("hidtools.test.usb")
 
 
 class USBDev(base.UHIDTestDevice):
@@ -50,7 +51,9 @@ class USBDev(base.UHIDTestDevice):
     # fmt: on
 
     def __init__(self, name=None, input_info=None):
-        super().__init__(name, 'Mouse', input_info=input_info, rdesc=USBDev.report_descriptor)
+        super().__init__(
+            name, "Mouse", input_info=input_info, rdesc=USBDev.report_descriptor
+        )
 
     # skip witing for udev events, it's likely that the report
     # descriptor is wrong
@@ -60,14 +63,15 @@ class USBDev(base.UHIDTestDevice):
     # we don't have an evdev node here, so paper over
     # the checks
     def get_evdev(self, application=None):
-        return 'OK'
+        return "OK"
 
 
 class TestUSBDevice(base.BaseTestCase.TestUhid):
-    '''
+    """
     Test class to test if an emulated USB device crashes
     the kernel.
-    '''
+    """
+
     # conftest.py is generating the following fixture:
     #
     # @pytest.fixture(params=[('modulename', 1, 2)])
@@ -80,7 +84,7 @@ class TestUSBDevice(base.BaseTestCase.TestUhid):
         return USBDev(input_info=(3, self.vid, self.pid))
 
     def test_creation(self):
-        '''
+        """
         inject the USB dev through uhid and immediately see if there is a crash:
 
         uhid can create a USB device with the BUS_USB bus, and some
@@ -94,5 +98,5 @@ class TestUSBDevice(base.BaseTestCase.TestUhid):
 
         The test is empty as the fixture `check_taint` is doing the job (and
         honestly, when the kernel crashes, the whole machine freezes).
-        '''
+        """
         assert True

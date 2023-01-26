@@ -27,10 +27,10 @@ import hidtools.hidraw
 import logging
 import yaml
 from hidtools.hid import ReportDescriptor
-logging.basicConfig(format='%(levelname)s: %(name)s: %(message)s',
-                    level=logging.INFO)
-base_logger = logging.getLogger('hid')
-logger = logging.getLogger('hid.decode')
+
+logging.basicConfig(format="%(levelname)s: %(name)s: %(message)s", level=logging.INFO)
+base_logger = logging.getLogger("hid")
+logger = logging.getLogger("hid.decode")
 
 
 class Oops(Exception):
@@ -38,28 +38,30 @@ class Oops(Exception):
 
 
 def open_sysfs_rdesc(path):
-    logger.debug(f'Reading sysfs file {path}')
-    with open(path, 'rb') as fd:
+    logger.debug(f"Reading sysfs file {path}")
+    with open(path, "rb") as fd:
         data = fd.read()
         return [hidtools.hid.ReportDescriptor.from_bytes(data)]
 
 
 def open_devnode_rdesc(path):
-    if not path.startswith('/dev/input/event'):
-        raise Oops(f'Unexpected event node: {path}')
+    if not path.startswith("/dev/input/event"):
+        raise Oops(f"Unexpected event node: {path}")
 
-    node = path[len('/dev/input/'):]
+    node = path[len("/dev/input/") :]
     # should use pyudev here, but let's keep that for later
-    sysfs = f'/sys/class/input/{node}/device/device/report_descriptor'
+    sysfs = f"/sys/class/input/{node}/device/device/report_descriptor"
 
     if not os.path.exists(sysfs):
-        raise Oops(f'Unable to find report descriptor for {path}, is this a HID device?')
+        raise Oops(
+            f"Unable to find report descriptor for {path}, is this a HID device?"
+        )
 
     return open_sysfs_rdesc(sysfs)
 
 
 def open_hidraw(path):
-    with open(path, 'rb+') as fd:
+    with open(path, "rb+") as fd:
         device = hidtools.hidraw.HidrawDevice(fd)
         return [device.report_descriptor]
 
@@ -67,10 +69,10 @@ def open_hidraw(path):
 def open_binary(path):
     # This will misidentify a few files (e.g. UTF-16) as binary but for the
     # inputs we need to accept it doesn't matter
-    with open(path, 'rb') as fd:
+    with open(path, "rb") as fd:
         data = fd.read(4096)
-        if b'\0' in data:
-            logger.debug(f'{path} is a binary file')
+        if b"\0" in data:
+            logger.debug(f"{path} is a binary file")
             return [hidtools.hid.ReportDescriptor.from_bytes(data)]
     return None
 
@@ -78,12 +80,16 @@ def open_binary(path):
 def interpret_file_hidrecorder(fd):
     data = fd.read()
     # The proper (machine-readable) hid-recorder output
-    rdescs = [ReportDescriptor.from_string(l[3:]) for l in data.splitlines() if l.startswith('R: ')]
+    rdescs = [
+        ReportDescriptor.from_string(l[3:])
+        for l in data.splitlines()
+        if l.startswith("R: ")
+    ]
     if rdescs:
         return rdescs
 
     # The human-readable version (the comment in the hid-recorder output)
-    if any(filter(lambda x: x.strip().startswith('Usage Page ('), data.splitlines())):
+    if any(filter(lambda x: x.strip().startswith("Usage Page ("), data.splitlines())):
         rdescs = [hidtools.hid.ReportDescriptor.from_human_descr(data)]
         if rdescs:
             return rdescs
@@ -97,11 +103,11 @@ def interpret_file_libinput_record(fd):
     except UnicodeDecodeError:
         # binary file?
         return None
-    if 'libinput' not in libinput_data:
+    if "libinput" not in libinput_data:
         # not a libinput record
         return None
 
-    rdescs_data = [dev['hid'] for dev in libinput_data['devices']]
+    rdescs_data = [dev["hid"] for dev in libinput_data["devices"]]
 
     rdescs = [hidtools.hid.ReportDescriptor.from_bytes(r) for r in rdescs_data]
 
@@ -110,33 +116,33 @@ def interpret_file_libinput_record(fd):
 
 def open_report_descriptor(path):
     abspath = os.path.abspath(path)
-    logger.debug(f'Processing {abspath}')
+    logger.debug(f"Processing {abspath}")
 
     if os.path.isdir(abspath) or not os.path.exists(abspath):
-        raise Oops(f'Invalid path: {path}')
+        raise Oops(f"Invalid path: {path}")
 
-    if re.match('/sys/.*/report_descriptor', abspath):
+    if re.match("/sys/.*/report_descriptor", abspath):
         return open_sysfs_rdesc(path)
-    if re.match('/dev/input/event[0-9]+', abspath):
+    if re.match("/dev/input/event[0-9]+", abspath):
         return open_devnode_rdesc(path)
-    if re.match('/dev/hidraw[0-9]+', abspath):
+    if re.match("/dev/hidraw[0-9]+", abspath):
         return open_hidraw(path)
     rdesc = open_binary(path)
     if rdesc is not None:
         return rdesc
 
-    with open(path, 'r') as fd:
-        logger.debug(f'Opening {path} as text file')
+    with open(path, "r") as fd:
+        logger.debug(f"Opening {path} as text file")
         rdesc = interpret_file_hidrecorder(fd)
         if rdesc is not None:
             return rdesc
 
-    with open(path, 'r') as fd:
+    with open(path, "r") as fd:
         rdesc = interpret_file_libinput_record(fd)
         if rdesc is not None:
             return rdesc
 
-    raise Oops(f'Unable to detect file type for {path}')
+    raise Oops(f"Unable to detect file type for {path}")
 
 
 class FakeHidraw(hidtools.hidraw.HidrawDevice):
@@ -148,11 +154,25 @@ class FakeHidraw(hidtools.hidraw.HidrawDevice):
 
 
 @click.command()
-@click.argument('report_descriptor', metavar='<Path to report descriptor>', nargs=-1, type=click.Path(exists=True, dir_okay=False, readable=True))
-@click.option('--output', metavar='output-file', default=sys.stdout, nargs=1, type=click.File('w'), help='The file to record to (default: stdout)')
-@click.option('--verbose', default=False, is_flag=True, help='Show debugging information')
+@click.argument(
+    "report_descriptor",
+    metavar="<Path to report descriptor>",
+    nargs=-1,
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+)
+@click.option(
+    "--output",
+    metavar="output-file",
+    default=sys.stdout,
+    nargs=1,
+    type=click.File("w"),
+    help="The file to record to (default: stdout)",
+)
+@click.option(
+    "--verbose", default=False, is_flag=True, help="Show debugging information"
+)
 def main(report_descriptor, output, verbose):
-    '''Decode a HID report descriptor to human-readable format.
+    """Decode a HID report descriptor to human-readable format.
 
     \b
     Supported formats for the report descriptor are:
@@ -161,7 +181,7 @@ def main(report_descriptor, output, verbose):
     - a hidraw node, e.g. /dev/hidraw2
     - a recording produced by hid-recorder
     - a recording produced by libinput record
-    '''
+    """
     try:
         if verbose:
             base_logger.setLevel(logging.DEBUG)
@@ -169,16 +189,16 @@ def main(report_descriptor, output, verbose):
         for d, path in enumerate(report_descriptor):
             rdescs = open_report_descriptor(path)
             for r, rdesc in enumerate(rdescs):
-                fake = FakeHidraw(f'device {d}:{r}', rdesc)
+                fake = FakeHidraw(f"device {d}:{r}", rdesc)
                 fake.dump(output, from_the_beginning=True)
                 if rdesc.win8:
                     output.write("# **** win 8 certified ****\n")
     except BrokenPipeError:
         pass
     except PermissionError as e:
-        print(f'{e}', file=sys.stderr)
+        print(f"{e}", file=sys.stderr)
     except Oops as e:
-        print(f'{e}', file=sys.stderr)
+        print(f"{e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

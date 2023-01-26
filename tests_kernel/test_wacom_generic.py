@@ -18,9 +18,13 @@ in the driver's device table. It uses the device's HID descriptor to
 decode reports sent by the device.
 """
 
-from .descriptors_wacom import wacom_pth660_v145, wacom_pth660_v150, \
-    wacom_pth860_v145, wacom_pth860_v150, \
-    wacom_pth460_v105
+from .descriptors_wacom import (
+    wacom_pth660_v145,
+    wacom_pth660_v150,
+    wacom_pth860_v145,
+    wacom_pth860_v150,
+    wacom_pth460_v105,
+)
 
 import attr
 from enum import Enum
@@ -31,13 +35,15 @@ import libevdev
 import pytest
 
 import logging
-logger = logging.getLogger('hidtools.test.wacom')
+
+logger = logging.getLogger("hidtools.test.wacom")
 
 
 class ProximityState(Enum):
     """
     Enumeration of allowed proximity states.
     """
+
     # Tool is not able to be sensed by the device
     OUT = 0
 
@@ -52,18 +58,22 @@ class ProximityState(Enum):
     def fill(self, reportdata):
         """Fill a report with approrpiate HID properties/values."""
         reportdata.inrange = self in [ProximityState.IN_RANGE]
-        reportdata.wacomsense = self in [ProximityState.IN_PROXIMITY, ProximityState.IN_RANGE]
+        reportdata.wacomsense = self in [
+            ProximityState.IN_PROXIMITY,
+            ProximityState.IN_RANGE,
+        ]
 
 
-class ReportData():
+class ReportData:
     """
     Placeholder for HID report values.
     """
+
     pass
 
 
 @attr.s
-class Buttons():
+class Buttons:
     """
     Stylus button state.
 
@@ -71,6 +81,7 @@ class Buttons():
     may be present on a stylus. Buttons set to 'None' indicate the
     state is "unchanged" since the previous event.
     """
+
     primary = attr.ib(default=None)
     secondary = attr.ib(default=None)
     tertiary = attr.ib(default=None)
@@ -88,7 +99,7 @@ class Buttons():
 
 
 @attr.s
-class ToolID():
+class ToolID:
     """
     Stylus tool identifiers.
 
@@ -96,6 +107,7 @@ class ToolID():
     number and tool-type identifier. Values of ``0`` may sometimes be
     used for the out-of-range condition.
     """
+
     serial = attr.ib()
     tooltype = attr.ib()
 
@@ -112,10 +124,11 @@ class ToolID():
 
 
 @attr.s
-class PhysRange():
+class PhysRange:
     """
     Range of HID physical values, with units.
     """
+
     unit = attr.ib()
     min_size = attr.ib()
     max_size = attr.ib()
@@ -133,19 +146,22 @@ class PhysRange():
         range 0 cm - 5 cm) and exact unit comparison (e.g. 1 inch is
         not within the range 0 cm - 5 cm).
         """
-        phys_size = (field.physical_max - field.physical_min) * 10**(field.unit_exp)
-        return field.unit == self.unit.value and \
-            phys_size > self.min_size and \
-            phys_size < self.max_size
+        phys_size = (field.physical_max - field.physical_min) * 10 ** (field.unit_exp)
+        return (
+            field.unit == self.unit.value
+            and phys_size > self.min_size
+            and phys_size < self.max_size
+        )
 
 
 class BaseTablet(base.UHIDTestDevice):
     """
     Skeleton object for all kinds of tablet devices.
     """
+
     def __init__(self, rdesc, name=None, info=None):
         assert rdesc is not None
-        super().__init__(name, 'Pen', input_info=info, rdesc=rdesc)
+        super().__init__(name, "Pen", input_info=info, rdesc=rdesc)
         self.buttons = Buttons.clear()
         self.toolid = ToolID.clear()
         self.proximity = ProximityState.OUT
@@ -163,12 +179,14 @@ class BaseTablet(base.UHIDTestDevice):
         Use the Wacom driver's usual naming conventions to apply a
         sensible default filter.
         """
-        if application in ['Pen', 'Pad']:
+        if application in ["Pen", "Pad"]:
             return evdev.name.endswith(application)
         else:
             return True
 
-    def create_report(self, x, y, pressure, buttons=None, toolid=None, proximity=None, reportID=None):
+    def create_report(
+        self, x, y, pressure, buttons=None, toolid=None, proximity=None, reportID=None
+    ):
         """
         Return an input report for this device.
 
@@ -233,7 +251,7 @@ class BaseTablet(base.UHIDTestDevice):
             report.wacomtouchring = ring
             report.wacomtouchringstatus = 1
         else:
-            report.wacomtouchring = 0x7f
+            report.wacomtouchring = 0x7F
             report.wacomtouchringstatus = 0
 
         report.wacomexpresskey00 = ek0
@@ -288,7 +306,12 @@ class BaseTablet(base.UHIDTestDevice):
         return result
 
     def create_report_offset(self, rdesc):
-        require = ['Wacom Offset Left', 'Wacom Offset Top', 'Wacom Offset Right', 'Wacom Offset Bottom']
+        require = [
+            "Wacom Offset Left",
+            "Wacom Offset Top",
+            "Wacom Offset Right",
+            "Wacom Offset Bottom",
+        ]
         if not set(require).issubset(set([f.usage_name for f in rdesc])):
             return None
 
@@ -312,6 +335,7 @@ class OpaqueTablet(BaseTablet):
     one to function properly. The device uses only standard HID usages,
     not any of Wacom's vendor-defined pages.
     """
+
     # fmt: off
     report_descriptor = [
         0x05, 0x0D,                     # . Usage Page (Digitizer),
@@ -347,10 +371,7 @@ class OpaqueTablet(BaseTablet):
     ]
     # fmt: on
 
-    def __init__(self,
-                 rdesc=report_descriptor,
-                 name=None,
-                 info=(0x3, 0x056a, 0x9999)):
+    def __init__(self, rdesc=report_descriptor, name=None, info=(0x3, 0x056A, 0x9999)):
         super().__init__(rdesc, name, info)
         self.default_reportID = 1
 
@@ -363,6 +384,7 @@ class OpaqueCTLTablet(BaseTablet):
     an actual device. Position, eraser, pressure, barrel buttons.
     Uses the Wacom vendor-defined usage page.
     """
+
     # fmt: off
     report_descriptor = [
         0x06, 0x0D, 0xFF,               # . Usage Page (Vnd Wacom Emr),
@@ -433,10 +455,7 @@ class OpaqueCTLTablet(BaseTablet):
     ]
     # fmt: on
 
-    def __init__(self,
-                 rdesc=report_descriptor,
-                 name=None,
-                 info=(0x3, 0x056a, 0x9999)):
+    def __init__(self, rdesc=report_descriptor, name=None, info=(0x3, 0x056A, 0x9999)):
         super().__init__(rdesc, name, info)
         self.default_reportID = 16
 
@@ -449,17 +468,17 @@ class PTHX60_Pen(BaseTablet):
     the PTH-460 uses a slightly different descriptor construction (splits
     the pad among several physical collections)
     """
-    def __init__(self,
-                 rdesc=None,
-                 name=None,
-                 info=None):
+
+    def __init__(self, rdesc=None, name=None, info=None):
         super().__init__(rdesc, name, info)
         self.default_reportID = 16
 
 
 class BaseTest:
     class TestTablet(base.BaseTestCase.TestUhid):
-        def sync_and_assert_events(self, report, expected_events, auto_syn=True, strict=False):
+        def sync_and_assert_events(
+            self, report, expected_events, auto_syn=True, strict=False
+        ):
             """
             Assert we see the expected events in response to a report.
             """
@@ -482,7 +501,7 @@ class BaseTest:
                         for usage in field.usages:
                             yield (field, usage, application)
                     else:
-                        yield(field, field.usage, application)
+                        yield (field, field.usage, application)
 
             desc = uhdev.parsed_rdesc
             reports = [
@@ -514,29 +533,44 @@ class BaseTest:
             actually do, and those which shouldn't don't. Also verify that
             the associated unit is correct and within a sensible range.
             """
+
             def usage_id(page_name, usage_name):
                 page = HUT.usage_page_from_name(page_name)
                 return (page.page_id << 16) | page[usage_name].usage
 
             required = {
-                usage_id('Generic Desktop', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
-                usage_id('Generic Desktop', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
-                usage_id('Digitizers', 'X Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
-                usage_id('Digitizers', 'Y Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
-                usage_id('Digitizers', 'Twist'): PhysRange(PhysRange.DEGREE, 358, 360),
-                usage_id('Wacom', 'X Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
-                usage_id('Wacom', 'Y Tilt'): PhysRange(PhysRange.DEGREE, 90, 180),
-                usage_id('Wacom', 'Twist'): PhysRange(PhysRange.DEGREE, 358, 360),
-                usage_id('Wacom', 'X'): PhysRange(PhysRange.CENTIMETER, 5, 150),
-                usage_id('Wacom', 'Y'): PhysRange(PhysRange.CENTIMETER, 5, 150),
-                usage_id('Wacom', 'Wacom TouchRing'): PhysRange(PhysRange.DEGREE, 358, 360),
-                usage_id('Wacom', 'Wacom Offset Left'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
-                usage_id('Wacom', 'Wacom Offset Top'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
-                usage_id('Wacom', 'Wacom Offset Right'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
-                usage_id('Wacom', 'Wacom Offset Bottom'): PhysRange(PhysRange.CENTIMETER, 0, 0.5),
+                usage_id("Generic Desktop", "X"): PhysRange(
+                    PhysRange.CENTIMETER, 5, 150
+                ),
+                usage_id("Generic Desktop", "Y"): PhysRange(
+                    PhysRange.CENTIMETER, 5, 150
+                ),
+                usage_id("Digitizers", "X Tilt"): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id("Digitizers", "Y Tilt"): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id("Digitizers", "Twist"): PhysRange(PhysRange.DEGREE, 358, 360),
+                usage_id("Wacom", "X Tilt"): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id("Wacom", "Y Tilt"): PhysRange(PhysRange.DEGREE, 90, 180),
+                usage_id("Wacom", "Twist"): PhysRange(PhysRange.DEGREE, 358, 360),
+                usage_id("Wacom", "X"): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id("Wacom", "Y"): PhysRange(PhysRange.CENTIMETER, 5, 150),
+                usage_id("Wacom", "Wacom TouchRing"): PhysRange(
+                    PhysRange.DEGREE, 358, 360
+                ),
+                usage_id("Wacom", "Wacom Offset Left"): PhysRange(
+                    PhysRange.CENTIMETER, 0, 0.5
+                ),
+                usage_id("Wacom", "Wacom Offset Top"): PhysRange(
+                    PhysRange.CENTIMETER, 0, 0.5
+                ),
+                usage_id("Wacom", "Wacom Offset Right"): PhysRange(
+                    PhysRange.CENTIMETER, 0, 0.5
+                ),
+                usage_id("Wacom", "Wacom Offset Bottom"): PhysRange(
+                    PhysRange.CENTIMETER, 0, 0.5
+                ),
             }
             for field, usage, application in self.get_usages(self.uhdev):
-                if application == usage_id('Generic Desktop', 'Mouse'):
+                if application == usage_id("Generic Desktop", "Mouse"):
                     # Ignore the vestigial Mouse collection which exists
                     # on Wacom tablets only for backwards compatibility.
                     continue
@@ -579,13 +613,20 @@ class TestOpaqueTablet(BaseTest.TestTablet):
         uhdev = self.uhdev
 
         self.sync_and_assert_events(
-            uhdev.event(100, 200, pressure=300, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=1), proximity=ProximityState.IN_RANGE),
+            uhdev.event(
+                100,
+                200,
+                pressure=300,
+                buttons=Buttons.clear(),
+                toolid=ToolID(serial=1, tooltype=1),
+                proximity=ProximityState.IN_RANGE,
+            ),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 200),
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
@@ -594,17 +635,25 @@ class TestOpaqueTablet(BaseTest.TestTablet):
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 110),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 220),
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 0),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
-            uhdev.event(120, 230, pressure=0, toolid=ToolID.clear(), proximity=ProximityState.OUT),
+            uhdev.event(
+                120,
+                230,
+                pressure=0,
+                toolid=ToolID.clear(),
+                proximity=ProximityState.OUT,
+            ),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 0),
-            ]
+            ],
         )
 
-        self.sync_and_assert_events(uhdev.event(130, 240, pressure=0), [], auto_syn=False, strict=True)
+        self.sync_and_assert_events(
+            uhdev.event(130, 240, pressure=0), [], auto_syn=False, strict=True
+        )
 
 
 class TestOpaqueCTLTablet(TestOpaqueTablet):
@@ -621,13 +670,20 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
         uhdev = self.uhdev
 
         self.sync_and_assert_events(
-            uhdev.event(100, 200, pressure=0, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=1), proximity=ProximityState.IN_RANGE),
+            uhdev.event(
+                100,
+                200,
+                pressure=0,
+                buttons=Buttons.clear(),
+                toolid=ToolID(serial=1, tooltype=1),
+                proximity=ProximityState.IN_RANGE,
+            ),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 200),
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
@@ -635,7 +691,7 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 1),
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
@@ -643,7 +699,7 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS, 0),
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
@@ -651,7 +707,7 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS2, 1),
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
@@ -659,16 +715,16 @@ class TestOpaqueCTLTablet(TestOpaqueTablet):
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_STYLUS2, 0),
                 libevdev.InputEvent(libevdev.EV_MSC.MSC_SERIAL, 1),
-            ]
+            ],
         )
 
 
 PTHX60_Devices = [
-    {"rdesc": wacom_pth660_v145, "info": (0x3, 0x056a, 0x0357)},
-    {"rdesc": wacom_pth660_v150, "info": (0x3, 0x056a, 0x0357)},
-    {"rdesc": wacom_pth860_v145, "info": (0x3, 0x056a, 0x0358)},
-    {"rdesc": wacom_pth860_v150, "info": (0x3, 0x056a, 0x0358)},
-    {"rdesc": wacom_pth460_v105, "info": (0x3, 0x056a, 0x0392)},
+    {"rdesc": wacom_pth660_v145, "info": (0x3, 0x056A, 0x0357)},
+    {"rdesc": wacom_pth660_v150, "info": (0x3, 0x056A, 0x0357)},
+    {"rdesc": wacom_pth860_v145, "info": (0x3, 0x056A, 0x0358)},
+    {"rdesc": wacom_pth860_v150, "info": (0x3, 0x056A, 0x0358)},
+    {"rdesc": wacom_pth460_v105, "info": (0x3, 0x056A, 0x0392)},
 ]
 
 PTHX60_Names = [
@@ -681,7 +737,9 @@ PTHX60_Names = [
 
 
 class TestPTHX60_Pen(TestOpaqueCTLTablet):
-    @pytest.fixture(autouse=True, scope="class", params=PTHX60_Devices, ids=PTHX60_Names)
+    @pytest.fixture(
+        autouse=True, scope="class", params=PTHX60_Devices, ids=PTHX60_Names
+    )
     def set_device_params(self, request):
         request.cls.device_params = request.param
 
@@ -700,23 +758,32 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
         uhdev = self.uhdev
 
         self.sync_and_assert_events(
-            uhdev.event(100, 200, pressure=300, buttons=Buttons.clear(), toolid=ToolID(serial=1, tooltype=0x822), proximity=ProximityState.IN_RANGE),
+            uhdev.event(
+                100,
+                200,
+                pressure=300,
+                buttons=Buttons.clear(),
+                toolid=ToolID(serial=1, tooltype=0x822),
+                proximity=ProximityState.IN_RANGE,
+            ),
             [
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOOL_PEN, 1),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 100),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_Y, 200),
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_TOUCH, 1),
-            ]
+            ],
         )
 
         # Exactly zero events: not even a SYN
-        self.sync_and_assert_events(uhdev.event_heartbeat(19), [], auto_syn=False, strict=True)
+        self.sync_and_assert_events(
+            uhdev.event_heartbeat(19), [], auto_syn=False, strict=True
+        )
 
         self.sync_and_assert_events(
             uhdev.event(110, 200, pressure=300),
             [
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_X, 110),
-            ]
+            ],
         )
 
     def test_empty_pad_sync(self):
@@ -726,6 +793,7 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
         """
         Test that multiple pad collections do not trigger empty syncs.
         """
+
         def offset_rotation(value):
             """
             Offset touchring rotation values by the same factor as the
@@ -745,7 +813,7 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
             return value
 
         uhdev = self.uhdev
-        uhdev.application = 'Pad'
+        uhdev.application = "Pad"
         evdev = uhdev.get_evdev()
 
         print(evdev.name)
@@ -755,14 +823,12 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_0, 1),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(0)),
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_MISC, 15),
-            ]
+            ],
         )
 
         self.sync_and_assert_events(
             uhdev.event_pad(reportID=17, ring=1, ek0=1),
-            [
-                libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(1))
-            ]
+            [libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(1))],
         )
 
         self.sync_and_assert_events(
@@ -770,5 +836,5 @@ class TestPTHX60_Pen(TestOpaqueCTLTablet):
             [
                 libevdev.InputEvent(libevdev.EV_ABS.ABS_WHEEL, offset_rotation(2)),
                 libevdev.InputEvent(libevdev.EV_KEY.BTN_0, 0),
-            ]
+            ],
         )

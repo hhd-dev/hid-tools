@@ -228,6 +228,7 @@ class HidUsageTable(object):
         > print(hut.usage_page_from_page_id(0x01).page_name)
         Generic Desktop
     """
+
     def __init__(self):
         self._pages = {}
 
@@ -335,26 +336,26 @@ class HidUsageTable(object):
         usage_page = None
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
 
             # Usage Page, e.g. '(01)	Generic Desktop'
-            if line.startswith('('):
+            if line.startswith("("):
                 assert usage_page is None
 
-                r = parse.parse('({idx:x})\t{page_name}', line)
+                r = parse.parse("({idx:x})\t{page_name}", line)
                 assert r is not None
                 usage_page = HidUsagePage()
-                usage_page.page_id = r['idx']
-                usage_page.page_name = r['page_name']
+                usage_page.page_id = r["idx"]
+                usage_page.page_name = r["page_name"]
                 continue
 
             assert usage_page is not None
 
             # Reserved ranges, e.g  '0B-1F	Reserved'
-            r = parse.parse('{:x}-{:x}\t{name}', line)
+            r = parse.parse("{:x}-{:x}\t{name}", line)
             if r:
-                if 'reserved' not in r['name'].lower():
+                if "reserved" not in r["name"].lower():
                     print(line)
                 continue
 
@@ -362,13 +363,13 @@ class HidUsageTable(object):
             # we can not use {usage:x} or the value '0B' will be converted to 0
             # See https://github.com/r1chardj0n3s/parse/issues/65
             # fixed in parse 1.8.4 (May 2018)
-            r = parse.parse('{usage}\t{name}', line)
+            r = parse.parse("{usage}\t{name}", line)
             assert r is not None
-            if 'reserved' in r['name'].lower():
+            if "reserved" in r["name"].lower():
                 continue
 
-            u = int(r['usage'], 16)
-            usage = HidUsage(usage_page, u, r['name'])
+            u = int(r["usage"], 16)
+            usage = HidUsage(usage_page, u, r["name"])
 
             usage_page[u] = usage
 
@@ -394,9 +395,8 @@ class HidUsageTable(object):
         """
         hut = HidUsageTable()
         for filename in os.listdir(DATA_DIR):
-            if filename.endswith('.hut'):
-                with open(os.path.join(DATA_DIR, filename), 'r',
-                          encoding="utf-8") as f:
+            if filename.endswith(".hut"):
+                with open(os.path.join(DATA_DIR, filename), "r", encoding="utf-8") as f:
                     try:
                         usage_page = cls._parse_usages(f)
                         hut[usage_page.page_id] = usage_page

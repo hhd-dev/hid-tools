@@ -29,7 +29,7 @@ import hidtools.hid as hid
 from hidtools.uhid import UHIDDevice
 from hidtools.util import BusType
 
-logger = logging.getLogger('hidtools.device.base_device')
+logger = logging.getLogger("hidtools.device.base_device")
 
 
 class SysfsFile(object):
@@ -37,8 +37,8 @@ class SysfsFile(object):
         self.path = path
 
     def __set_value(self, value):
-        with open(self.path, 'w') as f:
-            return f.write(f'{value}\n')
+        with open(self.path, "w") as f:
+            return f.write(f"{value}\n")
 
     def __get_value(self):
         with open(self.path) as f:
@@ -64,8 +64,8 @@ class SysfsFile(object):
 class LED(object):
     def __init__(self, udev_object):
         self.sys_path = pathlib.Path(udev_object.sys_path)
-        self.max_brightness = SysfsFile(self.sys_path / 'max_brightness').int_value
-        self.__brightness = SysfsFile(self.sys_path / 'brightness')
+        self.max_brightness = SysfsFile(self.sys_path / "max_brightness").int_value
+        self.__brightness = SysfsFile(self.sys_path / "brightness")
 
     @property
     def brightness(self):
@@ -77,12 +77,13 @@ class LED(object):
 
 
 class PowerSupply(object):
-    """ Represents Linux power_supply_class sysfs nodes. """
+    """Represents Linux power_supply_class sysfs nodes."""
+
     def __init__(self, udev_object):
         self.sys_path = pathlib.Path(udev_object.sys_path)
-        self._capacity = SysfsFile(self.sys_path / 'capacity')
-        self._status = SysfsFile(self.sys_path / 'status')
-        self._type = SysfsFile(self.sys_path / 'type')
+        self._capacity = SysfsFile(self.sys_path / "capacity")
+        self._status = SysfsFile(self.sys_path / "status")
+        self._type = SysfsFile(self.sys_path / "type")
 
     @property
     def capacity(self):
@@ -99,23 +100,23 @@ class PowerSupply(object):
 
 class BaseDevice(UHIDDevice):
     input_type_mapping = {
-        'ID_INPUT_TOUCHSCREEN': ['Touch Screen'],
-        'ID_INPUT_TOUCHPAD': ['Touch Pad'],
-        'ID_INPUT_TABLET': ['Pen'],
-        'ID_INPUT_TABLET_PAD': ['Pad'],
-        'ID_INPUT_MOUSE': ['Mouse'],
-        'ID_INPUT_KEY': ['Key'],
-        'ID_INPUT_JOYSTICK': ['Joystick', 'Game Pad'],
-        'ID_INPUT_ACCELEROMETER': ['Accelerometer'],
+        "ID_INPUT_TOUCHSCREEN": ["Touch Screen"],
+        "ID_INPUT_TOUCHPAD": ["Touch Pad"],
+        "ID_INPUT_TABLET": ["Pen"],
+        "ID_INPUT_TABLET_PAD": ["Pad"],
+        "ID_INPUT_MOUSE": ["Mouse"],
+        "ID_INPUT_KEY": ["Key"],
+        "ID_INPUT_JOYSTICK": ["Joystick", "Game Pad"],
+        "ID_INPUT_ACCELEROMETER": ["Accelerometer"],
     }
 
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
         self._opened_files = []
         if rdesc_str is None and rdesc is None:
-            raise Exception('Please provide at least a rdesc or rdesc_str')
+            raise Exception("Please provide at least a rdesc or rdesc_str")
         super().__init__()
         if name is None:
-            name = f'uhid gamepad test {self.__class__.__name__}'
+            name = f"uhid gamepad test {self.__class__.__name__}"
         if input_info is None:
             input_info = (BusType.USB, 1, 2)
         self.name = name
@@ -132,7 +133,7 @@ class BaseDevice(UHIDDevice):
             self.rdesc = rdesc
 
     def match_evdev_rule(self, application, evdev):
-        '''Replace this in subclasses if the device has multiple reports
+        """Replace this in subclasses if the device has multiple reports
         of the same type and we need to filter based on the actual evdev
         node.
 
@@ -140,15 +141,15 @@ class BaseDevice(UHIDDevice):
         `self.input_nodes[type]`
         returning False  will ignore this report / type combination
         for the device.
-        '''
+        """
         return True
 
     def udev_input_event(self, device):
-        if 'DEVNAME' not in device.properties:
+        if "DEVNAME" not in device.properties:
             return
 
-        devname = device.properties['DEVNAME']
-        if not devname.startswith('/dev/input/event'):
+        devname = device.properties["DEVNAME"]
+        if not devname.startswith("/dev/input/event"):
             return
 
         # associate the Input type to the matching HID application
@@ -166,10 +167,10 @@ class BaseDevice(UHIDDevice):
 
         if not types:
             # abort, the device has not been processed by udev
-            print('abort', devname, list(device.properties.items()))
+            print("abort", devname, list(device.properties.items()))
             return
 
-        event_node = open(devname, 'rb')
+        event_node = open(devname, "rb")
         self._opened_files.append(event_node)
         evdev = libevdev.Device(event_node)
 
@@ -198,34 +199,36 @@ class BaseDevice(UHIDDevice):
         self.power_supply_class = PowerSupply(device)
 
     def udev_event(self, event):
-        if event.action == 'remove':
+        if event.action == "remove":
             return
 
         device = event
 
-        subsystem = device.properties['SUBSYSTEM']
+        subsystem = device.properties["SUBSYSTEM"]
 
         # power_supply events are presented with a 'change' event
         if subsystem == "power_supply":
             return self.udev_power_supply_event(device)
 
         # others are still using 'add'
-        if event.action != 'add':
+        if event.action != "add":
             return
 
-        if subsystem == 'input':
+        if subsystem == "input":
             return self.udev_input_event(device)
-        elif subsystem == 'leds':
+        elif subsystem == "leds":
             return self.udev_led_event(device)
-        elif subsystem == 'hwmon':
+        elif subsystem == "hwmon":
             # Often power_supply is managed by hwmon and it will appear during 'add'
             # and not the power_supply itself directly.
             if "power_supply" in device.sys_path:
                 # The 'device' directory brings us back to the power_supply.
-                power_supply = pyudev.Devices.from_sys_path(device.context, device.sys_path + "/device")
+                power_supply = pyudev.Devices.from_sys_path(
+                    device.context, device.sys_path + "/device"
+                )
                 return self.udev_power_supply_event(power_supply)
 
-        logger.debug(f'{subsystem}: {device}')
+        logger.debug(f"{subsystem}: {device}")
 
     def open(self):
         self.opened = True
@@ -263,7 +266,7 @@ class BaseDevice(UHIDDevice):
         return self.input_nodes[application]
 
     def is_ready(self):
-        '''Returns whether a UHID device is ready. Can be overwritten in
+        """Returns whether a UHID device is ready. Can be overwritten in
         subclasses to add extra conditions on when to consider a UHID
         device ready. This can be:
 
@@ -271,5 +274,5 @@ class BaseDevice(UHIDDevice):
           (Touch Screen and Pen for example)
         - we need to have at least 4 LEDs present
           (len(self.uhdev.leds_classes) == 4)
-        - or any other combinations'''
+        - or any other combinations"""
         return self.application in self.input_nodes
