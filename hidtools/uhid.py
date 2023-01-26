@@ -26,6 +26,9 @@ import select
 import struct
 import uuid
 
+from hidtools.hut import U8, U16, U32
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type
+
 try:
     import pyudev
 except ImportError:
@@ -74,35 +77,35 @@ class UHIDDevice(object):
 
     """
 
-    __UHID_LEGACY_CREATE = 0
-    _UHID_DESTROY = 1
-    _UHID_START = 2
-    _UHID_STOP = 3
-    _UHID_OPEN = 4
-    _UHID_CLOSE = 5
-    _UHID_OUTPUT = 6
-    __UHID_LEGACY_OUTPUT_EV = 7
-    __UHID_LEGACY_INPUT = 8
-    _UHID_GET_REPORT = 9
-    _UHID_GET_REPORT_REPLY = 10
-    _UHID_CREATE2 = 11
-    _UHID_INPUT2 = 12
-    _UHID_SET_REPORT = 13
-    _UHID_SET_REPORT_REPLY = 14
+    __UHID_LEGACY_CREATE: Final = 0
+    _UHID_DESTROY: Final = 1
+    _UHID_START: Final = 2
+    _UHID_STOP: Final = 3
+    _UHID_OPEN: Final = 4
+    _UHID_CLOSE: Final = 5
+    _UHID_OUTPUT: Final = 6
+    __UHID_LEGACY_OUTPUT_EV: Final = 7
+    __UHID_LEGACY_INPUT: Final = 8
+    _UHID_GET_REPORT: Final = 9
+    _UHID_GET_REPORT_REPLY: Final = 10
+    _UHID_CREATE2: Final = 11
+    _UHID_INPUT2: Final = 12
+    _UHID_SET_REPORT: Final = 13
+    _UHID_SET_REPORT_REPLY: Final = 14
 
-    UHID_FEATURE_REPORT = 0
-    UHID_OUTPUT_REPORT = 1
-    UHID_INPUT_REPORT = 2
+    UHID_FEATURE_REPORT: Final = 0
+    UHID_OUTPUT_REPORT: Final = 1
+    UHID_INPUT_REPORT: Final = 2
 
-    _polling_functions = {}
+    _polling_functions: Dict[int, Callable[[], None]] = {}
     _poll = select.poll()
-    _devices = []
+    _devices: List["UHIDDevice"] = []
 
-    _pyudev_context = None
-    _pyudev_monitor = None
+    _pyudev_context: Optional[pyudev.Context] = None
+    _pyudev_monitor: Optional[pyudev.Monitor] = None
 
     @classmethod
-    def dispatch(cls, timeout=None):
+    def dispatch(cls: Type["UHIDDevice"], timeout: Optional[float] = None) -> bool:
         """
         Process any events available on any internally registered file
         descriptor and deal with the events.
@@ -125,16 +128,21 @@ class UHIDDevice(object):
         return had_data
 
     @classmethod
-    def _append_fd_to_poll(cls, fd, read_function, mask=select.POLLIN):
+    def _append_fd_to_poll(
+        cls: Type["UHIDDevice"],
+        fd: int,
+        read_function: Callable[[], None],
+        mask=select.POLLIN,
+    ) -> None:
         cls._poll.register(fd, mask)
         cls._polling_functions[fd] = read_function
 
     @classmethod
-    def _remove_fd_from_poll(cls, fd):
+    def _remove_fd_from_poll(cls: Type["UHIDDevice"], fd: int) -> None:
         cls._poll.unregister(fd)
 
     @classmethod
-    def _init_pyudev(cls):
+    def _init_pyudev(cls: Type["UHIDDevice"]) -> None:
         if cls._pyudev_context is None:
             cls._pyudev_context = pyudev.Context()
             cls._pyudev_monitor = pyudev.Monitor.from_netlink(cls._pyudev_context)
@@ -145,7 +153,10 @@ class UHIDDevice(object):
             )
 
     @classmethod
-    def _cls_udev_event_callback(cls):
+    def _cls_udev_event_callback(cls: Type["UHIDDevice"]) -> None:
+        if cls._pyudev_monitor is None:
+            return
+        event: pyudev.Device
         for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
             logger.debug(f"udev event: {event.action} -> {event}")
 
@@ -156,43 +167,43 @@ class UHIDDevice(object):
                 ):
                     d._udev_event(event)
 
-    def __init__(self):
-        self._name = None
-        self._phys = ""
-        self._rdesc = None
-        self.parsed_rdesc = None
-        self._info = None
-        self._bustype = None
-        self._fd = os.open("/dev/uhid", os.O_RDWR)
+    def __init__(self: "UHIDDevice") -> None:
+        self._name: Optional[str] = None
+        self._phys: Optional[str] = ""
+        self._rdesc: Optional[List[int]] = None
+        self.parsed_rdesc: Optional[hidtools.hid.ReportDescriptor] = None
+        self._info: Optional[Tuple[int, int, int]] = None
+        self._bustype: Optional[BusType] = None
+        self._fd: int = os.open("/dev/uhid", os.O_RDWR)
         self._start = self.start
         self._stop = self.stop
         self._open = self.open
         self._close = self.close
         self._output_report = self.output_report
-        self._udev_device = None
-        self._ready = False
-        self._is_destroyed = False
-        self.device_nodes = []
-        self.hidraw_nodes = []
+        self._udev_device: Optional[pyudev.Device] = None
+        self._ready: bool = False
+        self._is_destroyed: bool = False
+        self.device_nodes: List[str] = []
+        self.hidraw_nodes: List[str] = []
         self.uniq = f"uhid_{str(uuid.uuid4())}"
         self._append_fd_to_poll(self._fd, self._process_one_event)
         self._init_pyudev()
         UHIDDevice._devices.append(self)
 
-    def __enter__(self):
+    def __enter__(self: "UHIDDevice") -> "UHIDDevice":
         return self
 
-    def __exit__(self, *exc_details):
+    def __exit__(self: "UHIDDevice", *exc_details) -> None:
         if not self._is_destroyed:
             self.destroy()
 
-    def udev_event(self, event):
+    def udev_event(self: "UHIDDevice", event: pyudev.Device) -> None:
         """
         Callback invoked on a udev event.
         """
         pass
 
-    def _udev_event(self, event):
+    def _udev_event(self: "UHIDDevice", event: pyudev.Device) -> None:
         # we do not need to process the udev events if the device is being
         # removed
         if not self._ready:
@@ -202,7 +213,7 @@ class UHIDDevice(object):
             device = event
 
             try:
-                devname = device.properties["DEVNAME"]
+                devname: str = device.properties["DEVNAME"]
                 if devname.startswith("/dev/input/event"):
                     self.device_nodes.append(devname)
                 elif devname.startswith("/dev/hidraw"):
@@ -213,123 +224,129 @@ class UHIDDevice(object):
         self.udev_event(event)
 
     @property
-    def fd(self):
+    def fd(self: "UHIDDevice") -> int:
         """
         The fd to the ``/dev/uhid`` device node
         """
         return self._fd
 
     @property
-    def rdesc(self):
+    def rdesc(self: "UHIDDevice") -> Optional[List[int]]:
         """
         The device's report descriptor
         """
         return self._rdesc
 
     @rdesc.setter
-    def rdesc(self, rdesc):
-        parsed_rdesc = rdesc
-        if not isinstance(rdesc, hidtools.hid.ReportDescriptor):
+    def rdesc(self: "UHIDDevice", rdesc: hidtools.hid.ReportDescriptor | str | bytes):
+        if isinstance(rdesc, hidtools.hid.ReportDescriptor):
+            self.parsed_rdesc = rdesc
+        else:
             if isinstance(rdesc, str):
                 rdesc = f"XXX {rdesc}"
-                parsed_rdesc = hidtools.hid.ReportDescriptor.from_string(rdesc)
+                self.parsed_rdesc = hidtools.hid.ReportDescriptor.from_string(rdesc)
             else:
-                parsed_rdesc = hidtools.hid.ReportDescriptor.from_bytes(rdesc)
-        self.parsed_rdesc = parsed_rdesc
-        self._rdesc = parsed_rdesc.bytes
+                self.parsed_rdesc = hidtools.hid.ReportDescriptor.from_bytes(rdesc)
+        if self.parsed_rdesc is not None:  # should always be true
+            self._rdesc = self.parsed_rdesc.bytes
 
     @property
-    def phys(self):
+    def phys(self: "UHIDDevice") -> Optional[str]:
         """
         The device's phys string
         """
         return self._phys
 
     @phys.setter
-    def phys(self, phys):
+    def phys(self: "UHIDDevice", phys: str) -> None:
         self._phys = phys
 
     @property
-    def name(self):
+    def name(self: "UHIDDevice") -> Optional[str]:
         """
         The devices HID name
         """
         return self._name
 
     @name.setter
-    def name(self, name):
+    def name(self: "UHIDDevice", name: str) -> None:
         self._name = name
 
     @property
-    def info(self):
+    def info(self: "UHIDDevice") -> Optional[Tuple[int, int, int]]:
         """
         The devices's bus, vendor ID and product ID as tuple
         """
         return self._info
 
     @info.setter
-    def info(self, info):
+    def info(self: "UHIDDevice", info: Tuple[int, int, int]) -> None:
         self._info = info
         # In case bus type is passed as 'int', wrap it in BusType.
         self._bustype = info[0] if isinstance(info[0], BusType) else BusType(info[0])
 
     @property
-    def bus(self):
+    def bus(self: "UHIDDevice") -> Optional[BusType]:
         """
         The device's bus type :class:`hidtools.util.BusType`
         """
         return self._bustype
 
     @property
-    def vid(self):
+    def vid(self: "UHIDDevice") -> Optional[int]:
         """
         The device's 16-bit vendor ID
         """
+        if self._info is None:
+            return None
         return self._info[1]
 
     @property
-    def pid(self):
+    def pid(self: "UHIDDevice") -> Optional[int]:
         """
         The device's 16-bit product ID
         """
+        if self._info is None:
+            return None
         return self._info[2]
 
-    def _call_set_report(self, req, err):
+    def _call_set_report(self: "UHIDDevice", req: int, err: int) -> None:
         buf = struct.pack("< L L H", UHIDDevice._UHID_SET_REPORT_REPLY, req, err)
         os.write(self._fd, buf)
 
-    def _call_get_report(self, req, data, err):
-        data = bytes(data)
+    def _call_get_report(self: "UHIDDevice", req: U8, data: List[U8], err: int) -> None:
+        bdata = bytes(data)
         buf = struct.pack(
             "< L L H H 4096s",
             UHIDDevice._UHID_GET_REPORT_REPLY,
             req,
             err,
-            len(data),
-            data,
+            len(bdata),
+            bdata,
         )
         os.write(self._fd, buf)
 
-    def call_input_event(self, data):
+    def call_input_event(self: "UHIDDevice", _data: List[int]) -> None:
         """
         Send an input event from this device.
 
         :param list data: a list of 8-bit integers representing the HID
             report for this input event
         """
-        data = bytes(data)
+        data: bytes = bytes(_data)
         buf = struct.pack("< L H 4096s", UHIDDevice._UHID_INPUT2, len(data), data)
-        logger.debug(f"inject {buf[:len(data)]}")
+        logger.debug(f"inject {buf[:len(data)]!r}")
         os.write(self._fd, buf)
 
     @property
-    def udev_device(self):
+    def udev_device(self: "UHIDDevice") -> Optional[pyudev.Device]:
         """
         The devices' udev device.
 
         The device may be None if udev hasn't processed the device yet.
         """
-        if self._udev_device is None:
+        if self._udev_device is None and self._pyudev_context is not None:
+            device: pyudev.Device
             for device in self._pyudev_context.list_devices(subsystem="hid"):
                 try:
                     if self.uniq == device.properties["HID_UNIQ"]:
@@ -340,13 +357,15 @@ class UHIDDevice(object):
         return self._udev_device
 
     @property
-    def sys_path(self):
+    def sys_path(self: "UHIDDevice") -> Optional[str]:
         """
         The device's /sys path
         """
+        if self.udev_device is None:
+            return None
         return self.udev_device.sys_path
 
-    def create_kernel_device(self):
+    def create_kernel_device(self: "UHIDDevice") -> None:
         """
         Create a kernel device from this device. Note that the device is not
         immediately ready to go after creation, you must wait for
@@ -355,7 +374,12 @@ class UHIDDevice(object):
         :raises: :class:`UHIDIncompleteException` if the device does not
             have a name, report descriptor or the info bits set.
         """
-        if self._name is None or self._rdesc is None or self._info is None:
+        if (
+            self._name is None
+            or self._rdesc is None
+            or self._info is None
+            or self._phys is None
+        ):
             raise UHIDIncompleteException("missing uhid initialization")
 
         buf = struct.pack(
@@ -378,7 +402,7 @@ class UHIDDevice(object):
         assert n == len(buf)
         self._ready = True
 
-    def destroy(self):
+    def destroy(self: "UHIDDevice") -> None:
         """
         Destroy the device. The kernel will trigger the appropriate
         messages in response before removing the device.
@@ -405,7 +429,7 @@ class UHIDDevice(object):
         self.device_nodes.clear()
         self.hidraw_nodes.clear()
 
-    def start(self, flags):
+    def start(self: "UHIDDevice", flags: int) -> None:
         """
         Called when the uhid device is ready to accept IO.
 
@@ -414,7 +438,7 @@ class UHIDDevice(object):
         """
         logger.debug("start")
 
-    def stop(self):
+    def stop(self: "UHIDDevice") -> None:
         """
         Called when the uhid device no longer accepts IO.
 
@@ -423,7 +447,7 @@ class UHIDDevice(object):
         """
         logger.debug("stop")
 
-    def open(self):
+    def open(self: "UHIDDevice") -> None:
         """
         Called when a userspace client opens the created kernel device.
 
@@ -432,7 +456,7 @@ class UHIDDevice(object):
         """
         logger.debug("open {}".format(self.sys_path))
 
-    def close(self):
+    def close(self: "UHIDDevice") -> None:
         """
         Called when a userspace client closes the created kernel device.
 
@@ -444,7 +468,9 @@ class UHIDDevice(object):
         """
         logger.debug("close")
 
-    def set_report(self, req, rnum, rtype, data):
+    def set_report(
+        self: "UHIDDevice", req: int, rnum: int, rtype: int, data: List[int]
+    ) -> int:
         """
         Callback invoked when a process calls SetReport on this UHID device.
 
@@ -460,7 +486,9 @@ class UHIDDevice(object):
         """
         return 5  # EIO
 
-    def _set_report(self, req, rnum, rtype, size, data):
+    def _set_report(
+        self: "UHIDDevice", req: int, rnum: int, rtype: int, size: int, data: List[int]
+    ) -> None:
         logger.debug(
             "set report {} {} {} {} {} ".format(
                 req, rnum, rtype, size, [f"{d:02x}" for d in data[:size]]
@@ -470,7 +498,9 @@ class UHIDDevice(object):
         if self._ready:
             self._call_set_report(req, error)
 
-    def get_report(self, req, rnum, rtype):
+    def get_report(
+        self: "UHIDDevice", req: int, rnum: int, rtype: int
+    ) -> Tuple[int, List[U8]]:
         """
         Callback invoked when a process calls SetReport on this UHID device.
 
@@ -486,13 +516,15 @@ class UHIDDevice(object):
         """
         return (5, [])  # EIO
 
-    def _get_report(self, req, rnum, rtype):
+    def _get_report(self: "UHIDDevice", req: int, rnum: int, rtype: int) -> None:
         logger.debug("get report {} {} {}".format(req, rnum, rtype))
         error, data = self.get_report(req, rnum, rtype)
         if self._ready:
             self._call_get_report(req, data, error)
 
-    def output_report(self, data, size, rtype):
+    def output_report(
+        self: "UHIDDevice", data: List[int], size: int, rtype: int
+    ) -> None:
         """
         Callback invoked when a process sends raw data to the device.
 
@@ -504,7 +536,7 @@ class UHIDDevice(object):
             "output {} {} {}".format(rtype, size, [f"{d:02x}" for d in data[:size]])
         )
 
-    def _process_one_event(self):
+    def _process_one_event(self: "UHIDDevice") -> None:
         buf = os.read(self._fd, 4380)
         assert len(buf) == 4380
         evtype = struct.unpack_from("< L", buf)[0]
@@ -529,7 +561,13 @@ class UHIDDevice(object):
             ev, data, size, rtype = struct.unpack_from("< L 4096s H B", buf)
             self._output_report(data, size, rtype)
 
-    def create_report(self, data, global_data=None, reportID=None, application=None):
+    def create_report(
+        self: "UHIDDevice",
+        data: Any,
+        global_data=None,
+        reportID: Optional[int] = None,
+        application: Optional[str | U32] = None,
+    ) -> List[U8]:
         """
         Convert the data object to an array of ints representing the report.
         Each property of the given data object is matched against the field
@@ -547,4 +585,6 @@ class UHIDDevice(object):
         The :class:`UHIDDevice` will create the report according to the
         device's report descriptor.
         """
+        if self.parsed_rdesc is None:
+            return []
         return self.parsed_rdesc.create_report(data, global_data, reportID, application)
