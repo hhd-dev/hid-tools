@@ -1879,7 +1879,6 @@ class ReportDescriptor(object):
         self.collection: List[U32] = [0, 0, 0]  # application, physical, logical
         self.local = ReportDescriptor._Locals()
         self.glob: "ReportDescriptor._Globals" = ReportDescriptor._Globals()
-        self.current_report: Dict[str, HidReport] = {}
         self.current_item = None
 
         index_in_report = 0
@@ -1893,7 +1892,6 @@ class ReportDescriptor(object):
         del self.glob
         del self.global_stack
         del self.local
-        del self.current_report
         del self.collection
 
     def get(
@@ -1943,21 +1941,12 @@ class ReportDescriptor(object):
         assert type in report_lists
 
         try:
-            cur = self.current_report[type]
+            cur = report_lists[type][self.local.report_ID]
         except KeyError:
-            cur = None
-
-        if cur is not None and cur.local.report_ID != self.local.report_ID:
-            cur = None
-
-        if cur is None:
-            try:
-                cur = report_lists[type][self.local.report_ID]
-            except KeyError:
-                cur = HidReport(
-                    self.local.report_ID, self.glob.application, report_type[type]
-                )
-                report_lists[type][self.local.report_ID] = cur
+            cur = HidReport(
+                self.local.report_ID, self.glob.application, report_type[type]
+            )
+            report_lists[type][self.local.report_ID] = cur
         return cur
 
     def _concatenate_usages(self: "ReportDescriptor") -> None:
