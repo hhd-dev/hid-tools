@@ -21,7 +21,6 @@ import fcntl
 import functools
 import libevdev
 import os
-import pathlib
 
 try:
     import pyudev
@@ -34,7 +33,7 @@ import hidtools.hid as hid
 from hidtools.uhid import UHIDDevice
 from hidtools.util import BusType
 
-from typing import Optional, Type
+from typing import List, Optional, Type
 
 logger = logging.getLogger("hidtools.device.base_device")
 
@@ -69,10 +68,9 @@ class SysfsFile(object):
 
 
 class LED(object):
-    def __init__(self, udev_object):
-        self.sys_path = pathlib.Path(udev_object.sys_path)
-        self.max_brightness = SysfsFile(self.sys_path / "max_brightness").int_value
-        self.__brightness = SysfsFile(self.sys_path / "brightness")
+    def __init__(self, sys_path):
+        self.max_brightness = SysfsFile(sys_path / "max_brightness").int_value
+        self.__brightness = SysfsFile(sys_path / "brightness")
 
     @property
     def brightness(self):
@@ -120,7 +118,6 @@ class _BaseDevice(UHIDDevice):
         self.opened = False
         self.application = application
         self.input_nodes = {}
-        self.led_classes = {}
         if rdesc is None:
             assert rdesc_str is not None
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
@@ -134,6 +131,14 @@ class _BaseDevice(UHIDDevice):
             return None
 
         return PowerSupply(ps[0])
+
+    @property
+    def led_classes(self: "_BaseDevice") -> List[LED]:
+        leds = self.walk_sysfs("led", "**/max_brightness")
+        if leds is None:
+            return []
+
+        return [LED(led.parent) for led in leds]
 
     def match_evdev_rule(self, application, evdev):
         """Replace this in subclasses if the device has multiple reports
@@ -336,10 +341,6 @@ class BaseDevice(_BaseDevice):
         if not used:
             evdev.fd.close()
 
-    def udev_led_event(self, device):
-        led = LED(device)
-        self.led_classes[led.sys_path.name] = led
-
     def udev_event(self, event):
         if event.action == "remove":
             return
@@ -354,7 +355,5 @@ class BaseDevice(_BaseDevice):
 
         if subsystem == "input":
             return self.udev_input_event(device)
-        elif subsystem == "leds":
-            return self.udev_led_event(device)
 
         logger.debug(f"{subsystem}: {device}")
