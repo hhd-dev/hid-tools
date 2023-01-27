@@ -271,15 +271,19 @@ class UHIDDevice(object):
         """
         return self._sys_path
 
-    def _walk_sysfs(self: "UHIDDevice", kind: str) -> List[str]:
-        kinds = {
+    def walk_sysfs(
+        self: "UHIDDevice", kind: str, glob: Optional[str] = None
+    ) -> Tuple[Path]:
+        kinds: Final = {
             "evdev": "input/input*/event*",
             "hidraw": "hidraw/hidraw*",
         }
-        if self._sys_path is None or kind not in kinds:
-            return []
+        if glob is None and kind in kinds:
+            glob = kinds[kind]
+        if self._sys_path is None or glob is None:
+            return tuple()
 
-        return [dev.name for dev in self._sys_path.glob(kinds[kind])]
+        return tuple(self._sys_path.glob(glob))
 
     @property
     def device_nodes(self) -> List[str]:
@@ -290,7 +294,7 @@ class UHIDDevice(object):
         Ensure that :meth:`dispatch` is called and that you wait for some
         reasonable time after creating the device.
         """
-        return [f"/dev/input/{e}" for e in self._walk_sysfs("evdev")]
+        return [f"/dev/input/{e.name}" for e in self.walk_sysfs("evdev")]
 
     @property
     def hidraw_nodes(self) -> List[str]:
@@ -301,7 +305,7 @@ class UHIDDevice(object):
         Ensure that :meth:`dispatch` is called and that you wait for some
         reasonable time after creating the device.
         """
-        return [f"/dev/{h}" for h in self._walk_sysfs("hidraw")]
+        return [f"/dev/{h.name}" for h in self.walk_sysfs("hidraw")]
 
     def create_kernel_device(self: "UHIDDevice") -> None:
         """

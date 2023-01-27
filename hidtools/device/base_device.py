@@ -86,11 +86,10 @@ class LED(object):
 class PowerSupply(object):
     """Represents Linux power_supply_class sysfs nodes."""
 
-    def __init__(self, udev_object):
-        self.sys_path = pathlib.Path(udev_object.sys_path)
-        self._capacity = SysfsFile(self.sys_path / "capacity")
-        self._status = SysfsFile(self.sys_path / "status")
-        self._type = SysfsFile(self.sys_path / "type")
+    def __init__(self, sys_path):
+        self._capacity = SysfsFile(sys_path / "capacity")
+        self._status = SysfsFile(sys_path / "status")
+        self._type = SysfsFile(sys_path / "type")
 
     @property
     def capacity(self):
@@ -122,12 +121,19 @@ class _BaseDevice(UHIDDevice):
         self.application = application
         self.input_nodes = {}
         self.led_classes = {}
-        self.power_supply_class = None
         if rdesc is None:
             assert rdesc_str is not None
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
         else:
             self.rdesc = rdesc
+
+    @property
+    def power_supply_class(self: "_BaseDevice") -> Optional[PowerSupply]:
+        ps = self.walk_sysfs("power_supply", "power_supply/*")
+        if ps is None or len(ps) < 1:
+            return None
+
+        return PowerSupply(ps[0])
 
     def match_evdev_rule(self, application, evdev):
         """Replace this in subclasses if the device has multiple reports
@@ -334,13 +340,6 @@ class BaseDevice(_BaseDevice):
         led = LED(device)
         self.led_classes[led.sys_path.name] = led
 
-    def udev_power_supply_event(self, device):
-        # we may be presented the event more than once
-        if self.power_supply_class is not None:
-            return
-
-        self.power_supply_class = PowerSupply(device)
-
     def udev_event(self, event):
         if event.action == "remove":
             return
@@ -348,10 +347,6 @@ class BaseDevice(_BaseDevice):
         device = event
 
         subsystem = device.properties["SUBSYSTEM"]
-
-        # power_supply events are presented with a 'change' event
-        if subsystem == "power_supply":
-            return self.udev_power_supply_event(device)
 
         # others are still using 'add'
         if event.action != "add":
@@ -361,14 +356,5 @@ class BaseDevice(_BaseDevice):
             return self.udev_input_event(device)
         elif subsystem == "leds":
             return self.udev_led_event(device)
-        elif subsystem == "hwmon":
-            # Often power_supply is managed by hwmon and it will appear during 'add'
-            # and not the power_supply itself directly.
-            if "power_supply" in device.sys_path:
-                # The 'device' directory brings us back to the power_supply.
-                power_supply = pyudev.Devices.from_sys_path(
-                    device.context, device.sys_path + "/device"
-                )
-                return self.udev_power_supply_event(power_supply)
 
         logger.debug(f"{subsystem}: {device}")
