@@ -29,11 +29,11 @@ class UHIDTestDevice(BaseDevice):
 
 class BaseTestCase:
     class TestUhid(object):
-        syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)
-        key_event = libevdev.InputEvent(libevdev.EV_KEY)
-        abs_event = libevdev.InputEvent(libevdev.EV_ABS)
-        rel_event = libevdev.InputEvent(libevdev.EV_REL)
-        msc_event = libevdev.InputEvent(libevdev.EV_MSC.MSC_SCAN)
+        syn_event = libevdev.InputEvent(libevdev.EV_SYN.SYN_REPORT)  # type: ignore
+        key_event = libevdev.InputEvent(libevdev.EV_KEY)  # type: ignore
+        abs_event = libevdev.InputEvent(libevdev.EV_ABS)  # type: ignore
+        rel_event = libevdev.InputEvent(libevdev.EV_REL)  # type: ignore
+        msc_event = libevdev.InputEvent(libevdev.EV_MSC.MSC_SCAN)  # type: ignore
 
         def assertInputEventsIn(self, expected_events, effective_events):
             effective_events = effective_events.copy()
@@ -131,6 +131,7 @@ class BaseTestCase:
             If this fail, there is something wrong in the device report
             descriptors."""
             uhdev = self.uhdev
+            assert uhdev is not None
             assert uhdev.get_evdev() is not None
             self.assertName(uhdev)
             assert len(uhdev.next_sync_events()) == 0
