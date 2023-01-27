@@ -101,9 +101,6 @@ class UHIDDevice(object):
     _poll = select.poll()
     _devices: List["UHIDDevice"] = []
 
-    _pyudev_context: Optional[pyudev.Context] = None
-    _pyudev_monitor: Optional[pyudev.Monitor] = None
-
     @classmethod
     def dispatch(cls: Type["UHIDDevice"], timeout: Optional[float] = None) -> bool:
         """
@@ -141,32 +138,6 @@ class UHIDDevice(object):
     def _remove_fd_from_poll(cls: Type["UHIDDevice"], fd: int) -> None:
         cls._poll.unregister(fd)
 
-    @classmethod
-    def _init_pyudev(cls: Type["UHIDDevice"]) -> None:
-        if cls._pyudev_context is None:
-            cls._pyudev_context = pyudev.Context()
-            cls._pyudev_monitor = pyudev.Monitor.from_netlink(cls._pyudev_context)
-            cls._pyudev_monitor.start()
-
-            cls._append_fd_to_poll(
-                cls._pyudev_monitor.fileno(), cls._cls_udev_event_callback
-            )
-
-    @classmethod
-    def _cls_udev_event_callback(cls: Type["UHIDDevice"]) -> None:
-        if cls._pyudev_monitor is None:
-            return
-        event: pyudev.Device
-        for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
-            logger.debug(f"udev event: {event.action} -> {event}")
-
-            for d in cls._devices:
-                if (
-                    d.udev_device is not None
-                    and d.udev_device.sys_path in event.sys_path
-                ):
-                    d._udev_event(event)
-
     def __init__(self: "UHIDDevice") -> None:
         self._name: Optional[str] = None
         self._phys: Optional[str] = ""
@@ -180,14 +151,12 @@ class UHIDDevice(object):
         self._open = self.open
         self._close = self.close
         self._output_report = self.output_report
-        self._udev_device: Optional[pyudev.Device] = None
         self._ready: bool = False
         self._is_destroyed: bool = False
         self.device_nodes: List[str] = []
         self.hidraw_nodes: List[str] = []
         self.uniq = f"uhid_{str(uuid.uuid4())}"
         self._append_fd_to_poll(self._fd, self._process_one_event)
-        self._init_pyudev()
         UHIDDevice._devices.append(self)
 
     def __enter__(self: "UHIDDevice") -> "UHIDDevice":
@@ -196,32 +165,6 @@ class UHIDDevice(object):
     def __exit__(self: "UHIDDevice", *exc_details) -> None:
         if not self._is_destroyed:
             self.destroy()
-
-    def udev_event(self: "UHIDDevice", event: pyudev.Device) -> None:
-        """
-        Callback invoked on a udev event.
-        """
-        pass
-
-    def _udev_event(self: "UHIDDevice", event: pyudev.Device) -> None:
-        # we do not need to process the udev events if the device is being
-        # removed
-        if not self._ready:
-            return
-
-        if event.action == "add":
-            device = event
-
-            try:
-                devname: str = device.properties["DEVNAME"]
-                if devname.startswith("/dev/input/event"):
-                    self.device_nodes.append(devname)
-                elif devname.startswith("/dev/hidraw"):
-                    self.hidraw_nodes.append(devname)
-            except KeyError:
-                pass
-
-        self.udev_event(event)
 
     @property
     def fd(self: "UHIDDevice") -> int:
@@ -339,31 +282,11 @@ class UHIDDevice(object):
         os.write(self._fd, buf)
 
     @property
-    def udev_device(self: "UHIDDevice") -> Optional[pyudev.Device]:
-        """
-        The devices' udev device.
-
-        The device may be None if udev hasn't processed the device yet.
-        """
-        if self._udev_device is None and self._pyudev_context is not None:
-            device: pyudev.Device
-            for device in self._pyudev_context.list_devices(subsystem="hid"):
-                try:
-                    if self.uniq == device.properties["HID_UNIQ"]:
-                        self._udev_device = device
-                        break
-                except KeyError:
-                    pass
-        return self._udev_device
-
-    @property
     def sys_path(self: "UHIDDevice") -> Optional[str]:
         """
         The device's /sys path
         """
-        if self.udev_device is None:
-            return None
-        return self.udev_device.sys_path
+        return None
 
     def create_kernel_device(self: "UHIDDevice") -> None:
         """
@@ -588,3 +511,118 @@ class UHIDDevice(object):
         if self.parsed_rdesc is None:
             return []
         return self.parsed_rdesc.create_report(data, global_data, reportID, application)
+
+
+class UdevUHIDDevice(UHIDDevice):
+    """
+    A uhid device with a udev manager. uhid is a kernel interface to
+    create virtual HID devices based on a report descriptor.
+
+    This class also acts as context manager for any :class:`UHIDDevice`
+    objects. See :meth:`dispatch` for details.
+
+    .. attribute:: device_nodes
+
+        A list of evdev nodes associated with this HID device. Populating
+        this list requires udev events to be processed, ensure that
+        :meth:`dispatch` is called and that you wait for some reasonable
+        time after creating the device.
+
+    .. attribute:: hidraw_nodes
+
+        A list of hidraw nodes associated with this HID device. Populating
+        this list requires udev events to be processed, ensure that
+        :meth:`dispatch` is called and that you wait for some reasonable
+        time after creating the device.
+
+    .. attribute:: uniq
+
+        A uniq string assigned to this device. This string is autogenerated
+        and can be used to reliably identify the device.
+
+    """
+
+    _pyudev_context: Optional[pyudev.Context] = None
+    _pyudev_monitor: Optional[pyudev.Monitor] = None
+
+    @classmethod
+    def _init_pyudev(cls: Type["UdevUHIDDevice"]) -> None:
+        if cls._pyudev_context is None:
+            cls._pyudev_context = pyudev.Context()
+            cls._pyudev_monitor = pyudev.Monitor.from_netlink(cls._pyudev_context)
+            cls._pyudev_monitor.start()
+
+            cls._append_fd_to_poll(
+                cls._pyudev_monitor.fileno(), cls._cls_udev_event_callback
+            )
+
+    @classmethod
+    def _cls_udev_event_callback(cls: Type["UdevUHIDDevice"]) -> None:
+        if cls._pyudev_monitor is None:
+            return
+        event: pyudev.Device
+        for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
+            logger.debug(f"udev event: {event.action} -> {event}")
+
+            for d in cls._devices:
+                if (
+                    isinstance(d, UdevUHIDDevice)
+                    and d.udev_device is not None
+                    and d.udev_device.sys_path in event.sys_path
+                ):
+                    d._udev_event(event)
+
+    def __init__(self: "UdevUHIDDevice") -> None:
+        super().__init__()
+        self._udev_device: Optional[pyudev.Device] = None
+        self._init_pyudev()
+
+    def udev_event(self: "UdevUHIDDevice", event: pyudev.Device) -> None:
+        """
+        Callback invoked on a udev event.
+        """
+        pass
+
+    def _udev_event(self: "UdevUHIDDevice", event: pyudev.Device) -> None:
+        # we do not need to process the udev events if the device is being
+        # removed
+        if not self._ready:
+            return
+
+        if event.action == "add":
+            device = event
+
+            try:
+                devname: str = device.properties["DEVNAME"]
+                if devname.startswith("/dev/input/event"):
+                    self.device_nodes.append(devname)
+                elif devname.startswith("/dev/hidraw"):
+                    self.hidraw_nodes.append(devname)
+            except KeyError:
+                pass
+
+        self.udev_event(event)
+
+    @property
+    def udev_device(self: "UdevUHIDDevice") -> Optional[pyudev.Device]:
+        """
+        The devices' udev device.
+
+        The device may be None if udev hasn't processed the device yet.
+        """
+        if self._udev_device is None and self._pyudev_context is not None:
+            device: pyudev.Device
+            for device in self._pyudev_context.list_devices(subsystem="hid"):
+                try:
+                    if self.uniq == device.properties["HID_UNIQ"]:
+                        self._udev_device = device
+                        break
+                except KeyError:
+                    pass
+        return self._udev_device
+
+    @property
+    def sys_path(self: "UdevUHIDDevice") -> Optional[str]:
+        if self.udev_device is None:
+            return None
+        return self.udev_device.sys_path

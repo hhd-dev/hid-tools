@@ -26,7 +26,7 @@ import pyudev
 import logging
 
 import hidtools.hid as hid
-from hidtools.uhid import UHIDDevice
+from hidtools.uhid import UdevUHIDDevice
 from hidtools.util import BusType
 
 logger = logging.getLogger("hidtools.device.base_device")
@@ -98,7 +98,7 @@ class PowerSupply(object):
         return self._type.str_value
 
 
-class BaseDevice(UHIDDevice):
+class BaseDevice(UdevUHIDDevice):
     input_type_mapping = {
         "ID_INPUT_TOUCHSCREEN": ["Touch Screen"],
         "ID_INPUT_TOUCHPAD": ["Touch Pad"],
