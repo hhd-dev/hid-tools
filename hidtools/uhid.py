@@ -24,10 +24,13 @@ import functools
 import os
 import select
 import struct
+import time
 import uuid
 
 from hidtools.hut import U8, U16, U32
 from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type
+
+from pathlib import Path
 
 try:
     import pyudev
@@ -55,20 +58,6 @@ class UHIDDevice(object):
 
     This class also acts as context manager for any :class:`UHIDDevice`
     objects. See :meth:`dispatch` for details.
-
-    .. attribute:: device_nodes
-
-        A list of evdev nodes associated with this HID device. Populating
-        this list requires udev events to be processed, ensure that
-        :meth:`dispatch` is called and that you wait for some reasonable
-        time after creating the device.
-
-    .. attribute:: hidraw_nodes
-
-        A list of hidraw nodes associated with this HID device. Populating
-        this list requires udev events to be processed, ensure that
-        :meth:`dispatch` is called and that you wait for some reasonable
-        time after creating the device.
 
     .. attribute:: uniq
 
@@ -153,9 +142,9 @@ class UHIDDevice(object):
         self._output_report = self.output_report
         self._ready: bool = False
         self._is_destroyed: bool = False
-        self.device_nodes: List[str] = []
-        self.hidraw_nodes: List[str] = []
+        self._sys_path: Optional[Path] = None
         self.uniq = f"uhid_{str(uuid.uuid4())}"
+        self.hid_id: int = 0
         self._append_fd_to_poll(self._fd, self._process_one_event)
         UHIDDevice._devices.append(self)
 
@@ -282,11 +271,43 @@ class UHIDDevice(object):
         os.write(self._fd, buf)
 
     @property
-    def sys_path(self: "UHIDDevice") -> Optional[str]:
+    def sys_path(self: "UHIDDevice") -> Optional[Path]:
         """
         The device's /sys path
         """
-        return None
+        return self._sys_path
+
+    def _walk_sysfs(self: "UHIDDevice", kind: str) -> List[str]:
+        kinds = {
+            "evdev": "input/input*/event*",
+            "hidraw": "hidraw/hidraw*",
+        }
+        if self._sys_path is None or kind not in kinds:
+            return []
+
+        return [dev.name for dev in self._sys_path.glob(kinds[kind])]
+
+    @property
+    def device_nodes(self) -> List[str]:
+        """
+        A list of evdev nodes associated with this HID device. Populating
+        this list requires the kernel to process the uhid device, and sometimes
+        the kernel needs to talk to the uhid process.
+        Ensure that :meth:`dispatch` is called and that you wait for some
+        reasonable time after creating the device.
+        """
+        return [f"/dev/input/{e}" for e in self._walk_sysfs("evdev")]
+
+    @property
+    def hidraw_nodes(self) -> List[str]:
+        """
+        A list of hidraw nodes associated with this HID device. Populating
+        this list requires the kernel to process the uhid device, and sometimes
+        the kernel needs to talk to the uhid process.
+        Ensure that :meth:`dispatch` is called and that you wait for some
+        reasonable time after creating the device.
+        """
+        return [f"/dev/{h}" for h in self._walk_sysfs("hidraw")]
 
     def create_kernel_device(self: "UHIDDevice") -> None:
         """
@@ -323,7 +344,36 @@ class UHIDDevice(object):
         logger.debug("creating kernel device")
         n = os.write(self._fd, buf)
         assert n == len(buf)
-        self._ready = True
+
+        # the kernel creates the device in a worker struct
+        # when we are here, we might still not have the device created
+        # and thus need to wait for incoming events. In practice, this
+        # works at the first attempt
+        found: Optional[Path] = None
+        iterations = 10
+        glob = f"{self.bus:04X}:{self.vid:04X}:{self.pid:04X}.*/uevent"
+        while found is None and iterations > 0:
+            iterations -= 1
+            uhid_path = Path("/sys/devices/virtual/misc/uhid")
+            for p in uhid_path.glob(glob):
+                try:
+                    with open(p) as f:
+                        for line in f.readlines():
+                            if not line.startswith("HID_UNIQ="):
+                                continue
+                            if line[9:].strip() == self.uniq:
+                                found = p
+                                break
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    pass
+
+            time.sleep(0.001)
+        if found is not None:
+            self._sys_path = found.parent
+            self.hid_id = int(self._sys_path.name[15:], 16)
+            self._ready = True
 
     def destroy(self: "UHIDDevice") -> None:
         """
@@ -349,8 +399,6 @@ class UHIDDevice(object):
         self._remove_fd_from_poll(self._fd)
         os.close(self._fd)
         self._is_destroyed = True
-        self.device_nodes.clear()
-        self.hidraw_nodes.clear()
 
     def start(self: "UHIDDevice", flags: int) -> None:
         """
@@ -521,20 +569,6 @@ class UdevUHIDDevice(UHIDDevice):
     This class also acts as context manager for any :class:`UHIDDevice`
     objects. See :meth:`dispatch` for details.
 
-    .. attribute:: device_nodes
-
-        A list of evdev nodes associated with this HID device. Populating
-        this list requires udev events to be processed, ensure that
-        :meth:`dispatch` is called and that you wait for some reasonable
-        time after creating the device.
-
-    .. attribute:: hidraw_nodes
-
-        A list of hidraw nodes associated with this HID device. Populating
-        this list requires udev events to be processed, ensure that
-        :meth:`dispatch` is called and that you wait for some reasonable
-        time after creating the device.
-
     .. attribute:: uniq
 
         A uniq string assigned to this device. This string is autogenerated
@@ -589,18 +623,6 @@ class UdevUHIDDevice(UHIDDevice):
         if not self._ready:
             return
 
-        if event.action == "add":
-            device = event
-
-            try:
-                devname: str = device.properties["DEVNAME"]
-                if devname.startswith("/dev/input/event"):
-                    self.device_nodes.append(devname)
-                elif devname.startswith("/dev/hidraw"):
-                    self.hidraw_nodes.append(devname)
-            except KeyError:
-                pass
-
         self.udev_event(event)
 
     @property
@@ -620,9 +642,3 @@ class UdevUHIDDevice(UHIDDevice):
                 except KeyError:
                     pass
         return self._udev_device
-
-    @property
-    def sys_path(self: "UdevUHIDDevice") -> Optional[str]:
-        if self.udev_device is None:
-            return None
-        return self.udev_device.sys_path

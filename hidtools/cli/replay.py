@@ -95,7 +95,7 @@ class HIDReplay(object):
             uhid_dev.create_kernel_device()
 
         while not self.ready:
-            hidtools.uhid.UHIDDevice.dispatch(1000)
+            hidtools.uhid.UHIDDevice.dispatch(10)
 
     def determine_device_by_info(self, info):
         device_id = (info["vid"], info["pid"])
