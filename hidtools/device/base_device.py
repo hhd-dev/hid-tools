@@ -33,7 +33,8 @@ import hidtools.hid as hid
 from hidtools.uhid import UHIDDevice
 from hidtools.util import BusType
 
-from typing import List, Optional, Type
+from pathlib import Path
+from typing import Any, Dict, Final, List, Optional, Type
 
 logger = logging.getLogger("hidtools.device.base_device")
 
@@ -102,9 +103,218 @@ class PowerSupply(object):
         return self._type.str_value
 
 
+class EvdevMatch(object):
+    def __init__(
+        self: "EvdevMatch",
+        *,
+        requires: List[Any] = [],
+        excludes: List[Any] = [],
+        req_properties: List[Any] = [],
+        excl_properties: List[Any] = [],
+    ) -> None:
+        self.requires = requires
+        self.excludes = excludes
+        self.req_properties = req_properties
+        self.excl_properties = excl_properties
+
+    def is_a_match(self: "EvdevMatch", evdev: libevdev.Device) -> bool:
+        for m in self.requires:
+            if not evdev.has(m):
+                return False
+        for m in self.excludes:
+            if evdev.has(m):
+                return False
+        for p in self.req_properties:
+            if not evdev.has_property(p):
+                return False
+        for p in self.excl_properties:
+            if evdev.has_property(p):
+                return False
+        return True
+
+
+class EvdevDevice(object):
+    """
+    Represents an Evdev node and its properties.
+    This is a stub for the libevdev devices, as they are relying on
+    uevent to get the data, saving us some ioctls to fetch the names
+    and properties.
+    """
+
+    # application to matches
+    _application_matches: Final = {
+        # pyright: ignore
+        "Accelerometer": EvdevMatch(
+            req_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ]
+        ),
+        "Game Pad": EvdevMatch(  # in systemd, this is a lot more complex, but that will do
+            requires=[
+                libevdev.EV_ABS.ABS_X,
+                libevdev.EV_ABS.ABS_Y,
+                libevdev.EV_ABS.ABS_RX,
+                libevdev.EV_ABS.ABS_RY,
+                libevdev.EV_KEY.BTN_START,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Joystick": EvdevMatch(  # in systemd, this is a lot more complex, but that will do
+            requires=[
+                libevdev.EV_ABS.ABS_RX,
+                libevdev.EV_ABS.ABS_RY,
+                libevdev.EV_KEY.BTN_START,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Key": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.KEY_A,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+                libevdev.INPUT_PROP_DIRECT,
+                libevdev.INPUT_PROP_POINTER,
+            ],
+        ),
+        "Mouse": EvdevMatch(
+            requires=[
+                libevdev.EV_REL.REL_X,
+                libevdev.EV_REL.REL_Y,
+                libevdev.EV_KEY.BTN_LEFT,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Pad": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.BTN_0,
+            ],
+            excludes=[
+                libevdev.EV_KEY.BTN_TOOL_PEN,
+                libevdev.EV_KEY.BTN_TOUCH,
+                libevdev.EV_ABS.ABS_DISTANCE,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Pen": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.BTN_STYLUS,
+                libevdev.EV_ABS.ABS_X,
+                libevdev.EV_ABS.ABS_Y,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Stylus": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.BTN_STYLUS,
+                libevdev.EV_ABS.ABS_X,
+                libevdev.EV_ABS.ABS_Y,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Touch Pad": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.BTN_LEFT,
+                libevdev.EV_ABS.ABS_X,
+                libevdev.EV_ABS.ABS_Y,
+            ],
+            excludes=[libevdev.EV_KEY.BTN_TOOL_PEN, libevdev.EV_KEY.BTN_STYLUS],
+            req_properties=[
+                libevdev.INPUT_PROP_POINTER,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+        "Touch Screen": EvdevMatch(
+            requires=[
+                libevdev.EV_KEY.BTN_TOUCH,
+                libevdev.EV_ABS.ABS_X,
+                libevdev.EV_ABS.ABS_Y,
+            ],
+            excludes=[libevdev.EV_KEY.BTN_TOOL_PEN, libevdev.EV_KEY.BTN_STYLUS],
+            req_properties=[
+                libevdev.INPUT_PROP_DIRECT,
+            ],
+            excl_properties=[
+                libevdev.INPUT_PROP_ACCELEROMETER,
+            ],
+        ),
+    }
+
+    def __init__(self: "EvdevDevice", sysfs: Path) -> None:
+        self.sysfs = sysfs
+        self.event_node: Any = None
+        self.libevdev: Optional[libevdev.Device] = None
+
+        self.uevents = {}
+        # all of the interesting properties are stored in the input uevent, so in the parent
+        # so convert the uevent file of the parent input node into a dict
+        with open(sysfs.parent / "uevent") as f:
+            for line in f.readlines():
+                key, value = line.strip().split("=")
+                self.uevents[key] = value.strip('"')
+
+        # we open all evdev nodes in order to not miss any event
+        self.open()
+
+    @property
+    def name(self: "EvdevDevice") -> str:
+        assert "NAME" in self.uevents
+
+        return self.uevents["NAME"]
+
+    @property
+    def evdev(self: "EvdevDevice") -> Path:
+        return Path("/dev/input") / self.sysfs.name
+
+    def matches_application(self: "EvdevDevice", application: str) -> bool:
+        if self.libevdev is None:
+            return False
+
+        if application in self._application_matches:
+            return self._application_matches[application].is_a_match(self.libevdev)
+
+        logger.error(
+            f"application '{application}' is unknown, please update/fix hid-tools"
+        )
+        assert False  # hid-tools likely needs an update
+
+    def open(self: "EvdevDevice") -> libevdev.Device:
+        self.event_node = open(self.evdev, "rb")
+        self.libevdev = libevdev.Device(self.event_node)
+
+        assert self.libevdev.fd is not None
+
+        fd = self.libevdev.fd.fileno()
+        flag = fcntl.fcntl(fd, fcntl.F_GETFD)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
+
+        return self.libevdev
+
+    def close(self: "EvdevDevice") -> None:
+        if self.libevdev is not None and self.libevdev.fd is not None:
+            self.libevdev.fd.close()
+            self.libevdev = None
+        if self.event_node is not None:
+            self.event_node.close()
+            self.event_node = None
+
+
 class _BaseDevice(UHIDDevice):
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
-        self._opened_files = []
         if rdesc_str is None and rdesc is None:
             raise Exception("Please provide at least a rdesc or rdesc_str")
         super().__init__()
@@ -116,8 +326,9 @@ class _BaseDevice(UHIDDevice):
         self.info = input_info
         self.default_reportID = None
         self.opened = False
+        self.started = False
         self.application = application
-        self.input_nodes = {}
+        self._input_nodes = None
         if rdesc is None:
             assert rdesc_str is not None
             self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
@@ -140,6 +351,24 @@ class _BaseDevice(UHIDDevice):
 
         return [LED(led.parent) for led in leds]
 
+    @property
+    def kernel_is_ready(self: "_BaseDevice") -> bool:
+        return True
+
+    @property
+    def input_nodes(self: "_BaseDevice") -> List[EvdevDevice]:
+        if self._input_nodes is not None:
+            return self._input_nodes
+
+        if not self.kernel_is_ready or not self.started:
+            return []
+
+        self._input_nodes = [
+            EvdevDevice(path)
+            for path in self.walk_sysfs("input", "input/input*/event*")
+        ]
+        return self._input_nodes
+
     def match_evdev_rule(self, application, evdev):
         """Replace this in subclasses if the device has multiple reports
         of the same type and we need to filter based on the actual evdev
@@ -155,24 +384,23 @@ class _BaseDevice(UHIDDevice):
     def open(self):
         self.opened = True
 
+    def _close_all_opened_evdev(self):
+        if self._input_nodes is not None:
+            for e in self._input_nodes:
+                e.close()
+
     def __del__(self):
-        for evdev in self._opened_files:
-            evdev.close()
+        self._close_all_opened_evdev()
 
     def close(self):
         self.opened = False
 
     def start(self, flags):
-        pass
+        self.started = True
 
     def stop(self):
-        to_remove = []
-        for name, evdev in self.input_nodes.items():
-            evdev.fd.close()
-            to_remove.append(name)
-
-        for name in to_remove:
-            del self.input_nodes[name]
+        self.started = False
+        self._close_all_opened_evdev()
 
     def next_sync_events(self, application=None):
         evdev = self.get_evdev(application)
@@ -184,10 +412,20 @@ class _BaseDevice(UHIDDevice):
         if application is None:
             application = self.application
 
-        if application not in self.input_nodes:
+        if len(self.input_nodes) == 0:
             return None
 
-        return self.input_nodes[application]
+        assert self._input_nodes is not None
+
+        if len(self._input_nodes) == 1:
+            evdev = self._input_nodes[0]
+            if self.match_evdev_rule(application, evdev.libevdev):
+                return evdev.libevdev
+        else:
+            for _evdev in self._input_nodes:
+                if _evdev.matches_application(application):
+                    if self.match_evdev_rule(application, _evdev.libevdev):
+                        return _evdev.libevdev
 
     def is_ready(self):
         """Returns whether a UHID device is ready. Can be overwritten in
@@ -199,7 +437,7 @@ class _BaseDevice(UHIDDevice):
         - we need to have at least 4 LEDs present
           (len(self.uhdev.leds_classes) == 4)
         - or any other combinations"""
-        return self.application in self.input_nodes
+        return self.kernel_is_ready and self.started
 
 
 class BaseDevice(_BaseDevice):
@@ -230,6 +468,7 @@ class BaseDevice(_BaseDevice):
 
     _pyudev_context: Optional[pyudev.Context] = None
     _pyudev_monitor: Optional[pyudev.Monitor] = None
+    _uhid_devices: Dict[int, bool] = {}
 
     def __init__(
         self: "BaseDevice",
@@ -248,6 +487,7 @@ class BaseDevice(_BaseDevice):
         if cls._pyudev_context is None:
             cls._pyudev_context = pyudev.Context()
             cls._pyudev_monitor = pyudev.Monitor.from_netlink(cls._pyudev_context)
+            cls._pyudev_monitor.filter_by("hid")
             cls._pyudev_monitor.start()
 
             cls._append_fd_to_poll(
@@ -260,100 +500,18 @@ class BaseDevice(_BaseDevice):
             return
         event: pyudev.Device
         for event in iter(functools.partial(cls._pyudev_monitor.poll, 0.02), None):
+            if event.action not in ["bind", "remove"]:
+                return
+
             logger.debug(f"udev event: {event.action} -> {event}")
 
-            for d in cls._devices:
-                if (
-                    isinstance(d, BaseDevice)
-                    and d.udev_device is not None
-                    and d.udev_device.sys_path in event.sys_path
-                ):
-                    d._udev_event(event)
+            id = int(event.sys_path.strip().split(".")[-1], 16)
 
-    def _udev_event(self: "BaseDevice", event: pyudev.Device) -> None:
-        # we do not need to process the udev events if the device is being
-        # removed
-        if not self._ready:
-            return
-
-        self.udev_event(event)
+            cls._uhid_devices[id] = event.action == "bind"
 
     @property
-    def udev_device(self: "BaseDevice") -> Optional[pyudev.Device]:
-        """
-        The devices' udev device.
-
-        The device may be None if udev hasn't processed the device yet.
-        """
-        if self._udev_device is None and self._pyudev_context is not None:
-            device: pyudev.Device
-            for device in self._pyudev_context.list_devices(subsystem="hid"):
-                try:
-                    if self.uniq == device.properties["HID_UNIQ"]:
-                        self._udev_device = device
-                        break
-                except KeyError:
-                    pass
-        return self._udev_device
-
-    def udev_input_event(self, device):
-        if "DEVNAME" not in device.properties:
-            return
-
-        devname = device.properties["DEVNAME"]
-        if not devname.startswith("/dev/input/event"):
-            return
-
-        # associate the Input type to the matching HID application
-        # we reuse the guess work from udev
-        types = []
-        for name, type_list in BaseDevice.input_type_mapping.items():
-            for type in type_list:
-                # do not duplicate event nodes if the application matches
-                # one of the type
-                if len(type_list) > 1:
-                    if self.application in type_list and type != self.application:
-                        continue
-                if name in device.properties:
-                    types.append(type)
-
-        if not types:
-            # abort, the device has not been processed by udev
-            print("abort", devname, list(device.properties.items()))
-            return
-
-        event_node = open(devname, "rb")
-        self._opened_files.append(event_node)
-        evdev = libevdev.Device(event_node)
-
-        assert evdev.fd is not None
-
-        fd = evdev.fd.fileno()
-        flag = fcntl.fcntl(fd, fcntl.F_GETFD)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flag | os.O_NONBLOCK)
-
-        used = False
-        for type in types:
-            # check for custom defined matching
-            if self.match_evdev_rule(type, evdev):
-                self.input_nodes[type] = evdev
-                used = True
-        if not used:
-            evdev.fd.close()
-
-    def udev_event(self, event):
-        if event.action == "remove":
-            return
-
-        device = event
-
-        subsystem = device.properties["SUBSYSTEM"]
-
-        # others are still using 'add'
-        if event.action != "add":
-            return
-
-        if subsystem == "input":
-            return self.udev_input_event(device)
-
-        logger.debug(f"{subsystem}: {device}")
+    def kernel_is_ready(self: "BaseDevice") -> bool:
+        try:
+            return self._uhid_devices[self.hid_id]
+        except KeyError:
+            return False
