@@ -103,7 +103,7 @@ class BaseTestCase:
                         self.uhdev.create_kernel_device()
                         now = time.time()
                         while not self.uhdev.is_ready() and time.time() - now < 5:
-                            self.uhdev.dispatch(10)
+                            self.uhdev.dispatch(1)
                         if self.uhdev.get_evdev() is None:
                             logger.warning(
                                 f"available list of input nodes: (default application is '{self.uhdev.application}')"
