@@ -1,6 +1,6 @@
 # vim: set expandtab shiftwidth=2 tabstop=8 textwidth=0:
 
-.templates_sha: &template_sha 6dfff3149f2ea9054a9e3ad9f94b359b57723afc # see https://docs.gitlab.com/ee/ci/yaml/#includefile
+.templates_sha: &template_sha 976b2e1ed25998fe36f90fc8bb72fe2acbab405b # see https://docs.gitlab.com/ee/ci/yaml/#includefile
 
 include:
   # Fedora container builder template
@@ -11,11 +11,12 @@ include:
 
 variables:
   TEST_PACKAGES: 'black python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq systemd-udev'
+  TEST_EXEC: 'pip3 install pytest-retry'
   BUILD_PACKAGES: 'file git-core gcc gcc-c++ diffutils make flex bison sparse bc xz findutils hostname elfutils-libelf-devel openssl-devel perl-Term-ANSIColor perl-Encode jq'
   FDO_DISTRIBUTION_VERSION: 36
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  TEST_CONTAINER_TAG: '2023-01-24.1'
-  BUILD_CONTAINER_TAG: '2023-01-24.1'
+  TEST_CONTAINER_TAG: '2023-02-02.1'
+  BUILD_CONTAINER_TAG: '2023-02-02.1'
   FDO_DISTRIBUTION_TAG: $TEST_CONTAINER_TAG
   KERNEL_VERSION: '6.1'
 
@@ -48,6 +49,7 @@ test container prep:
   variables:
     GIT_STRATEGY: none
     FDO_DISTRIBUTION_PACKAGES: $TEST_PACKAGES
+    FDO_DISTRIBUTION_EXEC: $TEST_EXEC
 
 .build_variables:
   variables:
@@ -152,16 +154,12 @@ pytest:
 
     - echo "[pytest]" > pytest.ini
     - echo "junit_family=xunit2" >> pytest.ini
-    - export B2C_COMMAND="pytest -v --udevd --junitxml=junit-$CI_JOB_NAME.xml || pytest --lf -v --udevd --junitxml=junit-$CI_JOB_NAME-retry.xml"
-    - rm -f junit-$CI_JOB_NAME.xml junit-$CI_JOB_NAME-retry.xml
+    - export B2C_COMMAND="pytest -v --udevd --junitxml=junit-$CI_JOB_NAME.xml --retries 2"
+    - rm -f junit-$CI_JOB_NAME.xml
     - set +e # Disable exit on error
     - /app/boot2container ; echo $? > .exit_code
     - set -e # Re-enable exit on error
     - cat '.exit_code'
-    - if [ ! -f junit-$CI_JOB_NAME-retry.xml ] ;
-      then
-        mv junit-$CI_JOB_NAME.xml junit-$CI_JOB_NAME-retry.xml ;
-      fi
     # pytest uses 2 and above for any errors outside the tests themselves
     - if [[ `cat .exit_code` -gt 1 ]] ;
       then
@@ -184,7 +182,7 @@ pytest errors:
     - pytest
   script:
     - pip install yq
-    - errors=`cat junit-*-retry.xml | xq -r '.testsuites.testsuite."@errors"'`
+    - errors=`cat junit-*.xml | xq -r '.testsuites.testsuite."@errors"'`
     - test $errors -ne 0 && echo "pytest encountered $errors errors, please fix"
     - echo "See the previous stage for test logs"
     - exit $errors
@@ -198,7 +196,7 @@ pytest failures:
     - pytest
   script:
     - pip install yq
-    - failures=`cat junit-*-retry.xml | xq -r '.testsuites.testsuite."@failures"'`
+    - failures=`cat junit-*.xml | xq -r '.testsuites.testsuite."@failures"'`
     - test $failures -ne 0 && echo "pytest encountered $failures test case failures"
     - echo "See the previous stage for test logs"
     - exit $failures
