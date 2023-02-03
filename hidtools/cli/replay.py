@@ -35,7 +35,7 @@ logger = logging.getLogger("hidtools.replay")
 
 
 class HIDReplay(object):
-    _known_devices = {(0x054C, 0x0268): PS3Controller()}
+    _known_devices = {(0x054C, 0x0268): PS3Controller}
 
     def __init__(self, filename):
         self._devices = {}
@@ -100,7 +100,7 @@ class HIDReplay(object):
     def determine_device_by_info(self, info):
         device_id = (info["vid"], info["pid"])
         if device_id in self._known_devices:
-            return self._known_devices[device_id]
+            return self._known_devices[device_id]()
         return hidtools.uhid.UHIDDevice()
 
     @property
