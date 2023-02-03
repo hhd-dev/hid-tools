@@ -25,7 +25,9 @@ import time
 import hidtools.uhid
 from parse import parse, findall
 
+from hidtools.device.base_device import BaseDevice
 from hidtools.device.sony_gamepad import PS3Controller
+from typing import Dict, Tuple, Type
 
 import logging
 
@@ -35,7 +37,9 @@ logger = logging.getLogger("hidtools.replay")
 
 
 class HIDReplay(object):
-    _known_devices = {(0x054C, 0x0268): PS3Controller}
+    _known_devices: Dict[Tuple[int, int], Type[BaseDevice]] = {
+        (0x054C, 0x0268): PS3Controller
+    }
 
     def __init__(self, filename):
         self._devices = {}
@@ -83,11 +87,15 @@ class HIDReplay(object):
                     dev.rdesc = r
 
         for idx, dev in devices.items():
-            uhid_dev = self.determine_device_by_info(dev.info)
-            uhid_dev.name = dev.name
-            uhid_dev.info = [dev.info["bus"], dev.info["vid"], dev.info["pid"]]
+            uhid_dev_class = self.determine_device_type_by_info(dev.info)
+            uhid_dev = uhid_dev_class(
+                name=dev.name,
+                application=None,
+                input_info=tuple([dev.info["bus"], dev.info["vid"], dev.info["pid"]]),
+                rdesc=dev.rdesc["desc"],
+            )
             uhid_dev.phys = dev.phys
-            uhid_dev.rdesc = dev.rdesc["desc"]
+            assert uhid_dev.rdesc is not None
             assert len(uhid_dev.rdesc) == dev.rdesc["length"]
 
             self._devices[idx] = uhid_dev
@@ -97,11 +105,11 @@ class HIDReplay(object):
         while not self.ready:
             hidtools.uhid.UHIDDevice.dispatch(10)
 
-    def determine_device_by_info(self, info):
+    def determine_device_type_by_info(self, info) -> Type[BaseDevice]:
         device_id = (info["vid"], info["pid"])
         if device_id in self._known_devices:
-            return self._known_devices[device_id]()
-        return hidtools.uhid.UHIDDevice()
+            return self._known_devices[device_id]
+        return BaseDevice
 
     @property
     def ready(self):
@@ -120,9 +128,10 @@ class HIDReplay(object):
     def inject_events(self, wait_max_seconds=2):
         t = None
         timestamp_offset = 0
+        assert len(self._devices) > 0
         with open(self.filename) as f:
             idx = 0
-            dev = None
+            dev = self._devices[idx]
             if idx in self._devices:
                 dev = self._devices[idx]
             for l in f:
