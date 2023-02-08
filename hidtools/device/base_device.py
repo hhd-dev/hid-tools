@@ -203,119 +203,6 @@ class EvdevDevice(object):
     and properties.
     """
 
-    # application to matches
-    _application_matches: Final = {
-        # pyright: ignore
-        "Accelerometer": EvdevMatch(
-            req_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ]
-        ),
-        "Game Pad": EvdevMatch(  # in systemd, this is a lot more complex, but that will do
-            requires=[
-                libevdev.EV_ABS.ABS_X,
-                libevdev.EV_ABS.ABS_Y,
-                libevdev.EV_ABS.ABS_RX,
-                libevdev.EV_ABS.ABS_RY,
-                libevdev.EV_KEY.BTN_START,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Joystick": EvdevMatch(  # in systemd, this is a lot more complex, but that will do
-            requires=[
-                libevdev.EV_ABS.ABS_RX,
-                libevdev.EV_ABS.ABS_RY,
-                libevdev.EV_KEY.BTN_START,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Key": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.KEY_A,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-                libevdev.INPUT_PROP_DIRECT,
-                libevdev.INPUT_PROP_POINTER,
-            ],
-        ),
-        "Mouse": EvdevMatch(
-            requires=[
-                libevdev.EV_REL.REL_X,
-                libevdev.EV_REL.REL_Y,
-                libevdev.EV_KEY.BTN_LEFT,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Pad": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.BTN_0,
-            ],
-            excludes=[
-                libevdev.EV_KEY.BTN_TOOL_PEN,
-                libevdev.EV_KEY.BTN_TOUCH,
-                libevdev.EV_ABS.ABS_DISTANCE,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Pen": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.BTN_STYLUS,
-                libevdev.EV_ABS.ABS_X,
-                libevdev.EV_ABS.ABS_Y,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Stylus": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.BTN_STYLUS,
-                libevdev.EV_ABS.ABS_X,
-                libevdev.EV_ABS.ABS_Y,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Touch Pad": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.BTN_LEFT,
-                libevdev.EV_ABS.ABS_X,
-                libevdev.EV_ABS.ABS_Y,
-            ],
-            excludes=[libevdev.EV_KEY.BTN_TOOL_PEN, libevdev.EV_KEY.BTN_STYLUS],
-            req_properties=[
-                libevdev.INPUT_PROP_POINTER,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-        "Touch Screen": EvdevMatch(
-            requires=[
-                libevdev.EV_KEY.BTN_TOUCH,
-                libevdev.EV_ABS.ABS_X,
-                libevdev.EV_ABS.ABS_Y,
-            ],
-            excludes=[libevdev.EV_KEY.BTN_TOOL_PEN, libevdev.EV_KEY.BTN_STYLUS],
-            req_properties=[
-                libevdev.INPUT_PROP_DIRECT,
-            ],
-            excl_properties=[
-                libevdev.INPUT_PROP_ACCELEROMETER,
-            ],
-        ),
-    }
-
     def __init__(self: "EvdevDevice", sysfs: Path) -> None:
         self.sysfs = sysfs
         self.event_node: Any = None
@@ -342,12 +229,14 @@ class EvdevDevice(object):
     def evdev(self: "EvdevDevice") -> Path:
         return Path("/dev/input") / self.sysfs.name
 
-    def matches_application(self: "EvdevDevice", application: str) -> bool:
+    def matches_application(
+        self: "EvdevDevice", application: str, matches: Dict[str, EvdevMatch]
+    ) -> bool:
         if self.libevdev is None:
             return False
 
-        if application in self._application_matches:
-            return self._application_matches[application].is_a_match(self.libevdev)
+        if application in matches:
+            return matches[application].is_a_match(self.libevdev)
 
         logger.error(
             f"application '{application}' is unknown, please update/fix hid-tools"
@@ -376,6 +265,10 @@ class EvdevDevice(object):
 
 
 class BaseDevice(UHIDDevice):
+    # default _application_matches that matches nothing. This needs
+    # to be set in the subclasses to have get_evdev() working
+    _application_matches: Dict[str, EvdevMatch] = {}
+
     def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
         self._kernel_is_ready: HIDIsReady = UdevHIDIsReady(self)
         if rdesc_str is None and rdesc is None:
@@ -471,6 +364,14 @@ class BaseDevice(UHIDDevice):
             return list(evdev.events())
         return []
 
+    @property
+    def application_matches(self: "BaseDevice") -> Dict[str, EvdevMatch]:
+        return self._application_matches
+
+    @application_matches.setter
+    def application_matches(self: "BaseDevice", data: Dict[str, EvdevMatch]) -> None:
+        self._application_matches = data
+
     def get_evdev(self, application=None):
         if application is None:
             application = self.application
@@ -486,7 +387,7 @@ class BaseDevice(UHIDDevice):
                 return evdev.libevdev
         else:
             for _evdev in self._input_nodes:
-                if _evdev.matches_application(application):
+                if _evdev.matches_application(application, self.application_matches):
                     if self.match_evdev_rule(application, _evdev.libevdev):
                         return _evdev.libevdev
 

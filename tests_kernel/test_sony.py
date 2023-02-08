@@ -6,6 +6,7 @@
 # Copyright (c) 2020 Red Hat, Inc.
 #
 
+from .base import application_matches
 from .test_gamepad import BaseTest
 from hidtools.device.sony_gamepad import (
     PS3Controller,
@@ -211,7 +212,9 @@ class SonyBaseTest:
 
 class TestPS3Controller(SonyBaseTest.SonyTest):
     def create_device(self):
-        return PS3Controller()
+        controller = PS3Controller()
+        controller.application_matches = application_matches
+        return controller
 
     @pytest.fixture(autouse=True)
     def start_controller(self):
@@ -241,19 +244,27 @@ class TestPS3Controller(SonyBaseTest.SonyTest):
 
 class TestPS4ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        return PS4ControllerBluetooth()
+        controller = PS4ControllerBluetooth()
+        controller.application_matches = application_matches
+        return controller
 
 
 class TestPS4ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        return PS4ControllerUSB()
+        controller = PS4ControllerUSB()
+        controller.application_matches = application_matches
+        return controller
 
 
 class TestPS5ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        return PS5ControllerBluetooth()
+        controller = PS5ControllerBluetooth()
+        controller.application_matches = application_matches
+        return controller
 
 
 class TestPS5ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        return PS5ControllerUSB()
+        controller = PS5ControllerUSB()
+        controller.application_matches = application_matches
+        return controller
