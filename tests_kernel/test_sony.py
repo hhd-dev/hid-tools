@@ -24,12 +24,18 @@ import pytest
 
 logger = logging.getLogger("hidtools.test.sony")
 
+PS3_MODULE = ("sony", "hid_sony")
+PS4_MODULE = ("playstation", "hid_playstation")
+PS5_MODULE = ("playstation", "hid_playstation")
+
 
 class SonyBaseTest:
     class SonyTest(BaseTest.TestGamepad):
         pass
 
     class SonyPS4ControllerTest(SonyTest):
+        kernel_modules = [PS4_MODULE]
+
         def test_accelerometer(self):
             uhdev = self.uhdev
             evdev = uhdev.get_evdev("Accelerometer")
@@ -211,6 +217,8 @@ class SonyBaseTest:
 
 
 class TestPS3Controller(SonyBaseTest.SonyTest):
+    kernel_modules = [PS3_MODULE]
+
     def create_device(self):
         controller = PS3Controller()
         controller.application_matches = application_matches
@@ -257,6 +265,8 @@ class TestPS4ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
 
 
 class TestPS5ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
+    kernel_modules = [PS5_MODULE]
+
     def create_device(self):
         controller = PS5ControllerBluetooth()
         controller.application_matches = application_matches
@@ -264,6 +274,8 @@ class TestPS5ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
 
 
 class TestPS5ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
+    kernel_modules = [PS5_MODULE]
+
     def create_device(self):
         controller = PS5ControllerUSB()
         controller.application_matches = application_matches

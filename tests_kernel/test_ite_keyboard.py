@@ -14,6 +14,8 @@ import logging
 
 logger = logging.getLogger("hidtools.test.ite-keyboard")
 
+KERNEL_MODULE = ("itetech", "hid_ite")
+
 
 class KbdData(object):
     pass
@@ -136,6 +138,8 @@ class ITEKeyboard(ArrayKeyboard):
 
 
 class TestITEKeyboard(TestArrayKeyboard):
+    kernel_modules = [KERNEL_MODULE]
+
     def create_device(self):
         return ITEKeyboard()
 

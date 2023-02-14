@@ -17,6 +17,8 @@ import time
 
 logger = logging.getLogger("hidtools.test.multitouch")
 
+KERNEL_MODULE = ("hid-multitouch", "hid_multitouch")
+
 
 def BIT(x):
     return 1 << x
@@ -509,6 +511,8 @@ class SmartTechDigitizer(Digitizer):
 
 class BaseTest:
     class TestMultitouch(base.BaseTestCase.TestUhid):
+        kernel_modules = [KERNEL_MODULE]
+
         def create_device(self):
             raise Exception("please reimplement me in subclasses")
 

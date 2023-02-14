@@ -38,6 +38,8 @@ import logging
 
 logger = logging.getLogger("hidtools.test.wacom")
 
+KERNEL_MODULE = ("wacom", "wacom")
+
 
 class ProximityState(Enum):
     """
@@ -476,6 +478,8 @@ class PTHX60_Pen(BaseTablet):
 
 class BaseTest:
     class TestTablet(base.BaseTestCase.TestUhid):
+        kernel_modules = [KERNEL_MODULE]
+
         def sync_and_assert_events(
             self, report, expected_events, auto_syn=True, strict=False
         ):

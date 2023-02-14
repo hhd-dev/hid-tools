@@ -13,6 +13,7 @@ import time
 import logging
 
 from hidtools.device.base_device import BaseDevice, EvdevMatch, SysfsFile
+from pathlib import Path
 from typing import Final
 
 logger = logging.getLogger("hidtools.test.base")
@@ -150,6 +151,12 @@ class BaseTestCase:
         rel_event = libevdev.InputEvent(libevdev.EV_REL)  # type: ignore
         msc_event = libevdev.InputEvent(libevdev.EV_MSC.MSC_SCAN)  # type: ignore
 
+        # List of kernel modules to load before starting the test
+        # if any module is not available (not compiled), the test will skip.
+        # Each element is a tuple '(kernel driver name, kernel module)',
+        # for example ("playstation", "hid-playstation")
+        kernel_modules = []
+
         def assertInputEventsIn(self, expected_events, effective_events):
             effective_events = effective_events.copy()
             for ev in expected_events:
@@ -195,8 +202,31 @@ class BaseTestCase:
         def create_device(self):
             raise Exception("please reimplement me in subclasses")
 
+        def _load_kernel_module(self, kernel_driver, kernel_module):
+            sysfs_path = Path("/sys/bus/hid/drivers")
+            if kernel_driver is not None:
+                sysfs_path /= kernel_driver
+            else:
+                # special case for when testing all available modules:
+                # we don't know beforehand the name of the module from modinfo
+                sysfs_path = Path("/sys/module") / kernel_module.replace("-", "_")
+            if not sysfs_path.exists():
+                import subprocess
+
+                ret = subprocess.run(["/usr/sbin/modprobe", kernel_module])
+                if ret.returncode != 0:
+                    pytest.skip(
+                        f"module {kernel_module} could not be loaded, skipping the test"
+                    )
+
         @pytest.fixture()
-        def new_uhdev(self):
+        def load_kernel_module(self):
+            for kernel_driver, kernel_module in self.kernel_modules:
+                self._load_kernel_module(kernel_driver, kernel_module)
+            yield
+
+        @pytest.fixture()
+        def new_uhdev(self, load_kernel_module):
             return self.create_device()
 
         def assertName(self, uhdev):

@@ -72,7 +72,7 @@ def pytest_generate_tests(metafunc):
                     vid, pid = m.groups()
                     vid = int(vid, 16)
                     pid = int(pid, 16)
-                    params.append([module, vid, pid])
+                    params.append([module.name.replace(".ko", ""), vid, pid])
                     ids.append(f"{module.name} {vid:04x}:{pid:04x}")
         metafunc.parametrize("usbVidPid", params, ids=ids)
 

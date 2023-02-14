@@ -81,6 +81,7 @@ class TestUSBDevice(base.BaseTestCase.TestUhid):
     @pytest.fixture()
     def new_uhdev(self, usbVidPid, request):
         self.module, self.vid, self.pid = usbVidPid
+        self._load_kernel_module(None, self.module)
         return USBDev(input_info=(3, self.vid, self.pid))
 
     def test_creation(self):
