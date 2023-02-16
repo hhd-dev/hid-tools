@@ -14,6 +14,8 @@ import logging
 
 logger = logging.getLogger("hidtools.test.apple-keyboard")
 
+KERNEL_MODULE = ("apple", "hid-apple")
+
 
 class KbdData(object):
     pass
@@ -154,6 +156,8 @@ class AppleKeyboard(ArrayKeyboard):
 
 
 class TestAppleKeyboard(TestArrayKeyboard):
+    kernel_modules = [KERNEL_MODULE]
+
     def create_device(self):
         return AppleKeyboard()
 
