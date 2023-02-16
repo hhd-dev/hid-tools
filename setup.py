@@ -3,6 +3,7 @@
 import os
 import sys
 import io
+from distutils.util import convert_path
 from setuptools import setup
 from setuptools.command.install import install
 
@@ -65,9 +66,14 @@ class ManPageGenerator(install):
         return man_pages
 
 
+main_ns = {}
+ver_path = convert_path("hidtools/_version.py")
+with open(ver_path) as ver_file:
+    exec(ver_file.read(), main_ns)
+
 setup(
     name="hid-tools",
-    version="0.3.1",
+    version=main_ns["__version__"],
     description="HID tools",
     long_description=open("README.md", "r").read(),
     long_description_content_type="text/markdown",
