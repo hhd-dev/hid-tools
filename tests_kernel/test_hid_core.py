@@ -1,4 +1,5 @@
 #!/bin/env python3
+# SPDX-License-Identifier: GPL-2.0
 # -*- coding: utf-8 -*-
 #
 # Copyright (c) 2017 Benjamin Tissoires <benjamin.tissoires@gmail.com>

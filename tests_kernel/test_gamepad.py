@@ -1,6 +1,6 @@
 #!/bin/env python3
-# -*- coding: utf-8 -*-
 # SPDX-License-Identifier: GPL-2.0
+# -*- coding: utf-8 -*-
 #
 # Copyright (c) 2019 Benjamin Tissoires <benjamin.tissoires@gmail.com>
 # Copyright (c) 2019 Red Hat, Inc.
