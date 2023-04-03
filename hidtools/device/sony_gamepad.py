@@ -497,9 +497,9 @@ class PS4Controller(BaseGamepad):
         "z": {"bias": 81, "numer": 16384, "denom": 16319},
     }
     gyroscope_calibration_data = {
-        "x": {"bias": 30, "numer": 1105920, "denom": 17827},
-        "y": {"bias": 5, "numer": 1105920, "denom": 17777},
-        "z": {"bias": -30, "numer": 1105920, "denom": 17748},
+        "x": {"bias": 0, "numer": 1105920, "denom": 17827},
+        "y": {"bias": 0, "numer": 1105920, "denom": 17777},
+        "z": {"bias": 0, "numer": 1105920, "denom": 17748},
     }
 
     def __init__(self, rdesc, name, input_info):
@@ -1453,9 +1453,9 @@ class PS5Controller(BaseGamepad):
         "z": {"bias": 2, "numer": 16384, "denom": 16395},
     }
     gyroscope_calibration_data = {
-        "x": {"bias": -1, "numer": 1105920, "denom": 17727},
-        "y": {"bias": -14, "numer": 1105920, "denom": 17728},
-        "z": {"bias": 4, "numer": 1105920, "denom": 17769},
+        "x": {"bias": 0, "numer": 1105920, "denom": 17727},
+        "y": {"bias": 0, "numer": 1105920, "denom": 17728},
+        "z": {"bias": 0, "numer": 1105920, "denom": 17769},
     }
 
     def __init__(self, rdesc, name, input_info):

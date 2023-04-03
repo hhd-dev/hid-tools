@@ -250,33 +250,93 @@ class TestPS3Controller(SonyBaseTest.SonyTest):
                 assert self.uhdev.hw_leds.get_led(idx)[0]
 
 
+class CalibratedPS4Controller(object):
+    # DS4 reports uncalibrated sensor data. Calibration coefficients
+    # can be retrieved using a feature report (0x2 USB / 0x5 BT).
+    # The values below are the processed calibration values for the
+    # DS4s matching the feature reports of PS4ControllerBluetooth/USB
+    # as dumped from hid-sony 'ds4_get_calibration_data'.
+    #
+    # Note we duplicate those values here in case the kernel changes them
+    # so we can have tests passing even if hid-tools doesn't have the
+    # correct values.
+    accelerometer_calibration_data = {
+        "x": {"bias": -73, "numer": 16384, "denom": 16472},
+        "y": {"bias": -352, "numer": 16384, "denom": 16344},
+        "z": {"bias": 81, "numer": 16384, "denom": 16319},
+    }
+    gyroscope_calibration_data = {
+        "x": {"bias": 0, "numer": 1105920, "denom": 17827},
+        "y": {"bias": 0, "numer": 1105920, "denom": 17777},
+        "z": {"bias": 0, "numer": 1105920, "denom": 17748},
+    }
+
+
+class CalibratedPS4ControllerBluetooth(CalibratedPS4Controller, PS4ControllerBluetooth):
+    pass
+
+
 class TestPS4ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        controller = PS4ControllerBluetooth()
+        controller = CalibratedPS4ControllerBluetooth()
         controller.application_matches = application_matches
         return controller
+
+
+class CalibratedPS4ControllerUSB(CalibratedPS4Controller, PS4ControllerUSB):
+    pass
 
 
 class TestPS4ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
     def create_device(self):
-        controller = PS4ControllerUSB()
+        controller = CalibratedPS4ControllerUSB()
         controller.application_matches = application_matches
         return controller
+
+
+class CalibratedPS5Controller(object):
+    # DualSense reports uncalibrated sensor data. Calibration coefficients
+    # can be retrieved using feature report 0x09.
+    # The values below are the processed calibration values for the
+    # DualSene matching the feature reports of PS5ControllerBluetooth/USB
+    # as dumped from hid-playstation 'dualsense_get_calibration_data'.
+    #
+    # Note we duplicate those values here in case the kernel changes them
+    # so we can have tests passing even if hid-tools doesn't have the
+    # correct values.
+    accelerometer_calibration_data = {
+        "x": {"bias": 0, "numer": 16384, "denom": 16374},
+        "y": {"bias": -114, "numer": 16384, "denom": 16362},
+        "z": {"bias": 2, "numer": 16384, "denom": 16395},
+    }
+    gyroscope_calibration_data = {
+        "x": {"bias": 0, "numer": 1105920, "denom": 17727},
+        "y": {"bias": 0, "numer": 1105920, "denom": 17728},
+        "z": {"bias": 0, "numer": 1105920, "denom": 17769},
+    }
+
+
+class CalibratedPS5ControllerBluetooth(CalibratedPS5Controller, PS5ControllerBluetooth):
+    pass
 
 
 class TestPS5ControllerBluetooth(SonyBaseTest.SonyPS4ControllerTest):
     kernel_modules = [PS5_MODULE]
 
     def create_device(self):
-        controller = PS5ControllerBluetooth()
+        controller = CalibratedPS5ControllerBluetooth()
         controller.application_matches = application_matches
         return controller
+
+
+class CalibratedPS5ControllerUSB(CalibratedPS5Controller, PS5ControllerUSB):
+    pass
 
 
 class TestPS5ControllerUSB(SonyBaseTest.SonyPS4ControllerTest):
     kernel_modules = [PS5_MODULE]
 
     def create_device(self):
-        controller = PS5ControllerUSB()
+        controller = CalibratedPS5ControllerUSB()
         controller.application_matches = application_matches
         return controller
