@@ -94,12 +94,12 @@ setup(
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.9",
     ],
     data_files=[],  # man pages are added on success
-    python_requires=">=3.6",
+    python_requires=">=3.9",
     include_package_data=True,
-    install_requires=["parse", "pyyaml", "click"],
+    install_requires=["parse", "pyyaml", "click", "typing_extensions"],
     extras_require={"uhid": ["pyudev"]},
     tests_require=["hid-tools[uhid]"],
     cmdclass=dict(

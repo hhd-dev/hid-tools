@@ -27,7 +27,7 @@ import time
 import uuid
 
 from hidtools.hut import U8, U16, U32
-from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type, Union
 
 from pathlib import Path
 
@@ -164,7 +164,9 @@ class UHIDDevice(object):
         return self._rdesc
 
     @rdesc.setter
-    def rdesc(self: "UHIDDevice", rdesc: hidtools.hid.ReportDescriptor | str | bytes):
+    def rdesc(
+        self: "UHIDDevice", rdesc: Union[hidtools.hid.ReportDescriptor, str, bytes]
+    ):
         if isinstance(rdesc, hidtools.hid.ReportDescriptor):
             self.parsed_rdesc = rdesc
         else:
@@ -535,7 +537,7 @@ class UHIDDevice(object):
         data: Any,
         global_data=None,
         reportID: Optional[int] = None,
-        application: Optional[str | U32] = None,
+        application: Optional[Union[str, U32]] = None,
     ) -> List[U8]:
         """
         Convert the data object to an array of ints representing the report.

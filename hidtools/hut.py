@@ -32,9 +32,14 @@ from typing import (
     Iterator,
     NamedTuple,
     Type,
-    TypeAlias,
+    Union,
     cast,
 )
+
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
 
 DATA_DIRNAME = "data"
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -163,7 +168,7 @@ class HidUsagePage(object):
     def __setitem__(self: "HidUsagePage", key: U16, value: HidUsage) -> None:
         self._usages[key] = value
 
-    def __getitem__(self: "HidUsagePage", key: str | U16 | U32) -> HidUsage:
+    def __getitem__(self: "HidUsagePage", key: Union[str, U16, U32]) -> HidUsage:
         if isinstance(key, str):
             return self.from_name[key]
 
@@ -272,7 +277,7 @@ class HidUsageTable(object):
     def __setitem__(self: "HidUsageTable", key: U16, value: HidUsagePage) -> None:
         self._pages[key] = value
 
-    def __getitem__(self: "HidUsageTable", key: str | U16) -> HidUsagePage:
+    def __getitem__(self: "HidUsageTable", key: Union[str, U16]) -> HidUsagePage:
         if isinstance(key, str):
             return self.usage_page_names[key]
 
@@ -322,7 +327,7 @@ class HidUsageTable(object):
 
     def usage_page_from_name(
         self: "HidUsageTable", page_name: str
-    ) -> HidUsagePage | None:
+    ) -> Union[HidUsagePage, None]:
         """
         Look up the usage page based on the page name (e.g. "Generic
         Desktop"). This is identical to ::
@@ -341,7 +346,7 @@ class HidUsageTable(object):
 
     def usage_page_from_page_id(
         self: "HidUsageTable", page_id: U16
-    ) -> HidUsagePage | None:
+    ) -> Union[HidUsagePage, None]:
         """
         Look up the usage page based on the page ID. This is identical to ::
 

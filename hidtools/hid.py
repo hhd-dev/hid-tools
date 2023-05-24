@@ -37,9 +37,15 @@ from typing import (
     Optional,
     Tuple,
     Type as _Type,
-    TypeAlias,
+    Union,
     cast,
 )
+
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
+
 
 logger = logging.getLogger("hidtools.hid")
 
@@ -111,7 +117,7 @@ class HidCollection:
         assert value <= 0xFF
         self.value = value
         self.name = str(self)
-        self.type: HidCollection.Type | None
+        self.type: Union[HidCollection.Type, None]
         try:
             self.type = HidCollection.Type(value)
         except ValueError:
@@ -427,7 +433,7 @@ class _HidRDescItem(object):
 
     @classmethod
     def _one_item_from_bytes(
-        cls: _Type["_HidRDescItem"], rdesc: Bytes | List[U8]
+        cls: _Type["_HidRDescItem"], rdesc: Union[Bytes, List[U8]]
     ) -> Optional["_HidRDescItem"]:
         """
         Parses a single (the first) item from the given report descriptor.
@@ -482,7 +488,10 @@ class _HidRDescItem(object):
     @classmethod
     def from_bytes(
         cls: _Type["_HidRDescItem"],
-        rdesc: Bytes | List[U8],
+        rdesc: Union[
+            Bytes,
+            List[U8],
+        ],
     ) -> List["_HidRDescItem"]:
         """
         Parses a series of bytes into items.
@@ -551,7 +560,7 @@ class _HidRDescItem(object):
 
         value = None
 
-        def hex_value(string: str, prefix: str) -> U16 | None:
+        def hex_value(string: str, prefix: str) -> Union[U16, None]:
             if string.startswith(prefix):
                 return int(string[len(prefix) :], 16)
             return None
@@ -873,7 +882,7 @@ class HidUnit(object):
         if system == HidUnit.System.NONE:
             return HidUnit.NONE
 
-        def convert(exponent: U16 | None) -> U16 | None:
+        def convert(exponent: Union[U16, None]) -> Union[U16, None]:
             return twos_comp(exponent, 4) if exponent is not None else None
 
         # Now create the mapping of correct unit types with their exponents, e.g.
@@ -907,7 +916,7 @@ class HidUnit(object):
         return HidUnit._parse(data)
 
     @classmethod
-    def from_value(cls: _Type["HidUnit"], value: U8 | U16 | U32) -> "HidUnit":
+    def from_value(cls: _Type["HidUnit"], value: Union[U8, U16, U32]) -> "HidUnit":
         """
         Converts the given 8, 16 or 32-bit value into a :class:`HidUnit`
         object.
@@ -951,7 +960,7 @@ class HidUnit(object):
         unitstrings = unit_string.split(" * ")
         units: Dict[Optional["Unit"], U16] = {}
         for s in unitstrings:
-            match: re.Match[str] | None
+            match: Union[re.Match[str], None]
             match = re.match(r"(?P<unit>[a-zA-z]+)(?P<exp>[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]{1,})?", s)
             if match is None:
                 continue
@@ -1068,7 +1077,7 @@ class HidField(object):
         self.type = value
         self.usage_page = usage_page
         self.usage = usage
-        self.usages: List[U32] | None = None
+        self.usages: Union[List[U32], None] = None
         self.logical_min = logical_min
         self.logical_max = logical_max
         self.physical_min = physical_min
@@ -1110,7 +1119,7 @@ class HidField(object):
         """
         return self._usage_name(self.usage)
 
-    def get_usage_name(self: "HidField", index: int) -> str | None:
+    def get_usage_name(self: "HidField", index: int) -> Union[str, None]:
         """
         Return the Usage name for this field at the given index. Use this
         function when the HID field has multiple Usages.
@@ -1120,7 +1129,7 @@ class HidField(object):
         return None
 
     @property
-    def physical_name(self: "HidField") -> str | None:
+    def physical_name(self: "HidField") -> Union[str, None]:
         """
         The physical name or ``None``
         """
@@ -1141,7 +1150,7 @@ class HidField(object):
         return _phys
 
     @property
-    def logical_name(self: "HidField") -> str | None:
+    def logical_name(self: "HidField") -> Union[str, None]:
         """
         The logical name or ``None``
         """
@@ -1162,7 +1171,7 @@ class HidField(object):
                 pass
         return _logical
 
-    def _get_value(self: "HidField", report: List[U8], idx: int) -> U32 | str:
+    def _get_value(self: "HidField", report: List[U8], idx: int) -> Union[U32, str]:
         """
         Extract the bits that are this HID field in the list of bytes
         ``report``
@@ -1188,7 +1197,7 @@ class HidField(object):
             value = twos_comp(value, self.size)
         return value
 
-    def get_values(self: "HidField", report: List[U8]) -> List[U32 | str]:
+    def get_values(self: "HidField", report: List[U8]) -> List[Union[U32, str]]:
         """
         Assume ``report`` is a list of bytes that are a full HID report,
         extract the values that are this HID field.
@@ -1916,7 +1925,7 @@ class ReportDescriptor(object):
         return None
 
     def get_report_from_application(
-        self: "ReportDescriptor", application: str | U32
+        self: "ReportDescriptor", application: Union[str, U32]
     ) -> Optional[HidReport]:
         """
         Return the Input report that matches the application or ``None``
@@ -2125,7 +2134,7 @@ class ReportDescriptor(object):
 
     @classmethod
     def from_bytes(
-        cls: _Type["ReportDescriptor"], rdesc: Bytes | List[U8]
+        cls: _Type["ReportDescriptor"], rdesc: Union[Bytes, List[U8]]
     ) -> "ReportDescriptor":
         """
         Parse the given list of 8-bit integers.
@@ -2197,7 +2206,7 @@ class ReportDescriptor(object):
         data: Any,
         global_data: Optional[Any] = None,
         reportID: Optional[U8] = None,
-        application: Optional[str | U32] = None,
+        application: Optional[Union[str, U32]] = None,
     ) -> List[U8]:
         """
         Convert the data object to an array of ints representing the report.
