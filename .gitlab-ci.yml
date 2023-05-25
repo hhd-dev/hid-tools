@@ -10,13 +10,48 @@ include:
       - '/templates/fedora.yml'
 
 variables:
-  TEST_PACKAGES: 'make black python3-flake8 python3-parse python3-pyudev python3-pypandoc pandoc python3-pytest python3-libevdev python3-click python3-pyyaml python3-pip jq systemd-udev'
-  TEST_EXEC: 'pip3 install pytest-retry pytest_tap pytest-xdist'
-  BUILD_PACKAGES: 'file git-core gcc gcc-c++ diffutils make flex bison sparse bc xz findutils hostname elfutils-libelf-devel openssl-devel perl-Term-ANSIColor perl-Encode jq'
-  FDO_DISTRIBUTION_VERSION: 37
+  PYTHON_VERSION: '3.9'
+  PYTHON: python$PYTHON_VERSION
+  PIP: pip$PYTHON_VERSION
+  TEST_PACKAGES: '$PYTHON make black pandoc jq systemd-udev libevdev'
+  TEST_EXEC: >  # multi-line yaml that replaces new lines by spaces
+    $PYTHON -m ensurepip --upgrade;
+    $PYTHON -m pip install --upgrade pip;
+    $PIP install attrs \
+                 parse \
+                 pyudev \
+                 pypandoc \
+                 pytest \
+                 libevdev \
+                 click \
+                 pyyaml \
+                 pytest-retry \
+                 pytest_tap \
+                 pytest-xdist \
+                 typing_extensions
+  BUILD_PACKAGES: >
+    file
+    git-core
+    gcc
+    gcc-c++
+    diffutils
+    make
+    flex
+    bison
+    sparse
+    bc
+    xz
+    findutils
+    hostname
+    elfutils-libelf-devel
+    openssl-devel
+    perl-Term-ANSIColor
+    perl-Encode
+    jq
+  FDO_DISTRIBUTION_VERSION: 38
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  TEST_CONTAINER_TAG: '2023-02-17.1'
-  BUILD_CONTAINER_TAG: '2023-02-17.1'
+  TEST_CONTAINER_TAG: '2023-05-25.1'
+  BUILD_CONTAINER_TAG: '2023-05-25.1'
   FDO_DISTRIBUTION_TAG: $TEST_CONTAINER_TAG
   KERNEL_VERSION: '6.3'
 
@@ -50,7 +85,6 @@ test container prep:
     GIT_STRATEGY: none
     FDO_DISTRIBUTION_PACKAGES: $TEST_PACKAGES
     FDO_DISTRIBUTION_EXEC: $TEST_EXEC
-
 .build_variables:
   variables:
     FDO_DISTRIBUTION_TAG: $BUILD_CONTAINER_TAG
@@ -130,14 +164,15 @@ install:
   extends: .default_image
   stage: build
   script:
-    - python3 setup.py install
+    - $PYTHON setup.py install
 
 install_no_man_pages:
   extends: .default_image
   stage: build
   script:
-    - dnf remove -y pandoc python3-pypandoc
-    - python3 setup.py install
+    - dnf remove -y pandoc
+    - $PIP uninstall -y pypandoc
+    - $PYTHON setup.py install
 
 pytest:
   extends:
@@ -181,7 +216,7 @@ pytest errors:
   needs:
     - pytest
   script:
-    - pip install yq
+    - $PIP install yq
     - errors=`cat junit-*.xml | xq -r '.testsuites.testsuite."@errors"'`
     - test $errors -ne 0 && echo "pytest encountered $errors errors, please fix"
     - echo "See the previous stage for test logs"
@@ -195,7 +230,7 @@ pytest failures:
   needs:
     - pytest
   script:
-    - pip install yq
+    - $PIP install yq
     - failures=`cat junit-*.xml | xq -r '.testsuites.testsuite."@failures"'`
     - test $failures -ne 0 && echo "pytest encountered $failures test case failures"
     - echo "See the previous stage for test logs"
