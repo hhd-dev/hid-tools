@@ -117,7 +117,7 @@ class HidCollection:
         assert value <= 0xFF
         self.value = value
         self.name = str(self)
-        self.type: Union[HidCollection.Type, None]
+        self.type: Optional[HidCollection.Type]
         try:
             self.type = HidCollection.Type(value)
         except ValueError:
@@ -560,7 +560,7 @@ class _HidRDescItem(object):
 
         value = None
 
-        def hex_value(string: str, prefix: str) -> Union[U16, None]:
+        def hex_value(string: str, prefix: str) -> Optional[U16]:
             if string.startswith(prefix):
                 return int(string[len(prefix) :], 16)
             return None
@@ -882,7 +882,7 @@ class HidUnit(object):
         if system == HidUnit.System.NONE:
             return HidUnit.NONE
 
-        def convert(exponent: Union[U16, None]) -> Union[U16, None]:
+        def convert(exponent: Optional[U16]) -> Optional[U16]:
             return twos_comp(exponent, 4) if exponent is not None else None
 
         # Now create the mapping of correct unit types with their exponents, e.g.
@@ -960,7 +960,7 @@ class HidUnit(object):
         unitstrings = unit_string.split(" * ")
         units: Dict[Optional["Unit"], U16] = {}
         for s in unitstrings:
-            match: Union[re.Match[str], None]
+            match: Optional[re.Match[str]]
             match = re.match(r"(?P<unit>[a-zA-z]+)(?P<exp>[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]{1,})?", s)
             if match is None:
                 continue
@@ -1077,7 +1077,7 @@ class HidField(object):
         self.type = value
         self.usage_page = usage_page
         self.usage = usage
-        self.usages: Union[List[U32], None] = None
+        self.usages: Optional[List[U32]] = None
         self.logical_min = logical_min
         self.logical_max = logical_max
         self.physical_min = physical_min
@@ -1119,7 +1119,7 @@ class HidField(object):
         """
         return self._usage_name(self.usage)
 
-    def get_usage_name(self: "HidField", index: int) -> Union[str, None]:
+    def get_usage_name(self: "HidField", index: int) -> Optional[str]:
         """
         Return the Usage name for this field at the given index. Use this
         function when the HID field has multiple Usages.
@@ -1129,7 +1129,7 @@ class HidField(object):
         return None
 
     @property
-    def physical_name(self: "HidField") -> Union[str, None]:
+    def physical_name(self: "HidField") -> Optional[str]:
         """
         The physical name or ``None``
         """
@@ -1150,7 +1150,7 @@ class HidField(object):
         return _phys
 
     @property
-    def logical_name(self: "HidField") -> Union[str, None]:
+    def logical_name(self: "HidField") -> Optional[str]:
         """
         The logical name or ``None``
         """

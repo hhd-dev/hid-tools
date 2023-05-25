@@ -31,6 +31,7 @@ from typing import (
     Hashable,
     Iterator,
     NamedTuple,
+    Optional,
     Type,
     Union,
     cast,
@@ -327,7 +328,7 @@ class HidUsageTable(object):
 
     def usage_page_from_name(
         self: "HidUsageTable", page_name: str
-    ) -> Union[HidUsagePage, None]:
+    ) -> Optional[HidUsagePage]:
         """
         Look up the usage page based on the page name (e.g. "Generic
         Desktop"). This is identical to ::
@@ -346,7 +347,7 @@ class HidUsageTable(object):
 
     def usage_page_from_page_id(
         self: "HidUsageTable", page_id: U16
-    ) -> Union[HidUsagePage, None]:
+    ) -> Optional[HidUsagePage]:
         """
         Look up the usage page based on the page ID. This is identical to ::
 
