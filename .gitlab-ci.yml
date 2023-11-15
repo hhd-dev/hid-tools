@@ -1,6 +1,6 @@
 # vim: set expandtab shiftwidth=2 tabstop=8 textwidth=0:
 
-.templates_sha: &template_sha 976b2e1ed25998fe36f90fc8bb72fe2acbab405b # see https://docs.gitlab.com/ee/ci/yaml/#includefile
+.templates_sha: &template_sha d03cddbcff35f26861429fc816c00323f48e99af # see https://docs.gitlab.com/ee/ci/yaml/#includefile
 
 include:
   # Fedora container builder template
