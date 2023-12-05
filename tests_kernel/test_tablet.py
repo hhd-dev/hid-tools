@@ -30,8 +30,8 @@ class PenState(Enum):
     PEN_IS_ERASING = (True, libevdev.EV_KEY.BTN_TOOL_RUBBER)
 
     def __init__(self, touch, tool):
-        self.touch = touch
-        self.tool = tool
+        self.touch = touch  # type: ignore
+        self.tool = tool  # type: ignore
 
     @classmethod
     def from_evdev(cls, evdev) -> "PenState":
@@ -53,7 +53,7 @@ class PenState(Enum):
         ):
             raise ValueError("2 tools are not allowed")
 
-        return cls((touch, tool))
+        return cls((touch, tool))  # type: ignore
 
     def apply(self, events) -> "PenState":
         if libevdev.EV_SYN.SYN_REPORT in events:
@@ -81,7 +81,7 @@ class PenState(Enum):
                 else:
                     tool = None
 
-        new_state = PenState((touch, tool))
+        new_state = PenState((touch, tool))  # type: ignore
         assert (
             new_state in self.valid_transitions()
         ), f"moving from {self} to {new_state} is forbidden"
