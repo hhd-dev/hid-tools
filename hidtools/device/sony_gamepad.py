@@ -23,17 +23,17 @@ class GamepadData(object):
 class PSBattery(object):
     """Represents a battery in a PlayStation controller."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.cable_connected = True
         self.capacity = 100  # capacity level %
         self.full = True  # battery full or not. Note: 100% doesn't guarantee 'full'.
 
     @property
-    def capacity(self):
+    def capacity(self) -> int:
         return self._capacity
 
     @capacity.setter
-    def capacity(self, value):
+    def capacity(self, value: int) -> None:
         if value < 0 or value > 100:
             raise ValueError("Invalid capacity")
 
@@ -345,41 +345,41 @@ class PSSensor(object):
         )
 
     @property
-    def raw_x(self):
+    def raw_x(self) -> int:
         return self._raw_x
 
     @property
-    def raw_y(self):
+    def raw_y(self) -> int:
         return self._raw_y
 
     @property
-    def raw_z(self):
+    def raw_z(self) -> int:
         return self._raw_z
 
     @property
-    def x(self):
+    def x(self) -> int:
         return self._x
 
     @x.setter
-    def x(self, value):
+    def x(self, value: int) -> None:
         self._x = value
         self._raw_x = self.uncalibrate(value, self.calibration_data["x"])
 
     @property
-    def y(self):
+    def y(self) -> int:
         return self._y
 
     @y.setter
-    def y(self, value):
+    def y(self, value: int) -> None:
         self._y = value
         self._raw_y = self.uncalibrate(value, self.calibration_data["y"])
 
     @property
-    def z(self):
+    def z(self) -> int:
         return self._z
 
     @z.setter
-    def z(self, value):
+    def z(self, value: int) -> None:
         self._z = value
         self._raw_z = self.uncalibrate(value, self.calibration_data["z"])
 

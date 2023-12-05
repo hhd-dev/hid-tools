@@ -34,7 +34,7 @@ from hidtools.uhid import UHIDDevice
 from hidtools.util import BusType
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type, Union
 
 logger = logging.getLogger("hidtools.device.base_device")
 
@@ -52,19 +52,19 @@ class SysfsFile(object):
             return f.read().strip()
 
     @property
-    def int_value(self):
+    def int_value(self) -> int:
         return int(self.__get_value())
 
     @int_value.setter
-    def int_value(self, v):
+    def int_value(self, v: int) -> None:
         self.__set_value(v)
 
     @property
-    def str_value(self):
+    def str_value(self) -> str:
         return self.__get_value()
 
     @str_value.setter
-    def str_value(self, v):
+    def str_value(self, v: str) -> None:
         self.__set_value(v)
 
 
@@ -74,11 +74,11 @@ class LED(object):
         self.__brightness = SysfsFile(sys_path / "brightness")
 
     @property
-    def brightness(self):
+    def brightness(self) -> int:
         return self.__brightness.int_value
 
     @brightness.setter
-    def brightness(self, value):
+    def brightness(self, value: int) -> None:
         self.__brightness.int_value = value
 
 
@@ -91,15 +91,15 @@ class PowerSupply(object):
         self._type = SysfsFile(sys_path / "type")
 
     @property
-    def capacity(self):
+    def capacity(self) -> int:
         return self._capacity.int_value
 
     @property
-    def status(self):
+    def status(self) -> str:
         return self._status.str_value
 
     @property
-    def type(self):
+    def type(self) -> str:
         return self._type.str_value
 
 
@@ -123,9 +123,9 @@ class HIDIsReady(object):
 
 
 class UdevHIDIsReady(HIDIsReady):
-    _pyudev_context: Optional[pyudev.Context] = None
-    _pyudev_monitor: Optional[pyudev.Monitor] = None
-    _uhid_devices: Dict[int, bool] = {}
+    _pyudev_context: ClassVar[Optional[pyudev.Context]] = None
+    _pyudev_monitor: ClassVar[Optional[pyudev.Monitor]] = None
+    _uhid_devices: ClassVar[Dict[int, bool]] = {}
 
     def __init__(self: "UdevHIDIsReady", uhid: UHIDDevice) -> None:
         super().__init__(uhid)
@@ -269,7 +269,14 @@ class BaseDevice(UHIDDevice):
     # to be set in the subclasses to have get_evdev() working
     _application_matches: Dict[str, EvdevMatch] = {}
 
-    def __init__(self, name, application, rdesc_str=None, rdesc=None, input_info=None):
+    def __init__(
+        self,
+        name,
+        application,
+        rdesc_str: Optional[str] = None,
+        rdesc: Optional[Union[hid.ReportDescriptor, str, bytes]] = None,
+        input_info=None,
+    ) -> None:
         self._kernel_is_ready: HIDIsReady = UdevHIDIsReady(self)
         if rdesc_str is None and rdesc is None:
             raise Exception("Please provide at least a rdesc or rdesc_str")
@@ -284,12 +291,12 @@ class BaseDevice(UHIDDevice):
         self.opened = False
         self.started = False
         self.application = application
-        self._input_nodes = None
+        self._input_nodes: Optional[list[EvdevDevice]] = None
         if rdesc is None:
             assert rdesc_str is not None
-            self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)
+            self.rdesc = hid.ReportDescriptor.from_human_descr(rdesc_str)  # type: ignore
         else:
-            self.rdesc = rdesc
+            self.rdesc = rdesc  # type: ignore
 
     @property
     def power_supply_class(self: "BaseDevice") -> Optional[PowerSupply]:
