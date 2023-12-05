@@ -134,13 +134,13 @@ class HIDReplay(object):
             dev = self._devices[idx]
             if idx in self._devices:
                 dev = self._devices[idx]
-            for l in f:
-                if l.startswith("D:"):
-                    r = parse("D: {idx:d}", l)
+            for line in f:
+                if line.startswith("D:"):
+                    r = parse("D: {idx:d}", line)
                     assert r is not None
                     dev = self._devices[r["idx"]]
-                elif l.startswith("E:"):
-                    r = parse("E: {sec:d}.{usec:d} {len:2d}{data}", l)
+                elif line.startswith("E:"):
+                    r = parse("E: {sec:d}.{usec:d} {len:2d}{data}", line)
                     assert r is not None
                     length = r["len"]
                     timestamp = r["sec"] + r["usec"] / 1000000

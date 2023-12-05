@@ -81,9 +81,9 @@ def interpret_file_hidrecorder(fd):
     data = fd.read()
     # The proper (machine-readable) hid-recorder output
     rdescs = [
-        ReportDescriptor.from_string(l[3:])
-        for l in data.splitlines()
-        if l.startswith("R: ")
+        ReportDescriptor.from_string(line[3:])
+        for line in data.splitlines()
+        if line.startswith("R: ")
     ]
     if rdescs:
         return rdescs

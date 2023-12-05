@@ -928,7 +928,7 @@ class HidUnit(object):
 
     def __eq__(self: "HidUnit", other: Any) -> bool:
         if not isinstance(other, HidUnit):
-            raise NotImplemented
+            raise NotImplementedError
         return self.system == other.system and self.units == other.units
 
     def __str__(self: "HidUnit") -> str:
@@ -1145,7 +1145,7 @@ class HidField(object):
         except KeyError:
             try:
                 _phys = f"0x{phys:04x}"
-            except:
+            except ValueError:
                 pass
         return _phys
 
@@ -1167,7 +1167,7 @@ class HidField(object):
         except KeyError:
             try:
                 _logical = f"0x{logical:04x}"
-            except:
+            except ValueError:
                 pass
         return _logical
 

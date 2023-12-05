@@ -26,7 +26,7 @@ import struct
 import time
 import uuid
 
-from hidtools.hut import U8, U16, U32
+from hidtools.hut import U8, U32
 from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type, Union
 
 from pathlib import Path
