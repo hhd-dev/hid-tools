@@ -13,14 +13,15 @@ variables:
   PYTHON_VERSION: '3.9'
   PYTHON: python$PYTHON_VERSION
   PIP: pip$PYTHON_VERSION
-  TEST_PACKAGES: '$PYTHON make black pandoc jq systemd-udev libevdev'
+  TEST_PACKAGES: 'python3.9 python3.10 python3.11 python3 make jq systemd-udev libevdev'
   TEST_EXEC: >  # multi-line yaml that replaces new lines by spaces
     $PYTHON -m ensurepip --upgrade;
     $PYTHON -m pip install --upgrade pip;
-    $PIP install attrs \
+    $PIP install hatch\
+                 ruff \
+                 attrs \
                  parse \
                  pyudev \
-                 pypandoc \
                  pytest \
                  libevdev \
                  click \
@@ -48,9 +49,9 @@ variables:
     perl-Term-ANSIColor
     perl-Encode
     jq
-  FDO_DISTRIBUTION_VERSION: 38
+  FDO_DISTRIBUTION_VERSION: 39
   FDO_UPSTREAM_REPO: 'libevdev/hid-tools'
-  TEST_CONTAINER_TAG: '2023-05-25.1'
+  TEST_CONTAINER_TAG: '2023-12-05.1'
   BUILD_CONTAINER_TAG: '2023-05-25.1'
   FDO_DISTRIBUTION_TAG: $TEST_CONTAINER_TAG
   KERNEL_VERSION: '6.5'
@@ -158,21 +159,13 @@ python formatting:
   extends: .default_image
   stage: build
   script:
-    - black --check .
+    - ruff format --check .
 
 install:
   extends: .default_image
   stage: build
   script:
-    - $PYTHON setup.py install
-
-install_no_man_pages:
-  extends: .default_image
-  stage: build
-  script:
-    - dnf remove -y pandoc
-    - $PIP uninstall -y pypandoc
-    - $PYTHON setup.py install
+    - $PIP install . --verbose
 
 pytest:
   extends:
@@ -189,7 +182,41 @@ pytest:
 
     - echo "[pytest]" > pytest.ini
     - echo "junit_family=xunit2" >> pytest.ini
-    - export B2C_COMMAND="pytest -v --udevd --junitxml=junit-$CI_JOB_NAME.xml --retries 2"
+    - export B2C_COMMAND="hatch run +py=$PYTHON_VERSION test:pytest -v --junitxml=junit-$CI_JOB_NAME_SLUG.xml tests"
+    - rm -f junit-$CI_JOB_NAME.xml
+    - /app/boot2container
+  artifacts:
+    name: "qemu-pytest-logs-$CI_JOB_NAME"
+    when: always
+    expire_in: 1 week
+    paths:
+      - junit-*.xml
+    reports:
+      junit: junit-*.xml
+  parallel:
+    matrix:
+      - PYTHON_VERSION:
+        - "3.9"
+        - "3.10"
+        - "3.11"
+        - "3.12"
+
+pytest kernel:
+  extends:
+    - .fdo.b2c-image@fedora
+  tags:
+    - kvm
+  stage: test
+  needs:
+    - python formatting
+    - rebuild kernel
+  script:
+    - *b2c-kernel-url
+    - export B2C_KERNEL=$KERNEL_URL
+
+    - echo "[pytest]" > pytest.ini
+    - echo "junit_family=xunit2" >> pytest.ini
+    - export B2C_COMMAND="hatch run test:pytest -v --udevd --junitxml=junit-$CI_JOB_NAME_SLUG.xml --retries 2"
     - rm -f junit-$CI_JOB_NAME.xml
     - set +e # Disable exit on error
     - /app/boot2container ; echo $? > .exit_code
@@ -214,7 +241,7 @@ pytest errors:
     - .fdo.distribution-image@fedora
   stage: analysis
   needs:
-    - pytest
+    - pytest kernel
   script:
     - $PIP install yq
     - errors=`cat junit-*.xml | xq -r '.testsuites.testsuite."@errors"'`
@@ -228,7 +255,7 @@ pytest failures:
     - .fdo.distribution-image@fedora
   stage: analysis
   needs:
-    - pytest
+    - pytest kernel
   script:
     - $PIP install yq
     - failures=`cat junit-*.xml | xq -r '.testsuites.testsuite."@failures"'`
