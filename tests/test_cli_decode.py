@@ -24,12 +24,14 @@ import logging
 import pytest
 import re
 
+from typing import List
+
 logger = logging.getLogger("hidtools.test.cli.decode")
 
 
 class BaseTest:
     class HidDecodeBase(object):
-        cli_args = []
+        cli_args: List[str] = []
 
         def run_hid_decode(self):
             runner = CliRunner()

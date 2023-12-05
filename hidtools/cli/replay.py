@@ -112,7 +112,7 @@ class HIDReplay(object):
         return BaseDevice
 
     @property
-    def ready(self):
+    def ready(self) -> bool:
         for d in self._devices.values():
             if not d.device_nodes:
                 return False

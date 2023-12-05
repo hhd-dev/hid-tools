@@ -275,7 +275,7 @@ class UHIDDevice(object):
 
     def walk_sysfs(
         self: "UHIDDevice", kind: str, glob: Optional[str] = None
-    ) -> Tuple[Path]:
+    ) -> Tuple[Path, ...]:
         kinds: Final = {
             "evdev": "input/input*/event*",
             "hidraw": "hidraw/hidraw*",
