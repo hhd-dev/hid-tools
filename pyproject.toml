@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hid-tools"
+dynamic = ["version"]
+description = "HID tools"
+readme = "README.md"
+license = "GPL-2.0-only"
+requires-python = ">=3.9"
+authors = [
+    { name = "Benjamin Tissoires", email = "benjamin.tissoires@redhat.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+dependencies = [
+    "click",
+    "parse",
+    "pyyaml",
+    "typing_extensions",
+]
+
+[project.optional-dependencies]
+uhid = [
+    "pyudev",
+]
+
+[project.scripts]
+hid-decode = "hidtools.cli.decode:main"
+hid-feature = "hidtools.cli.feature:main"
+hid-recorder = "hidtools.cli.record:main"
+hid-replay = "hidtools.cli.replay:main"
+
+[project.urls]
+Homepage = "http://gitlab.freedesktop.org/libevdev/hid-tools"
+
+[tool.hatch.version]
+path = "hidtools/_version.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "hidtools",
+    "man/*.md",
+]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+dependencies = [
+    "pypandoc_binary",
+]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"man" = "share/man/man1"
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "hidtools",
+    "man/*.1",
+]
