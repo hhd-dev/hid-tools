@@ -161,6 +161,12 @@ python formatting:
   script:
     - ruff format --check .
 
+python lint:
+  extends: .default_image
+  stage: build
+  script:
+    - hatch run types:check
+
 install:
   extends: .default_image
   stage: build

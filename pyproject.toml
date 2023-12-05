@@ -62,6 +62,17 @@ include = [
     "man/*.1",
 ]
 
+
+[tool.hatch.envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+  "pytest",
+  "attrs",
+  "hatch",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:.}"
+
 [tool.hatch.envs.test]
 dependencies = [
   "pytest",
