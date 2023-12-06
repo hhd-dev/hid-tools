@@ -54,14 +54,12 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"man" = "share/man/man1"
+"dist/man" = "share/man/man1"
 
 [tool.hatch.build.targets.wheel]
 include = [
     "hidtools",
-    "man/*.1",
 ]
-
 
 [tool.hatch.envs.types]
 dependencies = [

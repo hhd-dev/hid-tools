@@ -47,10 +47,13 @@ class ManPageGenerator(BuildHookInterface):
         # now do the actual conversion
         here = "."
         mandir = os.path.join(here, "man")
+        destdir = os.path.join(here, "dist", "man")
+        os.makedirs(destdir, exist_ok=True)
         for f in os.listdir(mandir):
             if f.endswith(".md"):
                 path = os.path.join(mandir, f)
-                outfile = f"{path[:-3]}.1"
+                name = os.path.splitext(f)[0]
+                outfile = os.path.join(destdir, f"{name}.1")
                 pypandoc.convert_file(
                     path, "man", outputfile=outfile, extra_args=["-s"]
                 )
