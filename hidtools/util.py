@@ -27,11 +27,29 @@ class BusType(enum.IntEnum):
         ``linux/input.h``)
     """
 
-    USB = 0x3
-    BLUETOOTH = 0x5
-    VIRTUAL = 0x6
+    PCI = 0x01
+    ISAPNP = 0x02
+    USB = 0x03
+    HIL = 0x04
+    BLUETOOTH = 0x05
+    VIRTUAL = 0x06
+    ISA = 0x10
+    I8042 = 0x11
+    XTKBD = 0x12
+    RS232 = 0x13
+    GAMEPORT = 0x14
+    PARPORT = 0x15
+    AMIGA = 0x16
+    ADB = 0x17
     I2C = 0x18
     HOST = 0x19
+    GSC = 0x1A
+    ATARI = 0x1B
+    SPI = 0x1C
+    RMI = 0x1D
+    CEC = 0x1E
+    INTEL_ISHTP = 0x1F
+    AMD_SFH = 0x20
 
 
 def twos_comp(val, bits):
