@@ -27,7 +27,18 @@ import time
 import uuid
 
 from hidtools.hut import U8, U32
-from typing import Any, Callable, Dict, Final, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Final,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pathlib import Path
 
@@ -254,7 +265,7 @@ class UHIDDevice(object):
         )
         os.write(self._fd, buf)
 
-    def call_input_event(self: "UHIDDevice", _data: List[int]) -> None:
+    def call_input_event(self: "UHIDDevice", _data: Iterable[int]) -> None:
         """
         Send an input event from this device.
 
