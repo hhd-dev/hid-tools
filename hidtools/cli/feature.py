@@ -92,14 +92,15 @@ def list(device, fetch_values, report_id):
     # Formatting nicety: we don't print the header until we have at least
     # one line to print, otherwise the error messages are messy.
     header_printed = False
+    report_str = ""
 
-    def print_header():
-        header = f'Feature | Report | {"Usage Page":25s} | {"Usage":42s} | {"Range":9s} | Count | Bits '
-        if fetch_values:
-            header += "| Value(s)"
-        divisor = "".join(["-" if x != "|" else "|" for x in header])
-        print(header)
-        print(divisor)
+    header = f'Feature | Report | {"Usage Page":25s} | {"Usage":42s} | {"Range":9s} | Count | Bits '
+    if fetch_values:
+        header += "| Value(s)"
+    divisor = "".join(["-" if x != "|" else "|" for x in header])
+    report_str += f"{header}\n"
+    report_str += f"{divisor}\n"
+
 
     all_fields = feature_report_fields(d, report_id)
 
@@ -109,27 +110,23 @@ def list(device, fetch_values, report_id):
                 try:
                     reports[f.report_ID] = d.get_feature_report(f.report_ID)
                 except OSError as e:
-                    print(
-                        f"Failed to get Feature Report ID {f.report_ID} from device: {e}"
-                    )
-                    print("Cannot run with --fetch-values")
-                    sys.exit(1)
+                    report_str += f"Failed to get Feature Report ID {f.report_ID} from device: {e}. Cannot run with --fetch-values\n"
+                    #sys.exit(1)
+                    continue
 
             values = f.get_values(reports[f.report_ID])
             if len(values) == 1:
-                vstring = f" | {values[0]}"
+                vstring = f" | {hex(values[0])}"
             else:
-                vstring = f' | {", ".join([str(x) for x in values])}'
+                vstring = f' | {", ".join([hex(x) for x in values])}'
         else:
             vstring = ""
 
-        if not header_printed:
-            header_printed = True
-            print_header()
+        report_str += f"{f._unique_id:7x} | {f.report_ID:6d} | {f.usage_page_name:25s} | {str(f.usage_name):42s} | [{f.logical_min:2d}, {f.logical_max:3d}] | {f.count:5d} | {f.size:3d} {vstring}\n"
+    for rid, rep in reports.items():
+        print(f"{rid:04x}: {bytes(rep).hex()}")
 
-        print(
-            f"{f._unique_id:7x} | {f.report_ID:6d} | {f.usage_page_name:25s} | {str(f.usage_name):42s} | [{f.logical_min:2d}, {f.logical_max:3d}] | {f.count:5d} | {f.size:3d} {vstring}"
-        )
+    print(report_str)
 
 
 @hid_feature.command()
