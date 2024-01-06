@@ -34,10 +34,25 @@ sudo venv/bin/python hid-recorder /dev/hidraw# | tee mydevice.txt
 ```
 Try to press all the buttons!
 
+You can also strip the decription of events with the following:
+```bash
+sudo venv/bin/python hid-recorder /dev/hidraw# --strip-desc | tee mydevice.txt
+```
+This makes it much easier to distinguish changed values from each other.
+Devices with vendor-specific descriptors result in garbled descriptions so this
+should be used.
+
 ### Feature reports
 Then, you should dump the device feature reports:
 ```bash
 sudo venv/bin/python hid-feature /dev/hidraw# | tee mydevice_features.txt
+```
+
+This will only print the report data with the format `{report_id}: <hex_report>`.
+You can append `--classic` to restore the old behavior.
+Then, you should dump the device feature reports:
+```bash
+sudo venv/bin/python hid-feature --classic /dev/hidraw# | tee mydevice_features.txt
 ```
 
 ## Other functionality
