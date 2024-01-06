@@ -280,7 +280,7 @@ class HidrawDevice(object):
 
         return index, count
 
-    def _dump_event(self, event, file):
+    def _dump_event(self, event, file, classic=True):
         report_id = event.bytes[0]
 
         rdesc = self.report_descriptor.get(report_id, len(event.bytes))
@@ -302,7 +302,8 @@ class HidrawDevice(object):
                     indent_2nd_line = slash + 1
             indent = f'\n#{" " * indent_2nd_line}'
             output = indent.join(output.split("\n"))
-            print(f"# {output}", file=file)
+            if classic:
+                print(f"# {output}", file=file)
 
         data = map(lambda x: f"{x:02x}", event.bytes)
         print(
@@ -311,7 +312,7 @@ class HidrawDevice(object):
             flush=True,
         )
 
-    def dump(self, file=sys.stdout, from_the_beginning=False):
+    def dump(self, file=sys.stdout, from_the_beginning=False, classic=True):
         """
         Format this device in a file format in the form of ::
 
@@ -354,7 +355,7 @@ class HidrawDevice(object):
             self._dump_offset = 0
 
         for e in self.events[self._dump_offset :]:
-            self._dump_event(e, file)
+            self._dump_event(e, file, classic)
         self._dump_offset = len(self.events)
 
     def get_feature_report(self, report_ID):

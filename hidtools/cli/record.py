@@ -78,7 +78,15 @@ def list_devices():
     nargs=-1,
     type=click.File("r"),
 )
-def main(device_list, output):
+@click.option(
+    "-s",
+    "--strip-desc",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Uses the old printing version, which was not useful for emulating devices with vendor-specific descriptors",
+)
+def main(device_list, output, strip_desc):
     """Record a HID device"""
 
     devices = {}
@@ -109,7 +117,7 @@ def main(device_list, output):
                 if last_index != idx:
                     print(f"D: {idx}", file=output)
                     last_index = idx
-                device.dump(output)
+                device.dump(output, classic=not strip_desc)
 
                 if is_first_event:
                     is_first_event = False
