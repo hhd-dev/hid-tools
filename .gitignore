@@ -7,3 +7,4 @@ dist/
 hid_tools.egg-info/
 doc/source/hidtools.rst
 man/*.1
+venv

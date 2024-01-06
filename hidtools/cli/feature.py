@@ -75,7 +75,15 @@ def list_devices():
     required=False,
     help="Only list the given Feature Reports",
 )
-def list(device, fetch_values, report_id):
+@click.option(
+    "-c",
+    "--classic",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Uses the old printing version, which was not useful for emulating devices with vendor-specific descriptors",
+)
+def list(device, fetch_values, report_id, classic):
     """
     List the available Feature Reports of a device and their respective items
     with details about each item.
@@ -100,9 +108,15 @@ def list(device, fetch_values, report_id):
     divisor = "".join(["-" if x != "|" else "|" for x in header])
     report_str += f"{header}\n"
     report_str += f"{divisor}\n"
+    raw_fileds = feature_report_fields(d, report_id)
 
-
-    all_fields = feature_report_fields(d, report_id)
+    all_fields = []
+    for f in raw_fileds:
+        r = f.report_ID
+        if r >= 0 and r <= 255:
+            all_fields.append(f)
+        else:
+            print(f"Invalid report id: {r}. It will be skipped.")
 
     for f in all_fields:
         if fetch_values:
@@ -111,7 +125,6 @@ def list(device, fetch_values, report_id):
                     reports[f.report_ID] = d.get_feature_report(f.report_ID)
                 except OSError as e:
                     report_str += f"Failed to get Feature Report ID {f.report_ID} from device: {e}. Cannot run with --fetch-values\n"
-                    #sys.exit(1)
                     continue
 
             values = f.get_values(reports[f.report_ID])
@@ -123,10 +136,12 @@ def list(device, fetch_values, report_id):
             vstring = ""
 
         report_str += f"{f._unique_id:7x} | {f.report_ID:6d} | {f.usage_page_name:25s} | {str(f.usage_name):42s} | [{f.logical_min:2d}, {f.logical_max:3d}] | {f.count:5d} | {f.size:3d} {vstring}\n"
+
     for rid, rep in reports.items():
         print(f"{rid:04x}: {bytes(rep).hex()}")
 
-    print(report_str)
+    if classic:
+        print(report_str)
 
 
 @hid_feature.command()
