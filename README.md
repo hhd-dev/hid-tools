@@ -1,4 +1,10 @@
 # HID-TOOLS
+
+> [!IMPORTANT]
+> For the needs of Handheld Daemon with regard to hid information, this library 
+> has been replaced by the command `hhd.contrib hidraw` which now prints
+> a hid descriptor as well.
+
 hid-tools is a set of tools to interact with the kernel's HID subsystem.
 
 It is quite useful, but its printing options are limited for emulating controller
